@@ -38,6 +38,17 @@ public partial class TestWrapGet
 		}
 	}
 	
+	private bool _hasNoGetterToWrap;
+	
+	[WrapGet]
+	public bool HasNoGetterToWrap
+	{
+		set
+		{
+			_hasNoGetterToWrap = true;
+		}
+	}
+	
 	[WrapGet]
 	public MyTestClass InstanceProperty2 { get; }
 

@@ -215,6 +215,12 @@ namespace Sandbox.Generator
 			var existingGetter = node.AccessorList?.Accessors.FirstOrDefault( a => a.Kind() == SyntaxKind.GetAccessorDeclaration );
 			var existingSetter = node.AccessorList?.Accessors.FirstOrDefault( a => a.Kind() == SyntaxKind.SetAccessorDeclaration );
 
+			if ( existingSetter is null )
+			{
+				// There is no setter to wrap.
+				return false;
+			}
+
 			// Check if ANY accessor uses the field keyword
 			var propertyUsesField = UsesFieldKeyword( existingGetter?.Body )
 				|| UsesFieldKeyword( existingGetter?.ExpressionBody )
@@ -223,7 +229,7 @@ namespace Sandbox.Generator
 
 			// Also need backing field for auto-properties
 			var getterIsAuto = existingGetter is not null && existingGetter.Body is null && existingGetter.ExpressionBody is null;
-			var setterIsAuto = existingSetter is not null && existingSetter.Body is null && existingSetter.ExpressionBody is null;
+			var setterIsAuto = existingSetter.Body is null && existingSetter.ExpressionBody is null;
 
 			var usesBackingField = propertyUsesField || getterIsAuto || setterIsAuto;
 
@@ -429,6 +435,12 @@ namespace Sandbox.Generator
 			var existingGetter = node.AccessorList?.Accessors.FirstOrDefault( a => a.Kind() == SyntaxKind.GetAccessorDeclaration );
 			var existingSetter = node.AccessorList?.Accessors.FirstOrDefault( a => a.Kind() == SyntaxKind.SetAccessorDeclaration );
 
+			if ( existingGetter is null )
+			{
+				// There is no setter to wrap.
+				return false;
+			}
+
 			// Check if ANY accessor uses the field keyword
 			var propertyUsesField = UsesFieldKeyword( existingGetter?.Body )
 				|| UsesFieldKeyword( existingGetter?.ExpressionBody )
@@ -436,7 +448,7 @@ namespace Sandbox.Generator
 				|| UsesFieldKeyword( existingSetter?.ExpressionBody );
 
 			// Also need backing field for auto-properties
-			var getterIsAuto = existingGetter is not null && existingGetter.Body is null && existingGetter.ExpressionBody is null;
+			var getterIsAuto = existingGetter.Body is null && existingGetter.ExpressionBody is null;
 			var setterIsAuto = existingSetter is not null && existingSetter.Body is null && existingSetter.ExpressionBody is null;
 
 			var usesBackingField = propertyUsesField || getterIsAuto || setterIsAuto;
@@ -486,7 +498,7 @@ namespace Sandbox.Generator
 
 				if ( getterIsAuto )
 				{
-					// Auto-getter: use backing field directly
+					// Auto-getter: use the backing field directly
 					defaultValueExpression = IdentifierName( backingFieldName );
 				}
 				else if ( existingGetter.Body is not null )

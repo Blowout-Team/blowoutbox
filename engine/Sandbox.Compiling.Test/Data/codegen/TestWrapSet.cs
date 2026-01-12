@@ -26,6 +26,12 @@ public partial class TestWrapSet
 	}
 	
 	[WrapSet]
+	public bool HasNoSetterToWrap
+	{
+		get => true;
+	}
+	
+	[WrapSet]
 	public bool FieldKeywordProperty
 	{
 		set
