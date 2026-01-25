@@ -2,6 +2,11 @@
 *
 !*/
 
+#
+# Blowout Dependencies
+#
+!gitassets/*
+
 # Git
 !.gitignore
 !.gitattributes
