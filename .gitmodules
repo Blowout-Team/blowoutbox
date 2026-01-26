@@ -1,0 +1,4 @@
+[submodule "engine/BlowoutTeamSoft"]
+	path = engine/BlowoutTeamSoft
+	url = https://github.com/Blowout-Team/BlowoutTeamSoft.git
+	branch = blowout_source2
