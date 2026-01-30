@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using BlowoutTeamSoft.Configuration.Ini;
+using System.IO;
 using System.Text.Json;
 using Zio.FileSystems;
 
@@ -335,6 +336,44 @@ public class BaseFileSystem
 	public System.IO.Stream OpenRead( string path, FileMode mode = FileMode.Open )
 	{
 		return system.OpenFile( FixPath( path ), mode, FileAccess.Read, FileShare.Read );
+	}
+
+	/// <summary>
+	/// Read INI Config from a file using <seealso cref="BlowoutTeamSoft.Configuration.Ini.BlowoutIniSerialization"/>. This will throw exceptions.
+	/// </summary>
+	public T ReadIni<T>(string filename, T defaultValue = default)
+		where T : new()
+	{
+		var text = ReadAllText(filename);
+		if (string.IsNullOrWhiteSpace(text))
+			return defaultValue;
+
+		return BlowoutIniSerialization.Deserialize<T>(text);
+	}
+
+	/// <summary>
+	/// The same as ReadIni except will return a default value on missing/error.
+	/// </summary>
+	public T ReadIniOrDefault<T>(string filename, T returnOnError = default)
+		where T : new()
+	{
+		try
+		{
+			return ReadIni<T>(filename, returnOnError);
+		}
+		catch (System.Exception)
+		{
+			return returnOnError;
+		}
+	}
+
+	/// <summary>
+	/// Convert object to BlowoutTeamSoft ini format and write it to the specified file.
+	/// </summary>
+	public void WriteIni<T>(string filename, T data)
+	{
+		var result = BlowoutIniSerialization.Serialize(data);
+		WriteAllText(filename, result);
 	}
 
 	/// <summary>

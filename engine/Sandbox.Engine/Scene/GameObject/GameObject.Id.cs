@@ -3,10 +3,10 @@
 public partial class GameObject
 {
 	private Guid _id;
-	public Guid Id
+	public override Guid Id
 	{
 		get => _id;
-		private set
+		protected set
 		{
 			if ( _id == value ) return;
 

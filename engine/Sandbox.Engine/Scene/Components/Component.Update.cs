@@ -1,7 +1,13 @@
-﻿namespace Sandbox;
+﻿using BlowoutTeamSoft.Engine.Core.Interfaces;
+using BlowoutTeamSoft.Engine.Interfaces;
+
+namespace Sandbox;
 
 public abstract partial class Component
 {
+	private IBlowoutTickable _tickable;
+	private IBlowoutLateTickable _lateTickable;
+
 	/// <summary>
 	/// Called once before the first Update - when enabled.
 	/// </summary>
@@ -34,6 +40,8 @@ public abstract partial class Component
 			Scene.pendingStartComponents.Remove( this );
 			_startCalled = true;
 			ExceptionWrap( "Start", OnStart );
+			if (this is IBlowoutGameSystemLifecycle lifecycle)
+				ExceptionWrap("Loaded", lifecycle.Loaded);
 
 			if ( Scene is not null && !Scene.IsEditor )
 			{
@@ -49,6 +57,8 @@ public abstract partial class Component
 
 		InternalOnStart();
 		ExceptionWrap( "Update", OnUpdate );
+		if (_tickable != null)
+			ExceptionWrap("Tick", () => _tickable.OnTick(Time.Delta));
 
 		if ( Scene is not null && !Scene.IsEditor )
 		{
@@ -62,7 +72,6 @@ public abstract partial class Component
 		if ( !ShouldExecute ) return;
 
 		InternalOnStart();
-		ExceptionWrap( "FixedUpdate", OnFixedUpdate );
 
 		if ( Scene is not null && !Scene.IsEditor )
 		{

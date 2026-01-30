@@ -1,4 +1,6 @@
-﻿namespace Sandbox;
+﻿using BlowoutTeamSoft.Engine.Interfaces;
+
+namespace Sandbox;
 
 /// <summary>
 /// Flags to search for Components.
@@ -69,11 +71,11 @@ public class ComponentList
 	/// This is the hard list of components.
 	/// This isn't a HashSet because we need the order to stay.
 	/// </summary>
-	List<Component> _list;
-	internal ComponentList( GameObject o )
+	List<IBlowoutGameSystem> _list;
+	internal ComponentList(GameObject o)
 	{
 		go = o;
-		_list = new List<Component>();
+		_list = new List<IBlowoutGameSystem>();
 	}
 
 	/// <summary>
@@ -81,7 +83,7 @@ public class ComponentList
 	/// </summary>
 	public IEnumerable<Component> GetAll()
 	{
-		return _list;
+		return _list.OfType<Component>();
 	}
 
 	/// <summary>
@@ -89,25 +91,25 @@ public class ComponentList
 	/// </summary>
 	internal void OnHotload()
 	{
-		_list.RemoveAll( x => x is null );
+		_list.RemoveAll(x => x is null);
 	}
 
 	/// <summary>
 	/// Add a component of this type
 	/// </summary>
-	public Component Create( TypeDescription type, bool startEnabled = true )
+	public Component Create(TypeDescription type, bool startEnabled = true)
 	{
-		if ( !type.TargetType.IsAssignableTo( typeof( Component ) ) )
+		if (!type.TargetType.IsAssignableTo(typeof(Component)))
 			return null;
 
 		using var batch = CallbackBatch.Batch();
 
 		var t = type.Create<Component>();
 		t.GameObject = go;
-		_list.Add( t );
+		_list.Add(t);
 
 		t.Enabled = startEnabled;
-		go.OnComponentAdded( t );
+		go.OnComponentAdded(t);
 
 		return t;
 	}
@@ -115,17 +117,25 @@ public class ComponentList
 	/// <summary>
 	/// Add a component of this type
 	/// </summary>
-	public T Create<T>( bool startEnabled = true ) where T : Component, new()
+	public T Create<T>(bool startEnabled = true)
+		where T : IBlowoutGameSystem, new()
 	{
 		using var batch = CallbackBatch.Batch();
 		var t = new T();
 
-		t.GameObject = go;
-		_list.Add( t );
+		_list.Add(t);
 
-		t.InitializeComponent();
-		t.Enabled = startEnabled;
-		go.OnComponentAdded( t );
+		if (t is Component sandboxComponent)
+		{
+			sandboxComponent.GameObject = go;
+			sandboxComponent.InitializeComponent();
+			sandboxComponent.Enabled = startEnabled;
+			go.OnComponentAdded(sandboxComponent);
+		}
+		else
+		{
+			t.IsExecuting = startEnabled;
+		}
 
 		return t;
 	}
@@ -133,20 +143,20 @@ public class ComponentList
 	/// <summary>
 	/// Add a component of this type
 	/// </summary>
-	internal Component Create( Type type, bool startEnabled = true )
+	internal Component Create(Type type, bool startEnabled = true)
 	{
-		if ( !type.IsAssignableTo( typeof( Component ) ) )
+		if (!type.IsAssignableTo(typeof(Component)))
 			return null;
 
 		using var batch = CallbackBatch.Batch();
-		var t = (Component)Activator.CreateInstance( type );
+		var t = (Component)Activator.CreateInstance(type);
 
 		t.GameObject = go;
-		_list.Add( t );
+		_list.Add(t);
 
 		t.InitializeComponent();
 		t.Enabled = startEnabled;
-		go.OnComponentAdded( t );
+		go.OnComponentAdded(t);
 
 		return t;
 	}
@@ -154,76 +164,78 @@ public class ComponentList
 	/// <summary>
 	/// Get a component of this type
 	/// </summary>
-	public T Get<T>( FindMode search )
+	public T Get<T>(FindMode search)
+		where T : IBlowoutGameSystem
 	{
-		return GetAll<T>( search ).FirstOrDefault();
+		return GetAll<T>(search).FirstOrDefault();
 	}
 
 	/// <summary>
 	/// Get a component of this type
 	/// </summary>
-	public Component Get( Type type, FindMode find = FindMode.EnabledInSelf )
+	public Component Get(Type type, FindMode find = FindMode.EnabledInSelf)
 	{
-		return GetAll( type, find ).FirstOrDefault();
+		return GetAll(type, find).FirstOrDefault();
 	}
 
 	/// <summary>
 	/// Get all components of this type
 	/// </summary>
-	public IEnumerable<Component> GetAll( Type type, FindMode find )
+	public IEnumerable<Component> GetAll(Type type, FindMode find)
 	{
-		return GetAll<Component>( find ).Where( x => x.GetType().IsAssignableTo( type ) );
+		return GetAll<Component>(find).Where(x => x.GetType().IsAssignableTo(type));
 	}
 
 	/// <summary>
 	/// Get all components
 	/// </summary>
-	public IEnumerable<Component> GetAll( FindMode find ) => GetAll<Component>( find );
+	public IEnumerable<Component> GetAll(FindMode find) => GetAll<Component>(find);
 
 	/// <summary>
 	/// Get a list of components on this game object, optionally recurse when deep is true
 	/// </summary>
-	public IEnumerable<T> GetAll<T>( FindMode find = FindMode.InSelf | FindMode.Enabled | FindMode.InDescendants )
+	public IEnumerable<T> GetAll<T>(FindMode find = FindMode.InSelf | FindMode.Enabled | FindMode.InDescendants)
+		where T : IBlowoutGameSystem
 	{
-		if ( go.IsDestroyed ) return Enumerable.Empty<T>();
+		if (go.IsDestroyed) return Enumerable.Empty<T>();
 
-		var results = new List<T>( 16 );
+		var results = new List<T>(16);
 
-		CollectAll( results, find );
+		CollectAll(results, find);
 
 		return results;
 	}
 
 	// This is an incredibly hot code path, even the slightest change should be verified with benchmarks.
-	private void CollectAll<T>( List<T> results, FindMode find )
+	private void CollectAll<T>(List<T> results, FindMode find)
 	{
-		bool enabledOnly = find.Contains( FindMode.Enabled );
-		bool disabledOnly = find.Contains( FindMode.Disabled );
+		bool enabledOnly = find.Contains(FindMode.Enabled);
+		bool disabledOnly = find.Contains(FindMode.Disabled);
 
-		if ( enabledOnly == disabledOnly )
+		if (enabledOnly == disabledOnly)
 		{
 			enabledOnly = false;
 			disabledOnly = false;
 		}
 
-		if ( enabledOnly && !go.Enabled ) return;
+		if (enabledOnly && !go.Enabled) return;
 
 		//
 		// Find in self
 		//
-		if ( find.Contains( FindMode.InSelf ) )
+		if (find.Contains(FindMode.InSelf))
 		{
-			for ( int i = 0; i < _list.Count; i++ )
+			for (int i = 0; i < _list.Count; i++)
 			{
 				var component = _list[i];
-				if ( component is null ) continue;
+				if (component is null) continue;
 
-				if ( enabledOnly && !component.Active ) continue;
-				if ( disabledOnly && component.Active ) continue;
+				if (enabledOnly && !component.IsActive) continue;
+				if (disabledOnly && component.IsActive) continue;
 
-				if ( component is T c )
+				if (component is T c)
 				{
-					results.Add( c );
+					results.Add(c);
 				}
 			}
 		}
@@ -231,24 +243,24 @@ public class ComponentList
 		//
 		// Find in children
 		//
-		if ( find.Contains( FindMode.InChildren ) || find.Contains( FindMode.InDescendants ) )
+		if (find.Contains(FindMode.InChildren) || find.Contains(FindMode.InDescendants))
 		{
 			var childFlags = find | FindMode.InSelf;
 			childFlags &= ~FindMode.InParent;
 			childFlags &= ~FindMode.InAncestors;
 
 			// If we're not searching all descendants then remove the InChildren flag
-			if ( !find.Contains( FindMode.InDescendants ) )
+			if (!find.Contains(FindMode.InDescendants))
 			{
 				childFlags &= ~FindMode.InChildren;
 			}
 
-			for ( int i = 0; i < go.Children.Count; i++ )
+			for (int i = 0; i < go.Children.Count; i++)
 			{
 				var child = go.Children[i];
-				if ( child.IsValid() )
+				if (child.IsValid())
 				{
-					child.Components.CollectAll( results, childFlags );
+					child.Components.CollectAll(results, childFlags);
 				}
 			}
 		}
@@ -256,98 +268,98 @@ public class ComponentList
 		//
 		// Find in parent
 		//
-		if ( find.Contains( FindMode.InParent ) || find.Contains( FindMode.InAncestors ) )
+		if (find.Contains(FindMode.InParent) || find.Contains(FindMode.InAncestors))
 		{
 			var parentFlags = find | FindMode.InSelf;
 			parentFlags &= ~FindMode.InChildren;
 			parentFlags &= ~FindMode.InDescendants;
 
 			// If we're not searching all ancestors then remove the InParent flag
-			if ( !find.Contains( FindMode.InAncestors ) )
+			if (!find.Contains(FindMode.InAncestors))
 			{
 				parentFlags &= ~FindMode.InParent;
 			}
 
-			if ( go.Parent is not null && go.Parent is PrefabScene or not Scene )
+			if (go.Parent is not null && go.Parent is PrefabScene or not Scene)
 			{
-				go.Parent.Components.CollectAll( results, parentFlags );
+				go.Parent.Components.CollectAll(results, parentFlags);
 			}
 		}
 	}
 
-	internal void Execute<T>( Action<T> action, FindMode find = FindMode.EnabledInSelfAndDescendants )
+	internal void Execute<T>(Action<T> action, FindMode find = FindMode.EnabledInSelfAndDescendants)
 	{
-		switch ( find )
+		switch (find)
 		{
 			// Most common case has a fast path
 			case FindMode.EnabledInSelfAndDescendants:
-				ExecuteEnabledInSelfAndDescendants( action );
+				ExecuteEnabledInSelfAndDescendants(action);
 				break;
 			default:
-				ExecuteGeneric( action, find );
+				ExecuteGeneric(action, find);
 				break;
 		}
 	}
 
 	// Calling this directly is faster than going through Execute
-	internal void ExecuteEnabledInSelfAndDescendants<T>( Action<T> action )
+	internal void ExecuteEnabledInSelfAndDescendants<T>(Action<T> action)
 	{
-		if ( !go.IsValid() || !go.Enabled )
+		if (!go.IsValid() || !go.Enabled)
 			return;
 
 		// Check components on this GameObject
-		for ( int i = 0; i < _list.Count; i++ )
+		for (int i = 0; i < _list.Count; i++)
 		{
 			var component = _list[i];
-			if ( component is null ) continue;
+			if (component is null) continue;
 
-			if ( component is T target && component.Active )
+			if (component is T target && component.IsActive)
 			{
-				action.Invoke( target );
+				action.Invoke(target);
 			}
 		}
 		// Recurse to children
-		for ( int i = go.Children.Count - 1; i >= 0; i-- )
+		for (int i = go.Children.Count - 1; i >= 0; i--)
 		{
-			if ( i >= go.Children.Count )
+			if (i >= go.Children.Count)
 				continue;
 
 			var child = go.Children[i];
-			if ( !child.IsValid() ) continue;
+			if (!child.IsValid()) continue;
 
-			child.Components.ExecuteEnabledInSelfAndDescendants( action );
+			child.Components.ExecuteEnabledInSelfAndDescendants(action);
 		}
 	}
 
-	private void ExecuteGeneric<T>( Action<T> action, FindMode find = FindMode.EnabledInSelfAndDescendants )
+	private void ExecuteGeneric<T>(Action<T> action, FindMode find = FindMode.EnabledInSelfAndDescendants)
 	{
-		bool enabledOnly = find.Contains( FindMode.Enabled );
-		bool disabledOnly = find.Contains( FindMode.Disabled );
+		bool enabledOnly = find.Contains(FindMode.Enabled);
+		bool disabledOnly = find.Contains(FindMode.Disabled);
 
-		if ( enabledOnly == disabledOnly )
+		if (enabledOnly == disabledOnly)
 		{
 			enabledOnly = false;
 			disabledOnly = false;
 		}
 
-		if ( enabledOnly && !go.Enabled ) return;
+		if (enabledOnly && !go.Enabled) return;
 
 		//
 		// Execute in self
 		//
-		if ( find.Contains( FindMode.InSelf ) )
+		if (find.Contains(FindMode.InSelf))
 		{
-			for ( int i = 0; i < _list.Count; i++ )
+			for (int i = 0; i < _list.Count; i++)
 			{
 				var component = _list[i];
-				if ( component is null ) continue;
+				if (component is null) continue;
 
-				if ( enabledOnly && !component.Active ) continue;
-				if ( disabledOnly && component.Active ) continue;
+				if (enabledOnly && !component.IsActive) continue;
+				if (disabledOnly && component.IsActive) continue;
 
-				if ( component is T target )
+				if (component is T target)
 				{
-					action.Invoke( target );
+					action.Invoke(target);
 				}
 			}
 		}
@@ -355,24 +367,24 @@ public class ComponentList
 		//
 		// Execute in children
 		//
-		if ( find.Contains( FindMode.InChildren ) || find.Contains( FindMode.InDescendants ) )
+		if (find.Contains(FindMode.InChildren) || find.Contains(FindMode.InDescendants))
 		{
 			var childFlags = find | FindMode.InSelf;
 			childFlags &= ~FindMode.InParent;
 			childFlags &= ~FindMode.InAncestors;
 
 			// If we're not searching all descendants then remove the InChildren flag
-			if ( !find.Contains( FindMode.InDescendants ) )
+			if (!find.Contains(FindMode.InDescendants))
 			{
 				childFlags &= ~FindMode.InChildren;
 			}
 
-			for ( int i = 0; i < go.Children.Count; i++ )
+			for (int i = 0; i < go.Children.Count; i++)
 			{
 				var child = go.Children[i];
-				if ( child.IsValid() )
+				if (child.IsValid())
 				{
-					child.Components.Execute( action, childFlags );
+					child.Components.Execute(action, childFlags);
 				}
 			}
 		}
@@ -380,21 +392,21 @@ public class ComponentList
 		//
 		// Execute in parent
 		//
-		if ( find.Contains( FindMode.InParent ) || find.Contains( FindMode.InAncestors ) )
+		if (find.Contains(FindMode.InParent) || find.Contains(FindMode.InAncestors))
 		{
 			var parentFlags = find | FindMode.InSelf;
 			parentFlags &= ~FindMode.InChildren;
 			parentFlags &= ~FindMode.InDescendants;
 
 			// If we're not searching all ancestors then remove the InParent flag
-			if ( !find.Contains( FindMode.InAncestors ) )
+			if (!find.Contains(FindMode.InAncestors))
 			{
 				parentFlags &= ~FindMode.InParent;
 			}
 
-			if ( go.Parent is not null && go.Parent is PrefabScene or not Scene )
+			if (go.Parent is not null && go.Parent is PrefabScene or not Scene)
 			{
-				go.Parent.Components.Execute( action, parentFlags );
+				go.Parent.Components.Execute(action, parentFlags);
 			}
 		}
 	}
@@ -402,9 +414,10 @@ public class ComponentList
 	/// <summary>
 	/// Try to get this component
 	/// </summary>
-	public bool TryGet<T>( out T component, FindMode search = FindMode.EnabledInSelf )
+	public bool TryGet<T>(out T component, FindMode search = FindMode.EnabledInSelf)
+		where T : IBlowoutGameSystem
 	{
-		component = Get<T>( search );
+		component = Get<T>(search);
 
 		return component is not null;
 	}
@@ -412,90 +425,95 @@ public class ComponentList
 	/// <summary>
 	/// Allows linq style queries
 	/// </summary>
-	public Component FirstOrDefault( Func<Component, bool> value ) => _list.FirstOrDefault( value );
+	public IBlowoutGameSystem FirstOrDefault(Func<IBlowoutGameSystem, bool> value) => _list.FirstOrDefault(value);
 
 	/// <summary>
 	/// Amount of components - including disabled
 	/// </summary>
 	public int Count => _list.Count;
 
-	public void ForEach<T>( string name, bool includeDisabled, Action<T> action )
+	public void ForEach<T>(string name, bool includeDisabled, Action<T> action)
 	{
-		if ( !includeDisabled && !go.Active )
+		if (!includeDisabled && !go.Active)
 			return;
 
-		for ( int i = _list.Count - 1; i >= 0 && i < _list.Count; i-- )
+		for (int i = _list.Count - 1; i >= 0 && i < _list.Count; i--)
 		{
-			Component c = _list[i];
+			IBlowoutGameSystem c = _list[i];
 
-			if ( c is null )
+			if (c is null)
 			{
-				_list.RemoveAt( i );
+				_list.RemoveAt(i);
 				continue;
 			}
 
-			if ( !includeDisabled && !c.Active )
+			if (!includeDisabled && !c.IsActive)
 				continue;
 
-			if ( c is not T t )
+			if (c is not T t)
 				continue;
 
 			try
 			{
-				action( t );
+				action(t);
 			}
-			catch ( System.Exception e )
+			catch (System.Exception e)
 			{
-				Log.Warning( e, $"Exception when calling {name} on {c}: {e.Message}" );
+				Log.Warning(e, $"Exception when calling {name} on {c}: {e.Message}");
 			}
 		}
 	}
 
-	public void ForEach( string name, bool includeDisabled, Action<Component> action ) => ForEach<Component>( name, includeDisabled, action );
+	public void ForEach(string name, bool includeDisabled, Action<Component> action) => ForEach<Component>(name, includeDisabled, action);
 
 	internal void RemoveNull()
 	{
-		_list.RemoveAll( x => x is null );
+		_list.RemoveAll(x => x is null);
 	}
 
-	internal void OnDestroyedInternal( Component baseComponent )
+	internal bool RemoveGameSystem(IBlowoutGameSystem gameSystem)
 	{
-		if ( _list.Remove( baseComponent ) )
+		return _list.RemoveAll(x => x == gameSystem) > 0;
+	}
+
+	internal void OnDestroyedInternal(Component baseComponent)
+	{
+		if (_list.Remove(baseComponent))
 		{
-			go.OnComponentRemoved( baseComponent );
+			go.OnComponentRemoved(baseComponent);
 		}
 	}
 
-	internal int IndexOf( Component baseComponent )
+	internal int IndexOf(Component baseComponent)
 	{
-		return _list.IndexOf( baseComponent );
+		return _list.IndexOf(baseComponent);
 	}
 
 	/// <summary>
 	/// Move the position of the component in the list by delta (-1 means up one, 1 means down one)
 	/// </summary>
-	public void Move( Component baseComponent, int delta )
+	public void Move(Component baseComponent, int delta)
 	{
-		var i = _list.IndexOf( baseComponent );
-		if ( i < 0 ) return;
+		var i = _list.IndexOf(baseComponent);
+		if (i < 0) return;
 
 		i += delta;
 
-		if ( i < 0 ) i = 0;
-		if ( i >= _list.Count ) i = _list.Count - 1;
+		if (i < 0) i = 0;
+		if (i >= _list.Count) i = _list.Count - 1;
 
 		// Move the element
-		_list.RemoveAt( _list.IndexOf( baseComponent ) );
-		_list.Insert( i, baseComponent );
+		_list.RemoveAt(_list.IndexOf(baseComponent));
+		_list.Insert(i, baseComponent);
 	}
 
 	/// <summary>
 	/// Move the component to a specific index in the list.
 	/// If a component is already at that index, it will be swapped with the component being moved.
 	/// </summary>
-	internal void MoveToIndex( Component comp, int targetIndex )
+	internal void MoveToIndex(Component comp, int targetIndex)
 	{
-		var compIndex = _list.IndexOf( comp );
+		var compIndex = _list.IndexOf(comp);
 
 		_list[compIndex] = _list[targetIndex];
 		_list[targetIndex] = comp;
@@ -508,20 +526,21 @@ public class ComponentList
 	/// <summary>
 	/// Find component on this gameobject
 	/// </summary>
-	public T Get<T>( bool includeDisabled = false )
+	public T Get<T>(bool includeDisabled = false)
+		where T : IBlowoutGameSystem
 	{
 		var f = FindMode.InSelf;
-		if ( !includeDisabled ) f |= FindMode.Enabled;
+		if (!includeDisabled) f |= FindMode.Enabled;
 
-		return Get<T>( f );
+		return Get<T>(f);
 	}
 
 	/// <summary>
 	/// Find this component, if it doesn't exist - create it.
 	/// </summary>
-	public T GetOrCreate<T>( FindMode flags = FindMode.EverythingInSelf ) where T : Component, new()
+	public T GetOrCreate<T>(FindMode flags = FindMode.EverythingInSelf) where T : IBlowoutGameSystem, new()
 	{
-		if ( TryGet<T>( out var component, flags ) )
+		if (TryGet<T>(out var component, flags))
 			return component;
 
 		return Create<T>();
@@ -530,108 +549,116 @@ public class ComponentList
 	/// <summary>
 	/// Find component on this gameobject's ancestors or on self
 	/// </summary>
-	public T GetInAncestorsOrSelf<T>( bool includeDisabled = false )
+	public T GetInAncestorsOrSelf<T>(bool includeDisabled = false)
+		where T : IBlowoutGameSystem
 	{
 		var f = FindMode.InSelf | FindMode.InAncestors;
-		if ( !includeDisabled ) f |= FindMode.Enabled;
+		if (!includeDisabled) f |= FindMode.Enabled;
 
-		return Get<T>( f );
+		return Get<T>(f);
 	}
 
 	/// <summary>
 	/// Find component on this gameobject's ancestors
 	/// </summary>
-	public T GetInAncestors<T>( bool includeDisabled = false )
+	public T GetInAncestors<T>(bool includeDisabled = false)
+		where T : IBlowoutGameSystem
 	{
 		var f = FindMode.InAncestors;
-		if ( !includeDisabled ) f |= FindMode.Enabled;
+		if (!includeDisabled) f |= FindMode.Enabled;
 
-		return Get<T>( f );
+		return Get<T>(f);
 	}
 
 	/// <summary>
 	/// Find component on this gameobject's decendants or on self
 	/// </summary>
-	public T GetInDescendantsOrSelf<T>( bool includeDisabled = false )
+	public T GetInDescendantsOrSelf<T>(bool includeDisabled = false)
+		where T : IBlowoutGameSystem
 	{
 		var f = FindMode.InSelf | FindMode.InDescendants;
-		if ( !includeDisabled ) f |= FindMode.Enabled;
+		if (!includeDisabled) f |= FindMode.Enabled;
 
-		return Get<T>( f );
+		return Get<T>(f);
 	}
 
 	/// <summary>
 	/// Find component on this gameobject's decendants
 	/// </summary>
-	public T GetInDescendants<T>( bool includeDisabled = false )
+	public T GetInDescendants<T>(bool includeDisabled = false)
+		where T : IBlowoutGameSystem
 	{
 		var f = FindMode.InDescendants;
-		if ( !includeDisabled ) f |= FindMode.Enabled;
+		if (!includeDisabled) f |= FindMode.Enabled;
 
-		return Get<T>( f );
+		return Get<T>(f);
 	}
 
 	/// <summary>
 	/// Find component on this gameobject's immediate children or on self
 	/// </summary>
-	public T GetInChildrenOrSelf<T>( bool includeDisabled = false )
+	public T GetInChildrenOrSelf<T>(bool includeDisabled = false)
+		where T : IBlowoutGameSystem
 	{
 		var f = FindMode.InSelf | FindMode.InChildren;
-		if ( !includeDisabled ) f |= FindMode.Enabled;
+		if (!includeDisabled) f |= FindMode.Enabled;
 
-		return Get<T>( f );
+		return Get<T>(f);
 	}
 
 	/// <summary>
 	/// Find component on this gameobject's immediate children
 	/// </summary>
-	public T GetInChildren<T>( bool includeDisabled = false )
+	public T GetInChildren<T>(bool includeDisabled = false)
+		where T : IBlowoutGameSystem
 	{
 		var f = FindMode.InChildren;
-		if ( !includeDisabled ) f |= FindMode.Enabled;
+		if (!includeDisabled) f |= FindMode.Enabled;
 
-		return Get<T>( f );
+		return Get<T>(f);
 	}
 
 	/// <summary>
 	/// Find component on this gameobject's parent or on self
 	/// </summary>
-	public T GetInParentOrSelf<T>( bool includeDisabled = false )
+	public T GetInParentOrSelf<T>(bool includeDisabled = false)
+		where T : IBlowoutGameSystem
 	{
 		var f = FindMode.InSelf | FindMode.InParent;
-		if ( !includeDisabled ) f |= FindMode.Enabled;
+		if (!includeDisabled) f |= FindMode.Enabled;
 
-		return Get<T>( f );
+		return Get<T>(f);
 	}
 
 	/// <summary>
 	/// Find component on this gameobject's parent
 	/// </summary>
-	public T GetInParent<T>( bool includeDisabled = false )
+	public T GetInParent<T>(bool includeDisabled = false)
+		where T : IBlowoutGameSystem
 	{
 		var f = FindMode.InParent;
-		if ( !includeDisabled ) f |= FindMode.Enabled;
+		if (!includeDisabled) f |= FindMode.Enabled;
 
-		return Get<T>( f );
+		return Get<T>(f);
 	}
 
 	/// <summary>
 	/// Find component on this gameobject with the specified id
 	/// </summary>
-	public Component Get( Guid id )
+	public Component Get(Guid id)
 	{
-		return GetAll().FirstOrDefault( x => x.Id.Equals( id ) );
+		return GetAll().FirstOrDefault(x => x.Id.Equals(id));
 	}
 
 	/// <summary>
 	/// Adds a special component that will keep information about a missing component.
 	/// This component just holds the raw json of this component.
 	/// </summary>
-	internal void AddMissing( MissingComponent missing )
+	internal void AddMissing(MissingComponent missing)
 	{
 		missing.GameObject = go;
-		_list.Add( missing );
-		go.OnComponentAdded( missing );
+		_list.Add(missing);
+		go.OnComponentAdded(missing);
 	}
 }
 
@@ -639,40 +666,43 @@ public class ComponentList
 /// Interface for types that reference a <see cref="ComponentList"/>, to provide
 /// convenience method for accessing that list.
 /// </summary>
-[Expose, Title( "Component List" ), Icon( "apps" )]
+[Expose, Title("Component List"), Icon("apps")]
 public interface IComponentLister
 {
 	[ActionGraphIgnore]
 	ComponentList Components { get; }
 
-	[Title( "Create {T|Component}" )]
-	public T Create<T>( bool startEnabled = true ) where T : Component, new()
+	[Title("Create {T|Component}")]
+	public T Create<T>(bool startEnabled = true) where T : Component, new()
 	{
-		return Components.Create<T>( startEnabled );
+		return Components.Create<T>(startEnabled);
 	}
 
-	[Pure, Title( "Get {T|Component}" )]
-	public T Get<[HasImplementation( typeof( Component ) )] T>( FindMode search = FindMode.EnabledInSelf )
+	[Pure, Title("Get {T|Component}")]
+	public T Get<[HasImplementation(typeof(Component))] T>(FindMode search = FindMode.EnabledInSelf)
+		where T : IBlowoutGameSystem
 	{
-		return Components.GetAll<T>( search ).FirstOrDefault();
+		return Components.GetAll<T>(search).FirstOrDefault();
 	}
 
-	[Pure, Title( "Try Get {T|Component}" )]
-	public bool TryGet<[HasImplementation( typeof( Component ) )] T>( out T component,
-		FindMode search = FindMode.EnabledInSelf )
+	[Pure, Title("Try Get {T|Component}")]
+	public bool TryGet<[HasImplementation(typeof(Component))] T>(out T component,
+		FindMode search = FindMode.EnabledInSelf)
+		where T : IBlowoutGameSystem
 	{
-		return Components.TryGet( out component, search );
+		return Components.TryGet(out component, search);
 	}
 
-	[Pure, Title( "Get All {T|Component}" )]
-	public IEnumerable<T> GetAll<[HasImplementation( typeof( Component ) )] T>( FindMode search = FindMode.EnabledInSelf )
+	[Pure, Title("Get All {T|Component}")]
+	public IEnumerable<T> GetAll<[HasImplementation(typeof(Component))] T>(FindMode search = FindMode.EnabledInSelf)
+		where T : IBlowoutGameSystem
 	{
-		return Components.GetAll<T>( search );
+		return Components.GetAll<T>(search);
 	}
 
-	[Title( "Get or Create {T|Component}" )]
-	public T GetOrCreate<T>( FindMode flags = FindMode.EverythingInSelf ) where T : Component, new()
+	[Title("Get or Create {T|Component}")]
+	public T GetOrCreate<T>(FindMode flags = FindMode.EverythingInSelf) where T : IBlowoutGameSystem, new()
 	{
-		return Components.GetOrCreate<T>( flags );
+		return Components.GetOrCreate<T>(flags);
 	}
 }

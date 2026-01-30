@@ -1,4 +1,9 @@
-﻿using Sandbox.Internal;
+﻿using BlowoutTeamSoft.Engine;
+using BlowoutTeamSoft.Engine.Core;
+using BlowoutTeamSoft.Engine.Enums;
+using BlowoutTeamSoft.Engine.Interfaces;
+using Sandbox.Engine.Extensions;
+using Sandbox.Internal;
 using Sandbox.Utility;
 using System.Runtime.CompilerServices;
 using System.Threading;
@@ -9,7 +14,7 @@ namespace Sandbox;
 /// A GameObject can have many components, which are the building blocks of the game.
 /// </summary>
 [Expose, ActionGraphIgnore, ActionGraphExposeWhenCached, Icon( "category" )]
-public abstract partial class Component : IJsonConvert, IComponentLister, IValid
+public abstract partial class Component : IJsonConvert, IComponentLister, IValid, IBlowoutGameSystem
 {
 	/// <summary>
 	/// The scene this Component is in. This is a shortcut for `GameObject.Scene`.
@@ -24,11 +29,27 @@ public abstract partial class Component : IJsonConvert, IComponentLister, IValid
 	[ActionGraphInclude]
 	public GameTransform Transform => GameObject?.Transform;
 
+	public CancellationToken AliveToken => GameObject?.EnabledToken ?? new CancellationToken(true);
+
+	public bool IsAliveSystem => IsValid;
+
+	public bool IsActive => Active;
+
+	public BlowoutEngineGameObject SystemGameObject => GameObject;
+
 	/// <summary>
 	/// The GameObject this component belongs to.
 	/// </summary>
 	[ActionGraphInclude]
 	public GameObject GameObject { get; internal set; }
+
+	public bool IsExecuting { get => Enabled; set => Enabled = value; }
+
+	public BlowoutSystemMode SystemMode
+	{
+		get => Flags.ToSystemMode();
+		set => Flags = value.ToSourceComponentFlags();
+	}
 
 	/// <summary>
 	/// Allow creating tasks that are automatically cancelled when the GameObject is destroyed.
@@ -53,6 +74,9 @@ public abstract partial class Component : IJsonConvert, IComponentLister, IValid
 
 		SceneMetrics.ComponentsCreated++;
 		_isInitialized = true;
+
+		_lateTickable = this as IBlowoutLateTickable;
+		_tickable = this as IBlowoutTickable;
 
 		if ( !GameObject.Flags.Contains( GameObjectFlags.Deserializing ) )
 			CheckRequireComponent();
@@ -155,6 +179,8 @@ public abstract partial class Component : IJsonConvert, IComponentLister, IValid
 		using ( GameTransform.DisableInterpolation() )
 		{
 			OnAwake();
+			if (this is IBlowoutGameSystemLifecycle lifecycle)
+				lifecycle.Awaked();
 		}
 	}
 
@@ -169,6 +195,8 @@ public abstract partial class Component : IJsonConvert, IComponentLister, IValid
 		{
 			_onEnabled = true;
 			OnEnabled();
+			if (this is IBlowoutGameSystemLifecycle lifecycle)
+				lifecycle.Enabled();
 			OnComponentEnabled?.Invoke();
 		}
 	}
@@ -189,12 +217,16 @@ public abstract partial class Component : IJsonConvert, IComponentLister, IValid
 		{
 			_onEnabled = false;
 			OnDisabled();
+			if (this is IBlowoutGameSystemLifecycle lifecycle)
+				lifecycle.Disabled();
 			OnComponentDisabled?.Invoke();
 		}
 	}
 
 	internal virtual void OnDestroyInternal()
 	{
+		if (this is IBlowoutGameSystemLifecycle lifecycle)
+			ExceptionWrap("BlowoutDestroyed", lifecycle.Destroyed);
 		ExceptionWrap( "OnDestroy", OnDestroy );
 		ExceptionWrap( "OnDestroy", OnComponentDestroy );
 
@@ -267,7 +299,6 @@ public abstract partial class Component : IJsonConvert, IComponentLister, IValid
 		var state = _enabled && Scene is not null && GameObject is not null && GameObject.Active;
 		if ( state == _enabledState ) return;
 
-		_enabledState = state;
 
 		if ( _enabledState )
 		{
@@ -476,7 +507,7 @@ public abstract partial class Component : IJsonConvert, IComponentLister, IValid
 	/// </summary>
 	public DebugOverlaySystem DebugOverlay => GameObject?.DebugOverlay;
 
-
+	BlowoutEngineGameObject IBlowoutGameSystem.GameObject => GameObject;
 
 	internal void OnParentDestroyInternal()
 	{

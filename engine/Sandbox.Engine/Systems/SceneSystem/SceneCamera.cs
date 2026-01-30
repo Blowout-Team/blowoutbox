@@ -24,6 +24,8 @@ public sealed partial class SceneCamera : IDisposable, IManagedCamera
 
 	internal Matrix ProjectionMatrix => Frustum.GetProj();
 
+	internal Matrix ViewMatrix => Frustum.GetViewProj();
+
 	public RenderAttributes Attributes { get; }
 
 	/// <summary>

@@ -1,4 +1,6 @@
 ﻿
+using BlowoutTeamSoft.Engine.Interfaces.Rendering;
+using BlowoutTeamSoft.Engine.Render;
 using Sandbox.Rendering;
 using System.Drawing;
 using System.Text.Json.Serialization;
@@ -13,7 +15,7 @@ namespace Sandbox;
 [Category( "Camera" )]
 [Icon( "videocam" )]
 [EditorHandle( "materials/gizmo/camera.png" )]
-public sealed partial class CameraComponent : Component, Component.ExecuteInEditor, Component.ISceneStage
+public sealed partial class CameraComponent : Component, Component.ExecuteInEditor, Component.ISceneStage, IBlowoutCamera
 {
 	SceneCamera sceneCamera;
 
@@ -234,7 +236,7 @@ public sealed partial class CameraComponent : Component, Component.ExecuteInEdit
 		Scene.Cameras.Add( this );
 	}
 
-	protected override void OnDestroy()
+	protected override void _OnDestroy()
 	{
 		Scene.Cameras.Remove( this );
 		sceneCamera?.Dispose();
@@ -697,6 +699,34 @@ public sealed partial class CameraComponent : Component, Component.ExecuteInEdit
 	/// </summary>
 	public Matrix ProjectionMatrix => sceneCamera.ProjectionMatrix;
 
+	public float Aspect
+	{
+		get
+		{
+			if(CustomSize == null)
+			{
+				return Screen.Size.x / Screen.Size.y;
+			}
+
+			return CustomSize.Value.x / CustomSize.Value.y;
+		}
+		set => CustomSize = new Vector2(value, 1f);
+	}
+
+	public Index TargetIndex
+	{
+		get => Priority;
+		set => Priority = value.Value;
+	}
+
+	public BlowoutCameraHandle Handle => new BlowoutCameraHandle(Id.Version);
+
+	System.Numerics.Matrix4x4 IBlowoutCamera.ProjectionMatrix =>
+		ProjectionMatrix;
+
+	public System.Numerics.Matrix4x4 WorldCameraMatrix =>
+		sceneCamera.ViewMatrix;
+
 	/// <summary>
 	/// Calculates a projection matrix with an oblique clip-plane defined in world space.
 	/// </summary>
@@ -739,6 +769,25 @@ public sealed partial class CameraComponent : Component, Component.ExecuteInEdit
 		/// </summary>
 		[Icon( "panorama_vertical" )]
 		Vertical
+	}
+
+	public System.Numerics.Vector3 WorldToViewportPoint(System.Numerics.Vector3 point)
+	{
+		var sr = ScreenRect;
+		var v = sceneCamera.ToScreen(point);
+		var result = new Vector2(v.x, v.y) * sr.Size;
+
+		return new System.Numerics.Vector3(result.x, result.y, 0f);
+	}
+
+	public System.Numerics.Vector3 WorldToScreenPoint(System.Numerics.Vector3 point)
+	{
+		var size = new Vector3(ScreenRect.Size.x, ScreenRect.Size.y);
+		var v = sceneCamera.ToScreenWithDirection(point);
+
+		var result = v * size;
+
+		return result;
 	}
 
 	/// <summary>

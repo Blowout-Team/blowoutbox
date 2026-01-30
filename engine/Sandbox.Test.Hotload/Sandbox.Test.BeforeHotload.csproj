@@ -14,13 +14,22 @@
     <RootNamespace>Sandbox.TestAssembly</RootNamespace>
 	<IsPublishable>false</IsPublishable>
     <IsPackable>false</IsPackable>
+    <Configurations>Debug;Release;Blowout_Source2_Debug;Blowout_Source2_Release</Configurations>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
     <DefineConstants>TRACE;TEST_BEFORE</DefineConstants>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Blowout_Source2_Debug|AnyCPU'">
+    <DefineConstants>TRACE;TEST_BEFORE</DefineConstants>
+  </PropertyGroup>
+
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <DefineConstants>TRACE;TEST_BEFORE</DefineConstants>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Blowout_Source2_Release|AnyCPU'">
     <DefineConstants>TRACE;TEST_BEFORE</DefineConstants>
   </PropertyGroup>
 

@@ -39,7 +39,7 @@ public sealed class ActionsInvoker : Component
 
 	[Property] public Action OnDestroyAction { get; set; }
 
-	protected override void OnDestroy()
+	protected override void _OnDestroy()
 	{
 		OnDestroyAction?.InvokeWithWarning();
 	}
@@ -136,7 +136,7 @@ public class FixedUpdateActionComponent : SimpleActionComponent
 [Title( "Destroy" ), Group( "Actions" ), Icon( "delete" )]
 public class DestroyActionComponent : SimpleActionComponent
 {
-	protected override void OnDestroy()
+	protected override void _OnDestroy()
 	{
 		Action?.Invoke();
 	}

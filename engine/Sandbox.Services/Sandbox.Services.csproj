@@ -9,6 +9,7 @@
 		<Version>1.0.6</Version>
 		<Authors>facepunch, garry</Authors>
 		<Company>facepunch</Company>
+		<Configurations>Debug;Release;Blowout_Source2_Debug;Blowout_Source2_Release</Configurations>
 	</PropertyGroup>
 
 	<ItemGroup>
