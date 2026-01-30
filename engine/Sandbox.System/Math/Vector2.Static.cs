@@ -1,5 +1,6 @@
 ﻿using Sandbox;
 
+namespace Sandbox;
 public partial struct Vector2
 {
 	/// <summary>
