@@ -1,5 +1,7 @@
-﻿using Sandbox.Engine;
+﻿using BlowoutTeamSoft.Engine.Input;
+using Sandbox.Engine;
 using Sandbox.VR;
+using System.Numerics;
 
 namespace Sandbox;
 
@@ -63,6 +65,9 @@ public static partial class Input
 		set => _analogMove = value;
 	}
 
+	public static Action<BlowoutInputKey> OnAnyKey;
+	public static Action<BlowoutInputKey> OnAnyKeyOnce;
+
 
 	internal static void AddMouseMovement( Vector2 delta )
 	{
@@ -113,6 +118,23 @@ public static partial class Input
 
 		Actions = CurrentContext.ActionsCurrent;
 		LastActions = CurrentContext.ActionsPrevious;
+
+		if(Actions != LastActions)
+		{
+			// dehs: im not tested that shit yet.
+			ulong down = Actions & ~LastActions;
+
+			while(down != 0)
+			{
+				int index = BitOperations.TrailingZeroCount(down);
+				string actionName = GetActionFromnIndex(index);
+
+				OnAnyKey?.Invoke(new BlowoutInputKey(actionName, default, default));
+				OnAnyKeyOnce?.Invoke(new BlowoutInputKey(actionName, default, default));
+
+				OnAnyKeyOnce = default;
+			}
+		}
 
 		if ( Preferences.InvertMousePitch )
 			AnalogLook = AnalogLook.WithPitch( -AnalogLook.pitch );

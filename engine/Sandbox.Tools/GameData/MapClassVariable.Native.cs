@@ -1,4 +1,5 @@
-﻿using Native;
+﻿using BlowoutTeamSoft.Engine.Attributes;
+using Native;
 using System;
 using System.Reflection;
 using System.Text;
@@ -145,6 +146,12 @@ public partial class MapClassVariable
 		if ( gameRes != null )
 		{
 			return $"resource:{gameRes.Extension}";
+		}
+
+		var blowoutAsset = type.GetCustomAttribute<BlowoutAssetInstanceAttribute>();
+		if(blowoutAsset != null)
+		{
+			return $"blowout_asset:{blowoutAsset.Extension}";
 		}
 
 		Log.Warning( $"{this}: Missing type for: {(type.IsGenericType ? type.GetGenericTypeDefinition() : type.Name)}" );

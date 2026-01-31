@@ -1,7 +1,9 @@
 ﻿
+using BlowoutTeamSoft.Engine.Interfaces.Assets;
+
 namespace Sandbox;
 
-public abstract class AnimationSequence
+public abstract class AnimationSequence : IBlowoutAnimationData
 {
 	/// <summary>
 	/// The duration of the currently playing sequence (seconds)
@@ -43,4 +45,6 @@ public abstract class AnimationSequence
 	/// The list of sequences that can be used
 	/// </summary>
 	public abstract IReadOnlyList<string> SequenceNames { get; }
+
+	public TimeSpan DurationSpan => TimeSpan.FromSeconds(Duration);
 }

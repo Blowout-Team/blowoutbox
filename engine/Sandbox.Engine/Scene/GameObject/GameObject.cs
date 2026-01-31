@@ -146,7 +146,7 @@ public partial class GameObject : BlowoutEngineGameObject, IJsonConvert, ICompon
 	/// <summary>
 	/// Create a new GameObject with the given parent, enabled state and name.
 	/// </summary>
-	public GameObject(GameObject parent, bool enabled = true, string name = null) 
+	public GameObject(GameObject parent, bool enabled = true, string name = null)
 	{
 		Scene = this as Scene ?? parent?.Scene ?? Game.ActiveScene;
 		parent ??= Scene;

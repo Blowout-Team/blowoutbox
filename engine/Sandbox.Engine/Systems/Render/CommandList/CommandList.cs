@@ -1,15 +1,21 @@
+using BlowoutTeamSoft.Engine.Exceptions;
+using BlowoutTeamSoft.Engine.Interfaces.GPU;
+using BlowoutTeamSoft.Engine.Interfaces.Rendering;
 using System.Threading;
 
 namespace Sandbox.Rendering;
 
 
-public sealed unsafe partial class CommandList
+public sealed unsafe partial class CommandList : IBlowoutGPUDispatchCommand
 {
 	readonly Lock _lock = new Lock();
 
 	public string DebugName { get; set; }
 	public bool Enabled { get; set; }
 	public Flag Flags { get; set; }
+
+	internal Matrix? ViewMatrix { get; private set; }
+	internal Matrix? ProjectionMatrix { get; private set; }
 
 	public CommandList()
 	{
@@ -97,6 +103,46 @@ public sealed unsafe partial class CommandList
 	}
 
 	State state;
+
+	public void SetViewMatrix(System.Numerics.Matrix4x4 matrix)
+	{
+		ViewMatrix = matrix;
+	}
+
+	public void SetProjectionMatrix(System.Numerics.Matrix4x4 matrix)
+	{
+		ProjectionMatrix = matrix;
+	}
+
+	public void DrawRenderTarget(IBlowoutRenderer target, IBlowoutMaterial material, int meshIndex, int shaderPass)
+	{
+		if(target is Renderer renderer && material is Material sourceMaterial)
+		{
+			if(ViewMatrix != null)
+				DrawRenderer(renderer, new RendererSetup() { Material = sourceMaterial, Transform = ViewMatrix.Value.ExtractTransform() });
+			else
+				DrawRenderer(renderer, new RendererSetup() { Material = sourceMaterial });
+			return;
+		}
+		throw new BlowoutEngineException("it is not possible to render a target that is not an Engine Renderer Instance or a material that is not a Material Engine Instance");
+	}
+
+	public void SetTarget(IBlowoutRenderTexture gpuTexture)
+	{
+		if(gpuTexture is Texture texture)
+		{
+			SetRenderTarget(RenderTarget.From(texture));
+			return;
+		}
+
+		throw new BlowoutEngineException("it is not possible to set target that is not Texture Engine Instance");
+	}
+
+	public void Flush()
+	{
+		Reset();
+		RenderTarget.Flush();
+	}
 
 	public void Reset()
 	{

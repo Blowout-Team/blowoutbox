@@ -329,4 +329,19 @@ public partial class Scene : GameObject
 	{
 		return Directory.AllGameObjects.Where( x => x.Tags.Has( tag ) );
 	}
+
+	public IEnumerable<GameObject> FindAllWithName(ReadOnlySpan<char> name, StringComparison comparison = StringComparison.Ordinal)
+	{
+		foreach(var gameObject in Directory.AllGameObjects)
+		{
+			if (name.Equals(gameObject.Name, comparison))
+				yield return gameObject;
+		}
+	}
+
+	public IEnumerable<GameObject> FindAllWithName(string name, IEqualityComparer<string> comparer = null)
+	{
+		comparer ??= StringComparer.Ordinal;
+		return Directory.AllGameObjects.Where(x => comparer.Equals(x.Name, name));
+	}
 }

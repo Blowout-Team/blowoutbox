@@ -1,4 +1,5 @@
-﻿using System;
+﻿using BlowoutTeamSoft.Engine.Attributes;
+using System;
 using System.Diagnostics;
 using System.Reflection;
 
@@ -333,6 +334,16 @@ public class AssetType
 	internal static bool UpdateCustomTypes()
 	{
 		bool bChanged = false;
+		foreach (var t in EditorTypeLibrary.GetTypesWithAttribute<BlowoutAssetInstanceAttribute>())
+		{
+			bChanged = UpdateType(t.Type, new AssetTypeAttribute()
+			{
+				Category = t.Attribute.Category,
+				Extension = t.Attribute.Extension,
+				Name = t.Attribute.Name
+			}) || bChanged;
+		}
+
 		foreach ( var t in EditorTypeLibrary.GetTypesWithAttribute<AssetTypeAttribute>() )
 		{
 			bChanged = UpdateType( t.Type, t.Attribute ) || bChanged;
@@ -405,6 +416,12 @@ public class AssetType
 		{
 			var at = Find( a.Extension, false );
 			if ( at != null ) return at;
+		}
+
+		foreach (var a in t.GetCustomAttributes<BlowoutAssetInstanceAttribute>())
+		{
+			var at = Find(a.Extension, false);
+			if (at != null) return at;
 		}
 
 		return null;

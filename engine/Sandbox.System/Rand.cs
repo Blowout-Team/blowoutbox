@@ -12,10 +12,15 @@ static class SandboxSystem
 	[ThreadStatic]
 	static Random _random;
 
+	public static int Seed { get; private set; }
+
 	internal static Random Random
 	{
 		get
 		{
+			if (_random == null)
+				Seed = -1;
+
 			_random ??= new Random();
 			return _random;
 		}
@@ -27,5 +32,6 @@ static class SandboxSystem
 	public static void SetRandomSeed( int seed )
 	{
 		_random = new Random( seed );
+		Seed = seed;
 	}
 }

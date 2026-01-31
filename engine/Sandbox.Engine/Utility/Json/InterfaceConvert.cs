@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using BlowoutTeamSoft.Engine.Assets;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -54,7 +55,7 @@ internal sealed class InterfaceConverter<T> : JsonConverter<T> where T : class
 		//
 		// Component types
 		//
-		if ( data.Type == "Component" )
+		if ( data.Type == "Component" || data.Type == "IBlowoutGameSystem" || data.Type == "BlowoutGameSystem")
 		{
 			var rawText = data.Value.GetRawText();
 			var bytes = Encoding.UTF8.GetBytes( rawText );
@@ -73,6 +74,16 @@ internal sealed class InterfaceConverter<T> : JsonConverter<T> where T : class
 			{
 				var path = data.Value.GetString();
 				var res = Resource.LoadFromPath( typeof( GameResource ), path );
+				return res as T;
+			}
+		}
+
+		if (data.Type == nameof(BlowoutAssetInstancePackable))
+		{
+			if (data.Value.ValueKind == JsonValueKind.String)
+			{
+				var path = data.Value.GetString();
+				var res = Resource.LoadFromPath(typeof(BlowoutAssetInstancePackable), path);
 				return res as T;
 			}
 		}
@@ -106,6 +117,15 @@ internal sealed class InterfaceConverter<T> : JsonConverter<T> where T : class
 			writer.WriteString( "Type", "Component" );
 			writer.WritePropertyName( "Value" );
 			Component.JsonWrite( component, writer );
+			writer.WriteEndObject();
+			return;
+		}
+
+		if(value is BlowoutAssetInstancePackable blowoutAsset)
+		{
+			writer.WriteString("Type", "BlowoutAssetInstancePackable");
+			writer.WritePropertyName("Value");
+			writer.WriteStringValue(blowoutAsset.Path);
 			writer.WriteEndObject();
 			return;
 		}

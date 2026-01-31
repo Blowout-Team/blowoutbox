@@ -1,3 +1,4 @@
+using BlowoutTeamSoft.Engine.Interfaces.Shaders;
 using NativeEngine;
 using Sandbox.Rendering;
 using System.Runtime.CompilerServices;

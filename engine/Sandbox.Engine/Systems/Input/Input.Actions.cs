@@ -39,6 +39,13 @@ public static partial class Input
 		return InputActions?.FindIndex( x => string.Equals( x.Name, actionName, StringComparison.OrdinalIgnoreCase ) ) ?? -1;
 	}
 
+	internal static string GetActionFromnIndex(int index)
+	{
+		if (index > InputActions.Count)
+			return string.Empty;
+		return InputActions[index].KeyboardCode;
+	}
+
 	/// <inheritdoc cref="GetActionIndex(string)"/>
 	internal static int GetActionIndex( InputAction action )
 	{

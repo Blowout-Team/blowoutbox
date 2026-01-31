@@ -23,6 +23,7 @@
     <Project Path="BlowoutTeamSoft/Debugger/BlowoutTeamSoft.Debugger.csproj" />
     <Project Path="BlowoutTeamSoft/DependencyInjection/BlowoutTeamSoft.DependencyInjection.csproj" />
     <Project Path="BlowoutTeamSoft/Editor/BlowoutTeamSoft.Editor.csproj" />
+    <Project Path="BlowoutTeamSoft/Engine.GPU/BlowoutTeamSoft.Engine.GPU.csproj" />
     <Project Path="BlowoutTeamSoft/Engine.Systems/BlowoutTeamSoft.Engine.Systems.csproj" />
     <Project Path="BlowoutTeamSoft/Engine/BlowoutTeamSoft.Engine.csproj" />
     <Project Path="BlowoutTeamSoft/Physics/BlowoutTeamSoft.Physics.csproj" />

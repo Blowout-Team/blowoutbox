@@ -1,4 +1,5 @@
-﻿using Sandbox.Engine;
+﻿using BlowoutTeamSoft.Engine.Attributes;
+using Sandbox.Engine;
 using System.Diagnostics;
 
 namespace Sandbox;
@@ -12,6 +13,16 @@ internal static class ResourceLoader
 		var sw = Stopwatch.StartNew();
 		var types = Game.TypeLibrary.GetAttributes<AssetTypeAttribute>().DistinctBy( x => x.Extension )
 			.ToDictionary( x => $".{x.Extension}_c", x => x, StringComparer.OrdinalIgnoreCase );
+
+		foreach(var blowoutResource in Game.TypeLibrary.GetAttributes<BlowoutAssetInstanceAttribute>().DistinctBy(x => x.Extension))
+		{
+			types.TryAdd($".{blowoutResource.Extension}_c", new AssetTypeAttribute()
+			{
+				Category = blowoutResource.Category,
+				Extension = blowoutResource.Extension,
+				Name = blowoutResource.Name
+			});
+		}
 
 		var allFiles = fileSystem.FindFile( "/", "*", true ).ToArray();
 

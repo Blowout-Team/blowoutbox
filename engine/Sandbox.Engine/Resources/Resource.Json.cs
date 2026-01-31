@@ -1,4 +1,6 @@
-﻿using Sandbox.Resources;
+﻿using BlowoutTeamSoft.Engine.Assets;
+using BlowoutTeamSoft.Engine.Interfaces.Assets;
+using Sandbox.Resources;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -37,7 +39,7 @@ public partial class Resource
 	/// <summary>
 	/// Load a resource from a path with improved deferred loading support
 	/// </summary>
-	internal static Resource LoadFromPath( Type typeToConvert, string path )
+	internal static IBlowoutEngineAsset LoadFromPath( Type typeToConvert, string path )
 	{
 		if ( typeToConvert.IsAssignableTo( typeof( GameResource ) ) )
 		{
@@ -58,6 +60,41 @@ public partial class Resource
 			return GameResource.GetPromise( typeToConvert, path );
 		}
 
+		if (typeToConvert.IsAssignableFrom(typeof(BlowoutAssetInstancePackable)))
+		{
+			if (!path.EndsWith("_c")) path += "_c";
+
+			var extension = System.IO.Path.GetExtension(path);
+			if (Game.Resources.TryGetType(extension, out var resourceAttribute))
+			{
+				typeToConvert = resourceAttribute.TargetType;
+			}
+
+			path = GameResource.FixPath(path);
+			var hash = path.FastHash();
+
+			var obj = Game.Resources.Get(typeToConvert, hash) as BlowoutAssetInstancePackable;
+			if (obj != null) 
+				return obj;
+
+			obj = System.Activator.CreateInstance(typeToConvert) as BlowoutAssetInstancePackable;
+
+			if (obj is null)
+			{
+				Log.Warning($"Failed to create blowout asset '{typeToConvert.FullName}'");
+				return default;
+			}
+
+#pragma warning disable CA2000
+			obj.InitializeAsset(path, hash, AsyncResourceLoader.Load(path));
+#pragma warning restore CA2000
+
+			Game.Resources.Register(obj);
+
+			obj.Awake();
+			return obj;
+		}
+
 		// For native resource types, use direct loading
 		return Load( typeToConvert, path );
 	}
@@ -66,7 +103,7 @@ public partial class Resource
 	/// Load a resource reference from JSON data.
 	/// Handles both string paths and embedded resource objects for all resource types.
 	/// </summary>
-	internal static Resource LoadJsonReference( Type targetType, ref Utf8JsonReader reader )
+	internal static IBlowoutEngineAsset LoadJsonReference( Type targetType, ref Utf8JsonReader reader )
 	{
 		// Just a path?
 		if ( reader.TokenType == JsonTokenType.String )
@@ -97,9 +134,9 @@ public partial class Resource
 				var resource = LoadFromPath( targetType, serializedResource.CompiledPath );
 
 				// Store embedded resource data if the resource supports it
-				if ( resource is not null )
+				if ( resource is not null && resource is Resource sandboxResource)
 				{
-					resource.EmbeddedResource = serializedResource;
+					sandboxResource.EmbeddedResource = serializedResource;
 				}
 
 				return resource;

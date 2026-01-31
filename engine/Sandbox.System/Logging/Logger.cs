@@ -1,10 +1,14 @@
-﻿using NLog;
+﻿using BlowoutTeamSoft.Engine.Enums;
+using BlowoutTeamSoft.Engine.Exceptions;
+using BlowoutTeamSoft.Engine.Interfaces;
+using NLog;
+using System;
 using System.Web;
 
 namespace Sandbox.Diagnostics;
 
 [StackTraceHidden]
-public class Logger
+public class Logger : IBlowoutLogger
 {
 	private NLog.Logger _log;
 
@@ -228,4 +232,66 @@ public class Logger
 		return $"<a href=\"arg:{index}\" style=\"\">{HttpUtility.HtmlEncode( o.ToString() )}</a>";
 	}
 
+	public void Assert(bool condition)
+	{
+		if (condition)
+			return;
+
+		Error("AssertionError");
+		throw new BlowoutAssertionErrorException();
+	}
+
+	public void Assert(bool condition, string message)
+	{
+		if (condition)
+			return;
+
+		Error(string.Format("AssertionError: '{0}'", message));
+		throw new BlowoutAssertionErrorException();
+	}
+
+	public void LogFormat(string message, BlowoutLogLevel level, params object[] args)
+	{
+		NLog.LogLevel nlogLevel = level switch
+		{
+			BlowoutLogLevel.Debug => NLog.LogLevel.Debug,
+			BlowoutLogLevel.Info => NLog.LogLevel.Debug,
+			BlowoutLogLevel.Warning => NLog.LogLevel.Warn,
+			BlowoutLogLevel.Error => NLog.LogLevel.Error,
+			BlowoutLogLevel.Fatal => NLog.LogLevel.Fatal,
+			_ => NLog.LogLevel.Off
+		};
+
+		WriteToTargets(NLog.LogLevel.Trace, null, $"{string.Format(message, args)}");
+	}
+
+	public void Log(string message, BlowoutLogLevel level)
+	{
+		NLog.LogLevel nlogLevel = level switch
+		{
+			BlowoutLogLevel.Debug => NLog.LogLevel.Debug,
+			BlowoutLogLevel.Info => NLog.LogLevel.Debug,
+			BlowoutLogLevel.Warning => NLog.LogLevel.Warn,
+			BlowoutLogLevel.Error => NLog.LogLevel.Error,
+			BlowoutLogLevel.Fatal => NLog.LogLevel.Fatal,
+			_ => NLog.LogLevel.Off
+		};
+
+		WriteToTargets(NLog.LogLevel.Trace, null, $"{message}");
+	}
+
+	public void Log(string message, Exception exception, BlowoutLogLevel level)
+	{
+		NLog.LogLevel nlogLevel = level switch
+		{
+			BlowoutLogLevel.Debug => NLog.LogLevel.Debug,
+			BlowoutLogLevel.Info => NLog.LogLevel.Debug,
+			BlowoutLogLevel.Warning => NLog.LogLevel.Warn,
+			BlowoutLogLevel.Error => NLog.LogLevel.Error,
+			BlowoutLogLevel.Fatal => NLog.LogLevel.Fatal,
+			_ => NLog.LogLevel.Off
+		};
+
+		WriteToTargets(NLog.LogLevel.Trace, exception, $"{message}");
+	}
 }

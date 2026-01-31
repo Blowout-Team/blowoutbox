@@ -56,6 +56,8 @@ public abstract partial class Component : IJsonConvert, IComponentLister, IValid
 	/// </summary>
 	protected TaskSource Task => GameObject?.Task ?? TaskSource.Cancelled;
 
+	public BlowoutEngineObject Native => GameObject;
+
 	/// <summary>
 	/// Access components on this component's GameObject
 	/// </summary>

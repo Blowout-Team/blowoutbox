@@ -1,4 +1,5 @@
-﻿using NativeEngine;
+﻿using BlowoutTeamSoft.Engine.Attributes;
+using NativeEngine;
 
 namespace Editor;
 
@@ -523,6 +524,13 @@ public class EditorMainWindow : DockWindow
 		foreach ( var asset in recentScenes )
 		{
 			var attribute = EditorTypeLibrary.GetAttributes<AssetTypeAttribute>().Where( x => x.Extension == asset.AssetType.FileExtension ).FirstOrDefault();
+			if(attribute == null)
+			{
+				var blowoutAttribute = EditorTypeLibrary.GetAttributes<BlowoutAssetInstanceAttribute>().Where(x => x.Extension == asset.AssetType.FileExtension).FirstOrDefault();
+				RecentScenesMenu.AddOption($"{asset.Name} ({asset.Path})", string.Empty, () => { asset.OpenInEditor(); });
+				continue;
+			}
+
 			RecentScenesMenu.AddOption( $"{asset.Name} ({asset.Path})", string.Empty, () => { asset.OpenInEditor(); } );
 		}
 	}

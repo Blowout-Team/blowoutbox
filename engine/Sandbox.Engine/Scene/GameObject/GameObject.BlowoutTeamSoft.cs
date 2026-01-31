@@ -9,8 +9,8 @@ using System.Text;
 namespace Sandbox;
 public partial class GameObject
 {
-	public override T AddGameSystem<T>() =>
-		Components.Create<T>(true);
+	//public override T AddGameSystem<T>() =>
+	//	Components.CreateFromAlias<T>(true);
 
 	public override T GetGameSystem<T>() =>
 		Components.Get<T>(true);

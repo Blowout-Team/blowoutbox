@@ -40,5 +40,9 @@
     <PackageReference Include="Sentry" Version="5.15.1" />
     <PackageReference Include="Vestris.ResourceLib" Version="2.2.0" />
   </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\BlowoutTeamSoft\Engine\BlowoutTeamSoft.Engine.csproj" />
+  </ItemGroup>
   
 </Project>

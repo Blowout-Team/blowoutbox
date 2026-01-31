@@ -140,6 +140,54 @@ public class ComponentList
 		return t;
 	}
 
+	public T CreateFromAlias<T>(IDictionary<Type, Func<IBlowoutGameSystem>> alias, bool startEnabled = true)
+		where T : IBlowoutGameSystem
+	{
+		using var batch = CallbackBatch.Batch();
+		var currentType = typeof(T);
+		T t = default;
+		bool isFounded = false;
+		foreach(var type in alias)
+		{
+			if(currentType.IsInterface && currentType.IsAssignableFrom(type.Key))
+			{
+				t = (T)type.Value();
+				isFounded = true;
+				break;
+			}
+			else if (type.Key == currentType)
+			{
+				t = (T)type.Value();
+				isFounded = true;
+				break;
+			}
+		}
+
+		if (!isFounded)
+		{
+			if (Create(currentType, startEnabled) is T target)
+				return target;
+
+			return default;
+		}
+
+		_list.Add(t);
+
+		if (t is Component sandboxComponent)
+		{
+			sandboxComponent.GameObject = go;
+			sandboxComponent.InitializeComponent();
+			sandboxComponent.Enabled = startEnabled;
+			go.OnComponentAdded(sandboxComponent);
+		}
+		else
+		{
+			t.IsExecuting = startEnabled;
+		}
+
+		return t;
+	}
+
 	/// <summary>
 	/// Add a component of this type
 	/// </summary>

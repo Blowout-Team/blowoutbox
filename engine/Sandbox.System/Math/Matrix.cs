@@ -22,7 +22,7 @@ public struct Matrix : System.IEquatable<Matrix>
 	public static Matrix CreateTranslation( Vector3 vec ) => System.Numerics.Matrix4x4.CreateTranslation( vec );
 	public static Matrix CreateScale( Vector3 scales ) => System.Numerics.Matrix4x4.CreateScale( scales );
 	public static Matrix CreateScale( Vector3 scales, Vector3 centerPoint ) => System.Numerics.Matrix4x4.CreateScale( scales, centerPoint );
-	public static Matrix CreateSkew( Vector2 skew ) => new System.Numerics.Matrix4x4( 1.0f, MathF.Tan( skew.y.DegreeToRadian() ), 0.0f, 0.0f, MathF.Tan( skew.x.DegreeToRadian() ), 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f );
+	public static Matrix CreateSkew( Sandbox.Vector2 skew ) => new System.Numerics.Matrix4x4( 1.0f, MathF.Tan( skew.y.DegreeToRadian() ), 0.0f, 0.0f, MathF.Tan( skew.x.DegreeToRadian() ), 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f );
 	public static Matrix CreateSkewX( float degrees ) => new System.Numerics.Matrix4x4( 1.0f, 0.0f, 0.0f, 0.0f, MathF.Tan( degrees.DegreeToRadian() ), 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f );
 	public static Matrix CreateSkewY( float degrees ) => new System.Numerics.Matrix4x4( 1.0f, MathF.Tan( degrees.DegreeToRadian() ), 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f );
 	public static Matrix CreateMatrix3D( float[] matrix ) => new System.Numerics.Matrix4x4( matrix[0], matrix[1], matrix[2], matrix[3], matrix[4], matrix[5], matrix[6], matrix[7], matrix[8], matrix[9], matrix[10], matrix[11], matrix[12], matrix[13], matrix[14], matrix[15] );
@@ -113,7 +113,7 @@ public struct Matrix : System.IEquatable<Matrix>
 	/// <summary>
 	/// Transforms a vector by a 4x4 matrix
 	/// </summary>
-	public Vector2 Transform( Vector2 v )
+	public Sandbox.Vector2 Transform( Sandbox.Vector2 v )
 	{
 		return System.Numerics.Vector2.Transform( v._vec, _numerics );
 	}
