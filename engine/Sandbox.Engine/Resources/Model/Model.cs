@@ -101,7 +101,7 @@ public sealed partial class Model : Resource
 	/// <summary>
 	/// Name of the model, usually being its file path.
 	/// </summary>
-	public string Name { get; internal set; }
+	public override string Name { get; set; }
 
 	/// <summary>
 	/// Whether this model is procedural, i.e. it was created at runtime via <see cref="ModelBuilder.Create"/>.

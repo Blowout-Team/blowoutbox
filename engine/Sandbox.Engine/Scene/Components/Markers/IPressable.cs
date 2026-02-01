@@ -1,4 +1,6 @@
-﻿namespace Sandbox;
+﻿using BlowoutTeamSoft.Engine.Interfaces;
+
+namespace Sandbox;
 
 public abstract partial class Component
 {
@@ -10,7 +12,7 @@ public abstract partial class Component
 	/// releasing E stops pressing it. You need to handle edge cases where
 	/// the player dies while holding etc.
 	/// </summary>
-	public interface IPressable
+	public interface IPressable : IBlowoutGameSystem
 	{
 		/// <summary>
 		/// Describes who pressed it.

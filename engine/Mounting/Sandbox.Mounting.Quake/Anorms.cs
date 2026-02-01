@@ -1,4 +1,4 @@
-﻿
+﻿using Sandbox;
 public static class Anorms
 {
 	public static readonly Vector3[] Values =

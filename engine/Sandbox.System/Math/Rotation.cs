@@ -1,7 +1,6 @@
 ﻿using Sandbox;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
-using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Text.Json.Serialization;
 using Sandbox.Interpolation;
@@ -57,7 +56,7 @@ public struct Rotation : System.IEquatable<Rotation>, IParsable<Rotation>, IInte
 	/// </summary>
 	public Rotation()
 	{
-		_quat = Quaternion.Identity;
+		_quat = System.Numerics.Quaternion.Identity;
 	}
 
 	/// <summary>
@@ -69,7 +68,7 @@ public struct Rotation : System.IEquatable<Rotation>, IParsable<Rotation>, IInte
 	/// <param name="w">The W component.</param>
 	public Rotation( float x, float y, float z, float w )
 	{
-		_quat = new Quaternion( x, y, z, w );
+		_quat = new System.Numerics.Quaternion( x, y, z, w );
 	}
 
 	/// <summary>
@@ -79,7 +78,7 @@ public struct Rotation : System.IEquatable<Rotation>, IParsable<Rotation>, IInte
 	/// <param name="w">The W component, aka rotation around the normal vector.</param>
 	public Rotation( Vector3 v, float w )
 	{
-		_quat = new Quaternion( v.x, v.y, v.z, w );
+		_quat = new System.Numerics.Quaternion( v.x, v.y, v.z, w );
 	}
 
 	/// <summary>
@@ -143,7 +142,7 @@ public struct Rotation : System.IEquatable<Rotation>, IParsable<Rotation>, IInte
 	[ActionGraphNode( "rotation.fromaxis" ), Title( "Rotation From Axis" ), Pure, Group( "Math/Geometry/Rotation" ), Icon( "360" )]
 	public static Rotation FromAxis( Vector3 axis, float degrees )
 	{
-		return Quaternion.CreateFromAxisAngle( axis, degrees.DegreeToRadian() );
+		return System.Numerics.Quaternion.CreateFromAxisAngle( axis, degrees.DegreeToRadian() );
 	}
 
 	/// <summary>
@@ -231,7 +230,7 @@ public struct Rotation : System.IEquatable<Rotation>, IParsable<Rotation>, IInte
 
 		float flTrace = vX.x + vY.y + vZ.z;
 
-		Quaternion q;
+		System.Numerics.Quaternion q;
 
 		if ( flTrace >= 0.0f )
 		{
@@ -265,7 +264,7 @@ public struct Rotation : System.IEquatable<Rotation>, IParsable<Rotation>, IInte
 			}
 		}
 
-		return Quaternion.Normalize( q );
+		return System.Numerics.Quaternion.Normalize( q );
 	}
 
 	/// <summary>
@@ -293,9 +292,9 @@ public struct Rotation : System.IEquatable<Rotation>, IParsable<Rotation>, IInte
 	[ActionGraphNode( "rotation.diff" ), Pure, Group( "Math/Geometry/Rotation" ), Icon( "360" )]
 	public static Rotation Difference( Rotation from, Rotation to )
 	{
-		var fromInv = Quaternion.Conjugate( from._quat );
-		var diff = Quaternion.Multiply( to._quat, fromInv );
-		return Quaternion.Normalize( diff );
+		var fromInv = System.Numerics.Quaternion.Conjugate( from._quat );
+		var diff = System.Numerics.Quaternion.Multiply( to._quat, fromInv );
+		return System.Numerics.Quaternion.Normalize( diff );
 	}
 
 	/// <summary>
@@ -398,7 +397,7 @@ public struct Rotation : System.IEquatable<Rotation>, IParsable<Rotation>, IInte
 	public static Rotation Lerp( Rotation a, Rotation b, [Range( 0f, 1f )] float frac, bool clamp = true )
 	{
 		if ( clamp ) frac = frac.Clamp( 0, 1 );
-		return Quaternion.Lerp( a._quat, b._quat, frac );
+		return System.Numerics.Quaternion.Lerp( a._quat, b._quat, frac );
 	}
 
 	/// <summary>
@@ -408,7 +407,7 @@ public struct Rotation : System.IEquatable<Rotation>, IParsable<Rotation>, IInte
 	public static Rotation Slerp( Rotation a, Rotation b, float amount, bool clamp = true )
 	{
 		if ( clamp ) amount = amount.Clamp( 0, 1 );
-		return Quaternion.Slerp( a._quat, b._quat, amount );
+		return System.Numerics.Quaternion.Slerp( a._quat, b._quat, amount );
 	}
 
 	/// <summary>
@@ -473,7 +472,7 @@ public struct Rotation : System.IEquatable<Rotation>, IParsable<Rotation>, IInte
 		}
 		else
 		{
-			return Quaternion.CreateFromAxisAngle( V / Angle, Angle );
+			return System.Numerics.Quaternion.CreateFromAxisAngle( V / Angle, Angle );
 		}
 	}
 
@@ -496,12 +495,12 @@ public struct Rotation : System.IEquatable<Rotation>, IParsable<Rotation>, IInte
 		}
 
 		// Implicit integration of critically damped spring
-		if ( Quaternion.Dot( current._quat, target._quat ) < 0.0f )
+		if (System.Numerics.Quaternion.Dot( current._quat, target._quat ) < 0.0f )
 		{
 			current = new Rotation( -current.x, -current.y, -current.z, -current.w );
 		}
 
-		var delta = Quaternion.Multiply( target._quat - current._quat, 2.0f ) * Quaternion.Conjugate( current._quat );
+		var delta = System.Numerics.Quaternion.Multiply( target._quat - current._quat, 2.0f ) * System.Numerics.Quaternion.Conjugate( current._quat );
 		var omega = MathF.PI * 2.0f / smoothTime;
 		var v = new Vector3( delta.X, delta.Y, delta.Z );
 		velocity = (velocity + (omega * omega) * deltaTime * v) / ((1.0f + omega * deltaTime) * (1.0f + omega * deltaTime));
@@ -640,29 +639,29 @@ public struct Rotation : System.IEquatable<Rotation>, IParsable<Rotation>, IInte
 
 	public static Rotation operator *( Rotation a, Rotation b )
 	{
-		return Quaternion.Multiply( a._quat, b._quat );
+		return System.Numerics.Quaternion.Multiply( a._quat, b._quat );
 	}
 
 	public static Rotation operator *( Rotation a, float f )
 	{
-		return Quaternion.Slerp( Quaternion.Identity, a._quat, f );
+		return System.Numerics.Quaternion.Slerp(System.Numerics.Quaternion.Identity, a._quat, f );
 	}
 
 	public static Rotation operator /( Rotation a, float f )
 	{
-		return Quaternion.Slerp( Quaternion.Identity, a._quat, 1 / f );
+		return System.Numerics.Quaternion.Slerp(System.Numerics.Quaternion.Identity, a._quat, 1 / f );
 	}
 
 	[Obsolete( "Use the * operator if you want to combine rotations. If you really want to add (+) them use quaternions." )]
 	public static Rotation operator +( Rotation a, Rotation b )
 	{
-		return Quaternion.Add( a._quat, b._quat );
+		return System.Numerics.Quaternion.Add( a._quat, b._quat );
 	}
 
 	[Obsolete( "Use Rotation.Difference if you want to get the delta between rotations. If you really want to subtract (-) them use quaternions." )]
 	public static Rotation operator -( Rotation a, Rotation b )
 	{
-		return Quaternion.Subtract( a._quat, b._quat );
+		return System.Numerics.Quaternion.Subtract( a._quat, b._quat );
 	}
 	#endregion
 
@@ -681,7 +680,7 @@ public struct Rotation : System.IEquatable<Rotation>, IParsable<Rotation>, IInte
 	/// <returns>True if nearly equal</returns>
 	public readonly bool AlmostEqual( in Rotation r, float delta = 0.0001f )
 	{
-		return Quaternion.Dot( _quat, r._quat ) > 1.0f - delta;
+		return System.Numerics.Quaternion.Dot( _quat, r._quat ) > 1.0f - delta;
 	}
 	#endregion
 

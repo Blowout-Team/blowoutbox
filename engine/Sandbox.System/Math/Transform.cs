@@ -1,6 +1,5 @@
 ﻿using Sandbox;
 using Sandbox.Interpolation;
-using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Text.Json.Serialization;
 
@@ -333,7 +332,7 @@ public struct Transform : System.IEquatable<Transform>, IInterpolator<Transform>
 		var p = str.Split( new[] { ' ', ',', ';', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries );
 		if ( p.Length != 7 ) return default;
 
-		return new Transform( new Vector3( p[0].ToFloat(), p[1].ToFloat(), p[2].ToFloat() ), new Quaternion( p[3].ToFloat(), p[4].ToFloat(), p[5].ToFloat(), p[6].ToFloat() ) );
+		return new Transform( new Vector3( p[0].ToFloat(), p[1].ToFloat(), p[2].ToFloat() ), new System.Numerics.Quaternion( p[3].ToFloat(), p[4].ToFloat(), p[5].ToFloat(), p[6].ToFloat() ) );
 	}
 
 	/// <summary>

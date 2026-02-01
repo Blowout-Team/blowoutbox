@@ -52,9 +52,13 @@ public abstract partial class Resource : BlowoutEngineObject, IValid, IJsonConve
 	/// </summary>
 	[Hide, JsonIgnore] public virtual bool HasUnsavedChanges => false;
 
-	public override string Name { get => ResourceName; set => ResourceName = value; }
+	public string AssetName { get => ResourceName; set => ResourceName = value; }
 
-	public override int Id => ResourceId;
+	public override string Name { get => AssetName; set => AssetName = value; }
+
+	public int AssetId { get => ResourceId; set => ResourceId = value; }
+
+	public override Guid Id { get => new Guid(ResourceId, 0, 0, new byte[8]); protected set => ResourceId = value.ToByteArray()[0]; }
 
 	public string Path => ResourcePath;
 
@@ -194,7 +198,7 @@ public abstract partial class Resource : BlowoutEngineObject, IValid, IJsonConve
 
 	public bool Equals(IBlowoutEngineAsset other)
 	{
-		return other is Resource res ? res == this : other.Name == Name && other.Id == Id;
+		return other is Resource res ? res == this : other.Name == Name && other.AssetId == AssetId;
 	}
 
 	public BlowoutScriptValueContext ToContext(string name, IBlowoutScriptEngine scriptEngine) =>

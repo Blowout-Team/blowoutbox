@@ -9,7 +9,7 @@ namespace Sandbox;
 public partial class SceneFile : GameResource
 {
 	[JsonPropertyName( "__guid" )]
-	public Guid Id { get; set; }
+	public override Guid Id { get; protected set; }
 
 	public JsonObject[] GameObjects { get; set; }
 	public JsonObject SceneProperties { get; set; }
@@ -27,6 +27,9 @@ public partial class SceneFile : GameResource
 
 	[System.Obsolete( "Use GetMetadata" )]
 	public string Description => GetMetadata( "Description" );
+
+	internal void SetIdInternal(Guid id) =>
+		Id = id;
 
 	public string GetMetadata( string title, string defaultValue = null )
 	{

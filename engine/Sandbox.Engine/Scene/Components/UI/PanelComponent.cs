@@ -94,7 +94,7 @@ public abstract partial class PanelComponent : Component, IPanelComponent
 	Panel FindParentPanel()
 	{
 		// do we have any root panels with us?
-		if ( Components.Get<IRootPanelComponent>() is IRootPanelComponent r )
+		if ( GetComponent<IRootPanelComponent>() is IRootPanelComponent r )
 		{
 			return r.GetPanel();
 		}

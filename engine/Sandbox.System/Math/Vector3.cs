@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text.Json.Serialization;
 
+namespace Sandbox;
 /// <summary>
 /// A 3-dimentional vector. Typically represents a position, size, or direction in 3D space.
 /// </summary>

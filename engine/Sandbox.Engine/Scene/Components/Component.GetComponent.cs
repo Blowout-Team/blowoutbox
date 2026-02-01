@@ -39,7 +39,6 @@ public partial class Component
 	/// Get components on this GameObject and on descendant GameObjects
 	/// </summary>
 	public IEnumerable<T> GetComponentsInChildren<T>( bool includeDisabled = false, bool includeSelf = true )
-		where T : IBlowoutGameSystem
 		=> Components.GetAll<T>( includeDisabled ? ((includeSelf ? FindMode.InSelf : default) | FindMode.InDescendants | FindMode.Enabled | FindMode.Disabled) : (includeSelf ? FindMode.InSelf : default) | FindMode.InDescendants | FindMode.Enabled );
 
 	/// <summary>
@@ -53,13 +52,11 @@ public partial class Component
 	/// Get components on this GameObject and on ancestor GameObjects
 	/// </summary>
 	public IEnumerable<T> GetComponentsInParent<T>( bool includeDisabled = false, bool includeSelf = true )
-		where T : IBlowoutGameSystem
 		=> Components.GetAll<T>( includeDisabled ? ((includeSelf ? FindMode.InSelf : default) | FindMode.InAncestors | FindMode.Enabled | FindMode.Disabled) : (includeSelf ? FindMode.InSelf : default) | FindMode.InAncestors | FindMode.Enabled );
 
 	/// <summary>
 	/// Get component on this GameObject and on ancestor GameObjects
 	/// </summary>
 	public T GetComponentInParent<T>( bool includeDisabled = false, bool includeSelf = true )
-		where T : IBlowoutGameSystem
 		=> Components.Get<T>( includeDisabled ? ((includeSelf ? FindMode.InSelf : default) | FindMode.InAncestors | FindMode.Enabled | FindMode.Disabled) : (includeSelf ? FindMode.InSelf : default) | FindMode.InAncestors | FindMode.Enabled );
 }

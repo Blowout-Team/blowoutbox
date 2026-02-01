@@ -1,5 +1,4 @@
 using System;
-using System.Numerics;
 
 namespace SystemTest;
 
@@ -17,7 +16,7 @@ public class SandboxedUnsafeTest
 	[DataRow( typeof( Vector3 ) )]
 	[DataRow( typeof( Vector2 ) )]
 	[DataRow( typeof( Vector4 ) )]
-	[DataRow( typeof( Quaternion ) )]
+	[DataRow( typeof( System.Numerics.Quaternion ) )]
 	[DataRow( typeof( Angles ) )]
 	[DataRow( typeof( Transform ) )]
 	[DataRow( typeof( MySafeStruct ) )]
@@ -59,7 +58,7 @@ public class SandboxedUnsafeTest
 		Assert.IsTrue( SandboxedUnsafe.IsAcceptablePod<Vector3>() );
 		Assert.IsTrue( SandboxedUnsafe.IsAcceptablePod<Vector2>() );
 		Assert.IsTrue( SandboxedUnsafe.IsAcceptablePod<Vector4>() );
-		Assert.IsTrue( SandboxedUnsafe.IsAcceptablePod<Quaternion>() );
+		Assert.IsTrue( SandboxedUnsafe.IsAcceptablePod<System.Numerics.Quaternion>() );
 		Assert.IsTrue( SandboxedUnsafe.IsAcceptablePod<Angles>() );
 		Assert.IsTrue( SandboxedUnsafe.IsAcceptablePod<Transform>() );
 		Assert.IsTrue( SandboxedUnsafe.IsAcceptablePod<MySafeStruct>() );

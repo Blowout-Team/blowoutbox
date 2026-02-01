@@ -28,7 +28,7 @@ public sealed partial class AnimationGraph : Resource
 	/// <summary>
 	/// Animation graph file name.
 	/// </summary>
-	public string Name { get; internal set; }
+	public override string Name { get; set; }
 
 	/// <summary>
 	/// Private constructor, use <see cref="FromNative(HAnimationGraph, string)"/>

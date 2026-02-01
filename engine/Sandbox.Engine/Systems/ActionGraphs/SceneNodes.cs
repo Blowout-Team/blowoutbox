@@ -4,6 +4,7 @@ using Facepunch.ActionGraphs;
 using System.Linq.Expressions;
 using System.Reflection;
 using Facepunch.ActionGraphs.Compilation;
+using BlowoutTeamSoft.Engine.Interfaces;
 
 // ReSharper disable InconsistentNaming
 
@@ -19,6 +20,7 @@ internal static class SceneNodes
 
 	[ActionGraphNode( "scene.get" ), Pure, Hide, Title( "Get {T|Component}" ), Category( "Scene" ), Description( "Gets a component of the given type from a target object or component." ), Icon( "check_box_outline_blank" )]
 	public static T Get<[HasImplementation( typeof( Component ) )] T>( [Target, Title( "Target" )] IComponentLister _this )
+		where T : IBlowoutGameSystem
 	{
 		return _this.Get<T>( FindMode.Enabled | FindMode.Disabled | FindMode.InSelf );
 	}

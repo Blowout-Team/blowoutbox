@@ -27,7 +27,10 @@ public partial class GameObject : BlowoutEngineGameObject, IJsonConvert, ICompon
 	/// <summary>
 	/// Our position relative to our parent, or the scene if we don't have any parent.
 	/// </summary>
-	public override GameTransform Transform => _gameTransform;
+	public override GameTransform Transform
+	{
+		get => _gameTransform;
+	}
 
 	public override bool IsActive { get => Enabled; set => Enabled = value; }
 

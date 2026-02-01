@@ -213,7 +213,6 @@ public class ComponentList
 	/// Get a component of this type
 	/// </summary>
 	public T Get<T>(FindMode search)
-		where T : IBlowoutGameSystem
 	{
 		return GetAll<T>(search).FirstOrDefault();
 	}
@@ -243,7 +242,6 @@ public class ComponentList
 	/// Get a list of components on this game object, optionally recurse when deep is true
 	/// </summary>
 	public IEnumerable<T> GetAll<T>(FindMode find = FindMode.InSelf | FindMode.Enabled | FindMode.InDescendants)
-		where T : IBlowoutGameSystem
 	{
 		if (go.IsDestroyed) return Enumerable.Empty<T>();
 

@@ -1,9 +1,9 @@
 ﻿using BlowoutTeamSoft.Engine.Core;
-using BlowoutTeamSoft.Engine.Core.Enums;
-using BlowoutTeamSoft.Engine.Core.NativeHandles;
+using BlowoutTeamSoft.Engine.Enums;
 using BlowoutTeamSoft.Engine.Extensions;
 using BlowoutTeamSoft.Engine.Interfaces;
 using BlowoutTeamSoft.Engine.Math;
+using BlowoutTeamSoft.Engine.Render;
 using Sandbox.Engine.Extensions;
 using Sandbox.Interpolation;
 using Sandbox.Utility;
@@ -335,7 +335,7 @@ public partial class GameTransform : IBlowoutTransform
 		}
 	}
 
-	public BlowoutTransformNativeHandle Handle => throw new NotImplementedException();
+	public BlowoutTransformNativeHandle Handle => new BlowoutTransformNativeHandle(GameObject.Id.Variant);
 
 	public string Tag => GameObject.Tag;
 
@@ -470,6 +470,10 @@ public partial class GameTransform : IBlowoutTransform
 	}
 
 	BlowoutEngineGameObject IBlowoutGameSystem.GameObject => GameObject;
+
+	public bool IsActive => GameObject.Enabled;
+
+	public BlowoutTeamSoft.Engine.BlowoutEngineObject Native => GameObject;
 
 	/// <summary>
 	/// Performs linear interpolation between this and the given transform.

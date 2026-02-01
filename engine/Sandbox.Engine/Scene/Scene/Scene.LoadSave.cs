@@ -426,7 +426,7 @@ public partial class Scene : GameObject
 		using var optionsScope = target.PushSerializationScope();
 		using var blobs = BlobDataSerializer.Capture();
 
-		target.Id = Id;
+		target.SetIdInternal(Id);
 		target.GameObjects = Children.Select( x => x.Serialize() ).Where( x => x is not null ).ToArray();
 		target.SceneProperties = SerializeProperties();
 		target.BinaryData = blobs.ToByteArray();

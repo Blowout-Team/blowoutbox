@@ -16,7 +16,7 @@ public sealed partial class ParticleSystem : Resource
 	/// <summary>
 	/// Particle system file name.
 	/// </summary>
-	public string Name { get; internal set; }
+	public override string Name { get; set; }
 
 	/// <summary>
 	/// Static bounding box of the resource.

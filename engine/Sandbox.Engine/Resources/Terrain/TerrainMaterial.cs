@@ -63,8 +63,8 @@ public class TerrainMaterial : GameResource
 
 	void LoadGeneratedTextures()
 	{
-		BCRTexture = Texture.Load( Path.Combine( Path.GetDirectoryName( ResourcePath ), $"{Path.GetFileNameWithoutExtension( ResourcePath )}_tmat_bcr.generated.vtex" ) );
-		NHOTexture = Texture.Load( Path.Combine( Path.GetDirectoryName( ResourcePath ), $"{Path.GetFileNameWithoutExtension( ResourcePath )}_tmat_nho.generated.vtex" ) );
+		BCRTexture = Texture.Load( System.IO.Path.Combine(System.IO.Path.GetDirectoryName( ResourcePath ), $"{System.IO.Path.GetFileNameWithoutExtension( ResourcePath )}_tmat_bcr.generated.vtex" ) );
+		NHOTexture = Texture.Load(System.IO.Path.Combine(System.IO.Path.GetDirectoryName( ResourcePath ), $"{System.IO.Path.GetFileNameWithoutExtension( ResourcePath )}_tmat_nho.generated.vtex" ) );
 	}
 
 	protected override void PostLoad()

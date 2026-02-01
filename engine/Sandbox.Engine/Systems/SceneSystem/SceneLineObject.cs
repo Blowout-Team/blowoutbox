@@ -32,7 +32,7 @@ public class SceneLineObject : SceneCustomObject
 	[Obsolete( "Use Material property instead", false )]
 	public Texture LineTexture
 	{
-		get => Attributes.GetTexture( "BaseTexture" );
+		get => (Texture)Attributes.GetTexture( "BaseTexture" );
 		set => Attributes.Set( "BaseTexture", value ?? Texture.White );
 	}
 

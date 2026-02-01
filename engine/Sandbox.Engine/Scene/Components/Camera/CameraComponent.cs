@@ -236,7 +236,7 @@ public sealed partial class CameraComponent : Component, Component.ExecuteInEdit
 		Scene.Cameras.Add( this );
 	}
 
-	protected override void _OnDestroy()
+	protected override void OnDestroy()
 	{
 		Scene.Cameras.Remove( this );
 		sceneCamera?.Dispose();

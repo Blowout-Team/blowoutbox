@@ -2,7 +2,7 @@ using NativeEngine;
 
 namespace Sandbox;
 
-public abstract class MapLoader
+public abstract class MapLoader : IProgress<float>
 {
 	/// <summary>
 	/// Holds key values for the map object
@@ -83,6 +83,8 @@ public abstract class MapLoader
 	public PhysicsWorld PhysicsWorld { get; private set; }
 	public Vector3 WorldOrigin { get; private set; }
 
+	public event EventHandler<float> OnProgress;
+
 	protected readonly List<SceneObject> SceneObjects = new();
 
 	public MapLoader( SceneWorld world, PhysicsWorld physics, Vector3 origin = default )
@@ -111,6 +113,7 @@ public abstract class MapLoader
 			if ( !kv.IsValid )
 				continue;
 
+			Report(entityCount * (i / 100));
 			entries.Add( new ObjectEntry( kv, WorldOrigin ) );
 		}
 
@@ -135,5 +138,10 @@ public abstract class MapLoader
 				Log.Warning( e, $"Error when trying to create entity ({kv.TypeName})" );
 			}
 		}
+	}
+
+	public void Report(float value)
+	{
+		OnProgress?.Invoke(this, value);
 	}
 }

@@ -332,11 +332,14 @@ public partial class Scene : GameObject
 
 	public IEnumerable<GameObject> FindAllWithName(ReadOnlySpan<char> name, StringComparison comparison = StringComparison.Ordinal)
 	{
+		List<GameObject> all = new List<GameObject>(10);
 		foreach(var gameObject in Directory.AllGameObjects)
 		{
 			if (name.Equals(gameObject.Name, comparison))
-				yield return gameObject;
+				all.Add(gameObject);
 		}
+
+		return all;
 	}
 
 	public IEnumerable<GameObject> FindAllWithName(string name, IEqualityComparer<string> comparer = null)

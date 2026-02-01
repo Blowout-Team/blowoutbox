@@ -1,4 +1,5 @@
-﻿using BlowoutTeamSoft.Engine.Attributes;
+﻿using BlowoutTeamSoft.Engine.Assets;
+using BlowoutTeamSoft.Engine.Attributes;
 using BlowoutTeamSoft.Engine.Interfaces.Assets;
 using NativeEngine;
 using Sandbox.Engine;
@@ -14,14 +15,19 @@ public class ResourceSystem
 
 	internal void Register(IBlowoutEngineAsset resource )
 	{
-		Log.Trace( $"Registering {resource.GetType()} ( {resource.Path} ) as {resource.Id}" );
+		Log.Trace( $"Registering {resource.GetType()} ( {resource.Path} ) as {resource.AssetId}" );
 
-		ResourceIndex[resource.Id] = resource;
+		ResourceIndex[resource.AssetId] = resource;
 
 		if ( resource is GameResource gameResource && !gameResource.IsPromise )
 		{
 			IToolsDll.Current?.RunEvent<IEventListener>( i => i.OnRegister( gameResource ) );
 		}
+
+		//if (resource is BlowoutAssetInstancePackable assetInstance)
+		//{
+		//	IToolsDll.Current?.RunEvent<IEventListener>(i => i.OnRegister(gameResource));
+		//}
 	}
 
 	internal void Unregister( IBlowoutEngineAsset resource )
@@ -31,12 +37,12 @@ public class ResourceSystem
 
 		// Make sure we're unregistering the currently indexed resource
 
-		if ( ResourceIndex.TryGetValue( resource.Id, out var existing ) && existing == resource )
+		if ( ResourceIndex.TryGetValue( resource.AssetId, out var existing ) && existing == resource )
 		{
 			// native asset system doesn't support asset removal right now,
 			// so just remove it from the index to ensure we don't retrieve it anymore
 
-			ResourceIndex.Remove( resource.Id );
+			ResourceIndex.Remove( resource.AssetId );
 		}
 		else
 		{

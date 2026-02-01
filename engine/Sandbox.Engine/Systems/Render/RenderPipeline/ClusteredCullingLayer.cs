@@ -1,7 +1,7 @@
 using System;
 using System.Runtime.InteropServices;
 using NativeEngine;
-using IntVector3 = global::Vector3Int;
+using IntVector3 = global::Sandbox.Vector3Int;
 
 namespace Sandbox.Rendering;
 

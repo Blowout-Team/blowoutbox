@@ -51,9 +51,9 @@ public sealed partial class Material : Resource
 	public static Material FromShader( string path )
 	{
 		var pathSpan = path.AsSpan();
-		var shaderDirSpan = Path.GetDirectoryName( pathSpan );
-		var shaderNameSpan = Path.GetFileNameWithoutExtension( pathSpan );
-		var shaderPath = Path.Join( shaderDirSpan, shaderNameSpan ).NormalizeFilename( false, true, '_' );
+		var shaderDirSpan = System.IO.Path.GetDirectoryName( pathSpan );
+		var shaderNameSpan = System.IO.Path.GetFileNameWithoutExtension( pathSpan );
+		var shaderPath = System.IO.Path.Join( shaderDirSpan, shaderNameSpan ).NormalizeFilename( false, true, '_' );
 		if ( shaderMaterials.TryGetValue( shaderPath, out var material ) )
 			return material;
 
