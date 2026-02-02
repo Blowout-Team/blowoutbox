@@ -183,8 +183,8 @@ public sealed partial class IndirectLightVolume : Component, Component.ExecuteIn
 			Graphics.FlushGPU();
 
 			IrradianceTexture = SaveTexture( updater.GeneratedIrradianceTexture, "Irradiance" );
-			DistanceTexture = SaveTexture( updater.GeneratedDistanceTexture, "Distance", uncompressed: true );
-			RelocationTexture = SaveTexture( GeneratedRelocationTexture, "Relocation", uncompressed: true );
+			DistanceTexture = SaveTexture( updater.GeneratedDistanceTexture, "Distance", ImageFormat.RG1616F ); // BC6H ideally, but block compression fucks precision too much
+			RelocationTexture = SaveTexture( GeneratedRelocationTexture, "Relocation", ImageFormat.RGBA16161616F );
 		}
 
 		Scene.Get<DDGIVolumeSystem>()?.MarkDirty();
@@ -238,7 +238,7 @@ public sealed partial class IndirectLightVolume : Component, Component.ExecuteIn
 	/// <summary>
 	/// Saves texture to disk and reloads it.
 	/// </summary>
-	private Texture SaveTexture( Texture source, string suffix, bool uncompressed = false )
+	private Texture SaveTexture( Texture source, string suffix, ImageFormat? format = null )
 	{
 		if ( source is null || source.IsError )
 			return source;
@@ -249,7 +249,7 @@ public sealed partial class IndirectLightVolume : Component, Component.ExecuteIn
 		var sceneFolder = Scene.Editor.GetSceneFolder();
 		var filename = $"/ddgi/{GameObject?.Name ?? "DDGIVolume"}_{suffix}_{Id}.vtex_c";
 
-		var vtexBytes = source.SaveToVtex( uncompressed );
+		var vtexBytes = source.SaveToVtex( format );
 		var path = sceneFolder.WriteFile( filename, vtexBytes );
 
 		var saved = Texture.Load( path );
