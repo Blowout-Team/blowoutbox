@@ -663,7 +663,7 @@ public sealed partial class PhysicsBody : IHandle
 
 	/// <summary>
 	/// Applies instant linear impulse (i.e. a bullet impact) to this body at its center of mass.
-	/// For continuous force (i.e. a moving car), use <see cref="ApplyForce"/>
+	/// For continuous force (i.e. a moving car), use ApplyForce/>
 	/// </summary>
 	[ActionGraphInclude]
 	public void ApplyImpulse( Vector3 impulse )
@@ -714,7 +714,7 @@ public sealed partial class PhysicsBody : IHandle
 	public void ApplyTorque( Vector3 force ) => native.ApplyTorque( force );
 
 	/// <summary>
-	/// Clear accumulated linear forces (<see cref="ApplyForce"/> and <see cref="ApplyForceAt"/>) during this physics frame that were not yet applied to the physics body.
+	/// Clear accumulated linear forces (ApplyForce and <see cref="ApplyForceAt"/>) during this physics frame that were not yet applied to the physics body.
 	/// </summary>
 	public void ClearForces()
 	{

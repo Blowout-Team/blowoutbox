@@ -66,7 +66,9 @@ class Program
 		try
 		{
 			using var client = new HttpClient();
-			await client.PostAsJsonAsync( "https://services.facepunch.com/sbox/event/crash/1/", payload );
+			//TODO: [Engine Core] Add crash reporter for Blowout Team.
+			//Let's not pollute Facepunch with meaningless reports (I'm already ashamed of them :)) ).
+			//await client.PostAsJsonAsync( "https://services.facepunch.com/sbox/event/crash/1/", payload );
 		}
 		catch ( Exception ex )
 		{
@@ -76,7 +78,7 @@ class Program
 		// Open browser to crash report page (only if Sentry has the data)
 		if ( sentrySubmitted )
 		{
-			Process.Start( new ProcessStartInfo( $"https://sbox.game/crashes/{eventId}" ) { UseShellExecute = true } );
+			//Process.Start( new ProcessStartInfo( $"https://sbox.game/crashes/{eventId}" ) { UseShellExecute = true } );
 		}
 
 		return 0;

@@ -1,10 +1,18 @@
-﻿using Facepunch.ActionGraphs;
+﻿using BlowoutTeamSoft.Engine.Attributes;
+using BlowoutTeamSoft.Engine.Enums;
+using BlowoutTeamSoft.Engine.Enums.Sdk;
+using BlowoutTeamSoft.Engine.GraphicalUserInterface;
+using BlowoutTeamSoft.Engine.Interfaces;
+using BlowoutTeamSoft.Engine.Interfaces.Animator;
+using BlowoutTeamSoft.Engine.Interfaces.Geometry;
+using Facepunch.ActionGraphs;
 using Sandbox.Internal;
+using static Facepunch.ActionGraphs.Node;
 using static Sandbox.SerializedObject;
 
 namespace Sandbox;
 
-public abstract class SerializedProperty : IValid
+public abstract class SerializedProperty : IValid, IBlowoutSubjectProperty
 {
 	public virtual SerializedObject Parent { get; }
 
@@ -58,17 +66,138 @@ public abstract class SerializedProperty : IValid
 	/// </summary>
 	public PropertyFinishEditDelegate OnFinishEdit { get; set; }
 
+	public BlowoutSdkTypeEntity EntityType
+	{
+		get
+		{
+			if (PropertyType.IsArray)
+				return BlowoutSdkTypeEntity.Array;
+
+			if (HasAttribute<BlowoutReferenceFieldAttribute>())
+				return BlowoutSdkTypeEntity.ReadonlyReference;
+
+			switch (Type.GetTypeCode(PropertyType))
+			{
+				case TypeCode.Single:
+					return BlowoutSdkTypeEntity.Single;
+				case TypeCode.Char:
+					return BlowoutSdkTypeEntity.Char;
+				case TypeCode.String:
+					return BlowoutSdkTypeEntity.String;
+				case TypeCode.Int16:
+					return BlowoutSdkTypeEntity.Int16;
+				case TypeCode.Int32:
+					return BlowoutSdkTypeEntity.Int32;
+				case TypeCode.Int64:
+					return BlowoutSdkTypeEntity.Int32;
+				case TypeCode.UInt16:
+					return BlowoutSdkTypeEntity.UInt16;
+				case TypeCode.UInt32:
+					return BlowoutSdkTypeEntity.UInt32;
+				case TypeCode.UInt64:
+					return BlowoutSdkTypeEntity.UInt32;
+				case TypeCode.Byte:
+					return BlowoutSdkTypeEntity.Byte;
+				case TypeCode.SByte:
+					return BlowoutSdkTypeEntity.SByte;
+				case TypeCode.DateTime:
+					return BlowoutSdkTypeEntity.DateTime;
+				case TypeCode.Decimal:
+					return BlowoutSdkTypeEntity.Decimal;
+				case TypeCode.Boolean:
+					return BlowoutSdkTypeEntity.Boolean;
+				default:
+					return BlowoutSdkTypeEntity.Object;
+			}
+		}
+	}
+
+	public BlowoutSubjectType SubjectType
+	{
+		get
+		{
+			if (PropertyType == typeof(bool))
+				return BlowoutSubjectType.Boolean;
+
+			if (PropertyType == typeof(float))
+				return BlowoutSubjectType.Float;
+
+			if (PropertyType == typeof(int) ||
+				PropertyType == typeof(uint) ||
+				PropertyType == typeof(ulong) ||
+				PropertyType == typeof(ushort) ||
+				PropertyType == typeof(short) ||
+				PropertyType == typeof(long))
+				return BlowoutSubjectType.Integer;
+
+			if (PropertyType == typeof(Rect) || PropertyType == typeof(BlowoutRect))
+				return BlowoutSubjectType.Rect;
+
+			if (PropertyType == typeof(Gradient))
+				return BlowoutSubjectType.Gradient;
+
+			if (PropertyType == typeof(System.Numerics.Quaternion))
+				return BlowoutSubjectType.Quaternion;
+
+			if (PropertyType == typeof(BBox) || typeof(IBlowoutBounds).IsAssignableFrom(PropertyType))
+				return BlowoutSubjectType.Bounds;
+
+			if (typeof(IAnimationCurve).IsAssignableFrom(PropertyType) || PropertyType == typeof(Curve))
+				return BlowoutSubjectType.AnimationCurve;
+
+			if (typeof(IBlowoutBoundsInt).IsAssignableFrom(PropertyType))
+				return BlowoutSubjectType.BoundsInt;
+
+			if (PropertyType == typeof(RectInt))
+				return BlowoutSubjectType.RectInt;
+
+			if (PropertyType == typeof(Vector2) || PropertyType == typeof(BlowoutTeamSoft.Engine.Numerics.Vector3Int))
+				return BlowoutSubjectType.Vector2Int;
+			if (PropertyType == typeof(Vector3Int) || PropertyType == typeof(BlowoutTeamSoft.Engine.Numerics.Vector3Int))
+				return BlowoutSubjectType.Vector3Int;
+
+			if (PropertyType == typeof(Vector2) || PropertyType == typeof(System.Numerics.Vector2))
+				return BlowoutSubjectType.Vector2;
+			if (PropertyType == typeof(Vector3) || PropertyType == typeof(System.Numerics.Vector3))
+				return BlowoutSubjectType.Vector3;
+			if (PropertyType == typeof(Vector4) || PropertyType == typeof(System.Numerics.Vector4))
+				return BlowoutSubjectType.Vector4;
+
+			return BlowoutSubjectType.ObjectReference;
+		}
+	}
+
+	public string Path => DisplayName;
+
 	public SerializedProperty()
 	{
 		_as.Property = this;
 	}
 
+	public IBlowoutSubjectProperty FindProperty(string propertyName)
+	{
+		if (IsNull || !PropertyType.IsClass || !PropertyType.IsValueType)
+		{
+			return null;
+		}
+
+		if (!TryGetAsObject(out Sandbox.SerializedObject o) || !o.TryGetProperty(propertyName, out Sandbox.SerializedProperty pr))
+			return default;
+
+		return pr;
+	}
+
 	//
 	// Accessors
 	//
-	public abstract void SetValue<T>( T value );
-	public virtual void SetValue<T>( T value, SerializedProperty source ) => SetValue( value );
-	public abstract T GetValue<T>( T defaultValue = default );
+	public void SetValue(object value)
+	{
+		SetValue<object>(value);
+	}
+
+	public abstract void SetValue<T>(T value);
+	public virtual void SetValue<T>(T value, SerializedProperty source) => SetValue(value);
+	public abstract T GetValue<T>(T defaultValue = default);
 
 	/// <summary>
 	/// Get the default value of a specific property type.
@@ -77,25 +206,25 @@ public abstract class SerializedProperty : IValid
 	public object GetDefault()
 	{
 		// DefaultValue codegen
-		if ( TryGetAttribute<DefaultValueAttribute>( out var defaultValue ) )
+		if (TryGetAttribute<DefaultValueAttribute>(out var defaultValue))
 		{
 			return defaultValue.Value;
 		}
 
 		var type = PropertyType;
 
-		if ( IsNullable )
+		if (IsNullable)
 		{
 			type = NullableType;
 		}
 
-		if ( type == typeof( Color ) ) return Color.White;
-		if ( type == typeof( Color32 ) ) return Color32.White;
-		if ( type == typeof( ColorHsv ) ) return new ColorHsv( 0, 0, 1 );
+		if (type == typeof(Color)) return Color.White;
+		if (type == typeof(Color32)) return Color32.White;
+		if (type == typeof(ColorHsv)) return new ColorHsv(0, 0, 1);
 
-		if ( type.IsValueType )
+		if (type.IsValueType)
 		{
-			return Activator.CreateInstance( type );
+			return Activator.CreateInstance(type);
 		}
 
 		return null;
@@ -116,15 +245,15 @@ public abstract class SerializedProperty : IValid
 	/// <summary>
 	/// Return true if the property has this attribute
 	/// </summary>
-	public bool HasAttribute( Type t )
+	public bool HasAttribute(Type t)
 	{
-		return GetAttributes( t ).Any();
+		return GetAttributes(t).Any();
 	}
 
 	/// <summary>
 	/// Try to get this attribute from the property. Return false on fail.
 	/// </summary>
-	public bool TryGetAttribute<T>( out T attribute ) where T : Attribute
+	public bool TryGetAttribute<T>(out T attribute) where T : Attribute
 	{
 		attribute = GetAttributes<T>().FirstOrDefault();
 		return attribute != null;
@@ -141,9 +270,9 @@ public abstract class SerializedProperty : IValid
 	/// <summary>
 	/// Get all of these attributes from the property.
 	/// </summary>
-	public IEnumerable<Attribute> GetAttributes( Type t )
+	public IEnumerable<Attribute> GetAttributes(Type t)
 	{
-		return GetAttributes().Where( t.IsInstanceOfType );
+		return GetAttributes().Where(t.IsInstanceOfType);
 	}
 
 	/// <summary>
@@ -159,7 +288,7 @@ public abstract class SerializedProperty : IValid
 	/// </summary>
 	/// <param name="obj"></param>
 	/// <returns></returns>
-	public virtual bool TryGetAsObject( out SerializedObject obj )
+	public virtual bool TryGetAsObject(out SerializedObject obj)
 	{
 		obj = default;
 		return false;
@@ -177,61 +306,61 @@ public abstract class SerializedProperty : IValid
 		public string String
 		{
 			get => Property.GetValue<string>();
-			set => Property.SetValue<string>( value );
+			set => Property.SetValue<string>(value);
 		}
 
 		public Vector2 Vector2
 		{
 			get => Property.GetValue<Vector2>();
-			set => Property.SetValue<Vector2>( value );
+			set => Property.SetValue<Vector2>(value);
 		}
 
 		public Vector3 Vector3
 		{
 			get => Property.GetValue<Vector3>();
-			set => Property.SetValue<Vector3>( value );
+			set => Property.SetValue<Vector3>(value);
 		}
 
 		public Rotation Rotation
 		{
 			get => Property.GetValue<Rotation>();
-			set => Property.SetValue<Rotation>( value );
+			set => Property.SetValue<Rotation>(value);
 		}
 
 		public Angles Angles
 		{
 			get => Property.GetValue<Angles>();
-			set => Property.SetValue<Angles>( value );
+			set => Property.SetValue<Angles>(value);
 		}
 
 		public float Float
 		{
 			get => Property.GetValue<float>();
-			set => Property.SetValue<float>( value );
+			set => Property.SetValue<float>(value);
 		}
 
 		public double Double
 		{
 			get => Property.GetValue<double>();
-			set => Property.SetValue<double>( value );
+			set => Property.SetValue<double>(value);
 		}
 
 		public int Int
 		{
 			get => Property.GetValue<int>();
-			set => Property.SetValue<int>( value );
+			set => Property.SetValue<int>(value);
 		}
 
 		public long Long
 		{
 			get => Property.GetValue<long>();
-			set => Property.SetValue<long>( value );
+			set => Property.SetValue<long>(value);
 		}
 
 		public bool Bool
 		{
 			get => Property.GetValue<bool>();
-			set => Property.SetValue<bool>( value );
+			set => Property.SetValue<bool>(value);
 		}
 	}
 
@@ -261,127 +390,127 @@ public abstract class SerializedProperty : IValid
 	/// </summary>
 	protected virtual void NoteChanged()
 	{
-		if ( OnChanged is not null )
+		if (OnChanged is not null)
 		{
-			OnChanged( this );
+			OnChanged(this);
 		}
-		if ( Parent is not null )
+		if (Parent is not null)
 		{
-			Parent.NoteChanged( this );
+			Parent.NoteChanged(this);
 		}
 	}
 
-	internal virtual void NoteChanged( SerializedProperty childProperty )
+	internal virtual void NoteChanged(SerializedProperty childProperty)
 	{
-		if ( OnChanged is not null )
+		if (OnChanged is not null)
 		{
-			OnChanged( childProperty );
+			OnChanged(childProperty);
 		}
-		if ( Parent is not null )
+		if (Parent is not null)
 		{
-			Parent.NoteChanged( childProperty );
+			Parent.NoteChanged(childProperty);
 		}
 	}
 
 	protected virtual void NotePreChange()
 	{
-		if ( OnPreChange is not null )
+		if (OnPreChange is not null)
 		{
-			OnPreChange( this );
+			OnPreChange(this);
 		}
-		if ( Parent is not null )
+		if (Parent is not null)
 		{
-			Parent.NotePreChange( this );
+			Parent.NotePreChange(this);
 		}
 	}
 
-	internal virtual void NotePreChange( SerializedProperty childProperty )
+	internal virtual void NotePreChange(SerializedProperty childProperty)
 	{
-		if ( OnPreChange is not null )
+		if (OnPreChange is not null)
 		{
-			OnPreChange( childProperty );
+			OnPreChange(childProperty);
 		}
-		if ( Parent is not null )
+		if (Parent is not null)
 		{
-			Parent.NotePreChange( childProperty );
+			Parent.NotePreChange(childProperty);
 		}
 	}
 
 	protected virtual void NoteStartEdit()
 	{
-		if ( OnStartEdit is not null )
+		if (OnStartEdit is not null)
 		{
-			OnStartEdit( this );
+			OnStartEdit(this);
 		}
-		if ( Parent is not null )
+		if (Parent is not null)
 		{
-			Parent.NoteStartEdit( this );
+			Parent.NoteStartEdit(this);
 		}
 	}
 
-	internal virtual void NoteStartEdit( SerializedProperty childProperty )
+	internal virtual void NoteStartEdit(SerializedProperty childProperty)
 	{
-		if ( OnStartEdit is not null )
+		if (OnStartEdit is not null)
 		{
-			OnStartEdit( childProperty );
+			OnStartEdit(childProperty);
 		}
-		if ( Parent is not null )
+		if (Parent is not null)
 		{
-			Parent.NoteStartEdit( childProperty );
+			Parent.NoteStartEdit(childProperty);
 		}
 	}
 
 	protected virtual void NoteFinishEdit()
 	{
-		if ( OnFinishEdit is not null )
+		if (OnFinishEdit is not null)
 		{
-			OnFinishEdit( this );
+			OnFinishEdit(this);
 		}
-		if ( Parent is not null )
+		if (Parent is not null)
 		{
-			Parent.NoteFinishEdit( this );
+			Parent.NoteFinishEdit(this);
 		}
 	}
 
-	internal virtual void NoteFinishEdit( SerializedProperty childProperty )
+	internal virtual void NoteFinishEdit(SerializedProperty childProperty)
 	{
-		if ( OnFinishEdit is not null )
+		if (OnFinishEdit is not null)
 		{
-			OnFinishEdit( childProperty );
+			OnFinishEdit(childProperty);
 		}
-		if ( Parent is not null )
+		if (Parent is not null)
 		{
-			Parent.NoteFinishEdit( childProperty );
+			Parent.NoteFinishEdit(childProperty);
 		}
 	}
 
 	/// <summary>
 	/// Convert an object value to a T type 
 	/// </summary>
-	protected T ValueToType<T>( object value, T defaultValue = default )
+	protected T ValueToType<T>(object value, T defaultValue = default)
 	{
 		try
 		{
-			if ( value is null )
+			if (value is null)
 				return defaultValue;
 
-			if ( value.GetType().IsAssignableTo( typeof( T ) ) )
+			if (value.GetType().IsAssignableTo(typeof(T)))
 				return (T)value;
 
-			if ( typeof( T ) == typeof( string ) )
+			if (typeof(T) == typeof(string))
 				return (T)(object)$"{value}";
 
-			if ( value.GetType() == typeof( string ) )
+			if (value.GetType() == typeof(string))
 			{
-				return JsonSerializer.Deserialize<T>( (string)value );
+				return JsonSerializer.Deserialize<T>((string)value);
 			}
 
 			// Convert.ChangeType doesn't support long to enum
-			if ( typeof( T ).IsEnum && value is IConvertible )
+			if (typeof(T).IsEnum && value is IConvertible)
 			{
 				try
 				{
-					return (T)Enum.ToObject( typeof( T ), Convert.ToInt64( value ) );
+					return (T)Enum.ToObject(typeof(T), Convert.ToInt64(value));
 				}
 				catch
 				{
@@ -389,14 +518,14 @@ public abstract class SerializedProperty : IValid
 				}
 			}
 
-			var converted = Convert.ChangeType( value, typeof( T ) );
-			if ( converted is not null )
+			var converted = Convert.ChangeType(value, typeof(T));
+			if (converted is not null)
 				return (T)converted;
 
-			var jsonElement = JsonSerializer.SerializeToElement( value );
+			var jsonElement = JsonSerializer.SerializeToElement(value);
 			return jsonElement.Deserialize<T>();
 		}
-		catch ( System.Exception )
+		catch (System.Exception)
 		{
 			return defaultValue;
 		}
@@ -414,13 +543,13 @@ public abstract class SerializedProperty : IValid
 	/// </summary>
 	public bool ShouldShow()
 	{
-		if ( HasAttribute<HideAttribute>() ) return false;
-		if ( Parent is null ) return true;
+		if (HasAttribute<HideAttribute>()) return false;
+		if (Parent is null) return true;
 
 		var conditionals = GetAttributes<InspectorVisibilityAttribute>();
-		if ( !conditionals.Any() ) return true;
+		if (!conditionals.Any()) return true;
 
-		return !conditionals.All( x => x.TestCondition( Parent ) );
+		return !conditionals.All(x => x.TestCondition(Parent));
 	}
 
 	/// <summary>
@@ -430,7 +559,7 @@ public abstract class SerializedProperty : IValid
 	{
 		get
 		{
-			return Nullable.GetUnderlyingType( PropertyType ) is not null;
+			return Nullable.GetUnderlyingType(PropertyType) is not null;
 		}
 	}
 
@@ -441,7 +570,7 @@ public abstract class SerializedProperty : IValid
 	{
 		get
 		{
-			return Nullable.GetUnderlyingType( PropertyType );
+			return Nullable.GetUnderlyingType(PropertyType);
 		}
 	}
 
@@ -459,21 +588,21 @@ public abstract class SerializedProperty : IValid
 	/// <summary>
 	/// If this is a nullable type, you can use this to toggle between it being null or the default value type
 	/// </summary>
-	public void SetNullState( bool isnull )
+	public void SetNullState(bool isnull)
 	{
-		if ( !IsNullable )
+		if (!IsNullable)
 			return;
 
-		if ( IsNull == isnull )
+		if (IsNull == isnull)
 			return;
 
-		if ( isnull )
+		if (isnull)
 		{
-			SetValue<object>( null );
+			SetValue<object>(null);
 		}
 		else
 		{
-			SetValue( GetDefault() );
+			SetValue(GetDefault());
 		}
 	}
 
@@ -512,19 +641,19 @@ public abstract class SerializedProperty : IValid
 
 		public override ref AsAccessor As => ref base.As;
 
-		public override bool TryGetAsObject( out SerializedObject obj ) => ProxyTarget.TryGetAsObject( out obj );
-		public override T GetValue<T>( T defaultValue = default ) => ProxyTarget.GetValue( defaultValue );
-		public override void SetValue<T>( T value ) => ProxyTarget.SetValue( value );
+		public override bool TryGetAsObject(out SerializedObject obj) => ProxyTarget.TryGetAsObject(out obj);
+		public override T GetValue<T>(T defaultValue = default) => ProxyTarget.GetValue(defaultValue);
+		public override void SetValue<T>(T value) => ProxyTarget.SetValue(value);
 		public override IEnumerable<Attribute> GetAttributes() => ProxyTarget.GetAttributes();
 	}
 
 	/// <summary>
 	/// Create a serialized property that uses a getter and setter
 	/// </summary>
-	[Obsolete( "Best use TypeLibrary.CreateProperty" )]
-	public static SerializedProperty Create<T>( string title, Func<T> get, Action<T> set, Attribute[] attributes = null )
+	[Obsolete("Best use TypeLibrary.CreateProperty")]
+	public static SerializedProperty Create<T>(string title, Func<T> get, Action<T> set, Attribute[] attributes = null)
 	{
-		return new ActionBasedSerializedProperty<T>( title, title, "", get, set, attributes, null );
+		return new ActionBasedSerializedProperty<T>(title, title, "", get, set, attributes, null);
 	}
 }
 
@@ -533,7 +662,7 @@ public abstract class SerializedProperty : IValid
 /// </summary>
 public abstract class InspectorVisibilityAttribute : System.Attribute
 {
-	public abstract bool TestCondition( SerializedObject so );
+	public abstract bool TestCondition(SerializedObject so);
 }
 
 internal class ActionBasedSerializedProperty<T> : SerializedProperty
@@ -551,14 +680,14 @@ internal class ActionBasedSerializedProperty<T> : SerializedProperty
 	List<Attribute> _attributes;
 	SerializedObject _parent;
 
-	public ActionBasedSerializedProperty( string name, string title, string description, Func<T> get, Action<T> set, Attribute[] attributes, SerializedObject parent )
+	public ActionBasedSerializedProperty(string name, string title, string description, Func<T> get, Action<T> set, Attribute[] attributes, SerializedObject parent)
 	{
 		_name = name;
 		_title = title;
 		_description = description;
 		_get = get;
 		_set = set;
-		_attributes = new List<Attribute>( attributes ?? Array.Empty<Attribute>() );
+		_attributes = new List<Attribute>(attributes ?? Array.Empty<Attribute>());
 		_parent = parent;
 
 		_groupName = _attributes.OfType<IGroupAttribute>().FirstOrDefault()?.Value ?? _groupName;
@@ -578,20 +707,20 @@ internal class ActionBasedSerializedProperty<T> : SerializedProperty
 	public override string GroupName => _groupName;
 	public override bool IsEditable => true;
 	public override int Order => 0;
-	public override Type PropertyType => typeof( T );
+	public override Type PropertyType => typeof(T);
 	public override string SourceFile => _sourceFile;
 	public override int SourceLine => _sourceLine;
 	public override bool HasChanges => false;
 
 	public override ref AsAccessor As => ref base.As;
 
-	public override U GetValue<U>( U defaultValue = default ) => ValueToType<U>( _get() );
-	public override void SetValue<U>( U value ) => _set( ValueToType<T>( value ) );
+	public override U GetValue<U>(U defaultValue = default) => ValueToType<U>(_get());
+	public override void SetValue<U>(U value) => _set(ValueToType<T>(value));
 	public override IEnumerable<Attribute> GetAttributes() => _attributes;
 
-	public override bool TryGetAsObject( out SerializedObject obj )
+	public override bool TryGetAsObject(out SerializedObject obj)
 	{
-		obj = PropertyToObject?.Invoke( this ) ?? null;
+		obj = PropertyToObject?.Invoke(this) ?? null;
 		return obj is not null;
 	}
 }

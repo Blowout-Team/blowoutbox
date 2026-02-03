@@ -140,7 +140,7 @@ public class ComponentList
 		return t;
 	}
 
-	public T CreateFromAlias<T>(IDictionary<Type, Func<IBlowoutGameSystem>> alias, bool startEnabled = true)
+	public T CreateFromAlias<T>(IDictionary<Type, Func<GameObject, IBlowoutGameSystem>> alias, bool startEnabled = true)
 		where T : IBlowoutGameSystem
 	{
 		using var batch = CallbackBatch.Batch();
@@ -151,13 +151,13 @@ public class ComponentList
 		{
 			if(currentType.IsInterface && currentType.IsAssignableFrom(type.Key))
 			{
-				t = (T)type.Value();
+				t = (T)type.Value(go);
 				isFounded = true;
 				break;
 			}
 			else if (type.Key == currentType)
 			{
-				t = (T)type.Value();
+				t = (T)type.Value(go);
 				isFounded = true;
 				break;
 			}

@@ -59,6 +59,8 @@ internal static class VoiceManager
 	static unsafe void ReadVoice()
 	{
 		uint dataSize = 0;
+		if (!steamUser.IsValid)
+			return;
 
 		// Check if there's any avaliable first, the subsequent call takes 0.1ms even if you're not recording..
 		if ( steamUser.GetAvailableVoice( out var _ ) != 0 )

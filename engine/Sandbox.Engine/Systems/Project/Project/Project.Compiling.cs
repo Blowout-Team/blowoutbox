@@ -107,6 +107,7 @@ public partial class Project
 			{
 				Compiler.GeneratedCode.AppendLine( $"global using static Sandbox.Internal.GlobalToolsNamespace;" );
 				Compiler.AddReference( "Sandbox.Tools" );
+				Compiler.AddReference("BlowoutTeamSoft.Engine");
 				Compiler.AddReference( "Sandbox.Compiling" );
 				Compiler.AddReference( "System.Diagnostics.Process" );
 				Compiler.AddReference( "System.Net.WebSockets" );
@@ -204,6 +205,7 @@ public partial class Project
 		EditorCompiler.AddToolBaseReference();
 
 		EditorCompiler.AddReference( "Sandbox.Tools" );
+		EditorCompiler.AddReference( "BlowoutTeamSoft.Engine" );
 		EditorCompiler.AddReference( "Sandbox.Compiling" );
 		EditorCompiler.AddReference( "System.Diagnostics.Process" );
 		EditorCompiler.AddReference( "System.Net.WebSockets" );

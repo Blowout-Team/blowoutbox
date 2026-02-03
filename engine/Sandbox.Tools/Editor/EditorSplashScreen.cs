@@ -12,9 +12,9 @@
 			Singleton = this;
 			DeleteOnClose = true;
 
-			SetWindowIcon( Pixmap.FromFile( "window_icon.png" ) );
-			WindowTitle = "Opening s&box Editor";
-			BackgroundImage = Pixmap.FromFile( "splash_screen.png" );
+			SetWindowIcon( Pixmap.FromFile( "blow_window_icon.png" ) );
+			WindowTitle = "Opening b&box Editor [BlowoutTeamSoft]";
+			BackgroundImage = Pixmap.FromFile( "blow_splash_screen.png" );
 
 			// load any saved geometry
 			string geometryCookie = EditorCookie.GetString( "splash.geometry", null );

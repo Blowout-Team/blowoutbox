@@ -1,4 +1,5 @@
-﻿using Sandbox.UI;
+﻿using BlowoutTeamSoft.Engine.GraphicalUserInterface;
+using Sandbox.UI;
 using System.Runtime.InteropServices;
 using System.Text.Json.Serialization;
 
@@ -237,6 +238,9 @@ public struct Rect : System.IEquatable<Rect>
 	/// Returns a Rect grown in every direction by given amount.
 	/// </summary>
 	public readonly Rect Grow( in float amt ) => Grow( amt, amt, amt, amt );
+
+	public BlowoutRect ToBlowoutRect() =>
+		new BlowoutRect(Center, Size);
 
 	/// <summary>
 	/// Returns a Rect with position and size rounded down.

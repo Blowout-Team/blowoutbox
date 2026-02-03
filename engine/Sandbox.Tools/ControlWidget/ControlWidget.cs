@@ -1,4 +1,7 @@
-﻿using Facepunch.ActionGraphs;
+﻿using BlowoutTeamSoft.Editor.Attributes;
+using BlowoutTeamSoft.Engine.Interfaces;
+using BlowoutTeamSoft.Engine.Interfaces.Editor;
+using Facepunch.ActionGraphs;
 using System;
 using System.Reflection;
 
@@ -9,7 +12,7 @@ namespace Editor;
 /// </summary>
 public abstract class ControlWidget : Widget
 {
-	static Logger log = new Logger( "ControlWidget" );
+	static Logger log = new Logger("ControlWidget");
 
 	public static Color ControlHighlightPrimary = "#77BBFF";
 	public static Color ControlHighlightSecondary = "#B0E24D";
@@ -21,9 +24,9 @@ public abstract class ControlWidget : Widget
 	/// </summary>
 	public virtual TextFlag CellAlignment => TextFlag.None;
 
-	public ControlWidget( SerializedProperty property ) : this()
+	public ControlWidget(SerializedProperty property) : this()
 	{
-		ArgumentNullException.ThrowIfNull( property, "SerializedProperty" );
+		ArgumentNullException.ThrowIfNull(property, "SerializedProperty");
 
 		SerializedProperty = property;
 		ToolTip = property.Description ?? property.DisplayName;
@@ -38,16 +41,16 @@ public abstract class ControlWidget : Widget
 		//
 		// I think this should be more explicit, only readonly if there's a [readonly] property
 		//
-		if ( !property.IsEditable && property.PropertyType.IsValueType || property.HasAttribute<ReadOnlyAttribute>() )
+		if (!property.IsEditable && property.PropertyType.IsValueType || property.HasAttribute<ReadOnlyAttribute>())
 			base.ReadOnly = true;
 
-		if ( property.TryGetAttribute<TintAttribute>( out var tintAttribute ) )
+		if (property.TryGetAttribute<TintAttribute>(out var tintAttribute))
 		{
-			Tint = Theme.GetTint( tintAttribute.Tint );
+			Tint = Theme.GetTint(tintAttribute.Tint);
 		}
 	}
 
-	internal ControlWidget() : base( null )
+	internal ControlWidget() : base(null)
 	{
 		HorizontalSizeMode = SizeMode.CanShrink;
 		VerticalSizeMode = SizeMode.CanGrow;
@@ -104,7 +107,7 @@ public abstract class ControlWidget : Widget
 
 	protected virtual void PaintUnder()
 	{
-		if ( !PaintBackground )
+		if (!PaintBackground)
 			return;
 
 		bool active = IsControlActive;
@@ -113,39 +116,39 @@ public abstract class ControlWidget : Widget
 
 		Paint.ClearPen();
 
-		if ( IsControlButton )
+		if (IsControlButton)
 		{
-			if ( hovered )
+			if (hovered)
 			{
-				Paint.SetPen( Color.Lerp( Theme.ControlBackground, ControlHighlightPrimary, 0.6f ), 1 );
-				Paint.SetBrush( Color.Lerp( Theme.ControlBackground, ControlHighlightPrimary, 0.2f ) );
-				Paint.DrawRect( LocalRect.Shrink( 1 ), Theme.ControlRadius );
+				Paint.SetPen(Color.Lerp(Theme.ControlBackground, ControlHighlightPrimary, 0.6f), 1);
+				Paint.SetBrush(Color.Lerp(Theme.ControlBackground, ControlHighlightPrimary, 0.2f));
+				Paint.DrawRect(LocalRect.Shrink(1), Theme.ControlRadius);
 				return;
 			}
 
-			Paint.SetBrush( Theme.ControlBackground );
-			Paint.DrawRect( LocalRect, Theme.ControlRadius );
+			Paint.SetBrush(Theme.ControlBackground);
+			Paint.DrawRect(LocalRect, Theme.ControlRadius);
 			return;
 		}
 
-		if ( read )
+		if (read)
 		{
-			Paint.SetBrush( Theme.ControlBackground.Lighten( 0.5f ) );
+			Paint.SetBrush(Theme.ControlBackground.Lighten(0.5f));
 		}
-		else if ( active )
+		else if (active)
 		{
-			Paint.SetBrush( Theme.ControlBackground.Darken( 0.3f ) );
+			Paint.SetBrush(Theme.ControlBackground.Darken(0.3f));
 		}
-		else if ( hovered )
+		else if (hovered)
 		{
-			Paint.SetBrush( Theme.ControlBackground.Darken( 0.2f ) );
+			Paint.SetBrush(Theme.ControlBackground.Darken(0.2f));
 		}
 		else
 		{
-			Paint.SetBrush( Theme.ControlBackground );
+			Paint.SetBrush(Theme.ControlBackground);
 		}
 
-		Paint.DrawRect( LocalRect, Theme.ControlRadius );
+		Paint.DrawRect(LocalRect, Theme.ControlRadius);
 	}
 
 	protected virtual void PaintControl()
@@ -158,11 +161,11 @@ public abstract class ControlWidget : Widget
 		bool active = IsControlActive;
 		bool hovered = IsControlHovered;
 
-		if ( hovered && IsBeingDroppedOn )
+		if (hovered && IsBeingDroppedOn)
 		{
-			Paint.SetPen( ControlHighlightSecondary.WithAlpha( 0.8f ), 2, PenStyle.Dot );
-			Paint.SetBrush( ControlHighlightSecondary.WithAlpha( 0.2f ) );
-			Paint.DrawRect( LocalRect.Shrink( 2 ), Theme.ControlRadius );
+			Paint.SetPen(ControlHighlightSecondary.WithAlpha(0.8f), 2, PenStyle.Dot);
+			Paint.SetBrush(ControlHighlightSecondary.WithAlpha(0.2f));
+			Paint.DrawRect(LocalRect.Shrink(2), Theme.ControlRadius);
 			return;
 		}
 	}
@@ -174,47 +177,78 @@ public abstract class ControlWidget : Widget
 	}
 
 	static (TypeDescription Type, CustomEditorAttribute Attribute)[] editorAttributes;
+	static (TypeDescription Type, BlowoutDrawerPropertyType Attribute)[] s_propertyEditorAttributes;
 
-	public static ControlWidget Create( SerializedProperty property )
+	public static ControlWidget Create(SerializedProperty property)
 	{
-		if ( property is null )
+		if (property is null)
 		{
 			return new InvalidPropertyControlWidget();
 		}
 
-		ArgumentNullException.ThrowIfNull( property );
+		ArgumentNullException.ThrowIfNull(property);
 
 		var type = property.PropertyType;
 
-		log.Trace( $"Target Type: {type}" );
+		log.Trace($"Target Type: {type}");
 
-		editorAttributes ??= EditorTypeLibrary.GetTypesWithAttribute<CustomEditorAttribute>( false )
-					.Where( x => x.Type.TargetType.IsAssignableTo( typeof( ControlWidget ) ) )
+		s_propertyEditorAttributes ??= EditorTypeLibrary.GetTypesWithAttribute<BlowoutDrawerPropertyType>(true)
+			.Where(x => x.Type.TargetType.IsAssignableFrom(typeof(IBlowoutEditorPropertyWidget)))
+			.ToArray();
+
+		editorAttributes ??= EditorTypeLibrary.GetTypesWithAttribute<CustomEditorAttribute>(false)
+					.Where(x => x.Type.TargetType.IsAssignableTo(typeof(ControlWidget)))
 					.ToArray();
 
 		var allEditors = editorAttributes
-							.Select( x => new { score = x.Attribute.GetEditorScore( property ), editor = x } )
-							.Where( x => x.score > 0 )
-							.OrderByDescending( x => x.score )
+							.Select(x => new { score = x.Attribute.GetEditorScore(property), editor = x })
+							.Where(x => x.score > 0)
+							.OrderByDescending(x => x.score)
 							.ToArray();
 
 		// debug output
+
 		int i = 0;
-		foreach ( var entry in allEditors )
+		foreach (var propertyDrawer in s_propertyEditorAttributes)
 		{
-			log.Trace( $" {++i}. [{entry.score}]\t{entry.editor.Type.FullName}" );
+			log.Trace($" {++i}. [BLOWOUT_PROPERTY_EDITOR]\t{propertyDrawer.Type.FullName}");
+		}
+
+		i = 0;
+		foreach (var entry in allEditors)
+		{
+			log.Trace($" {++i}. [{entry.score}]\t{entry.editor.Type.FullName}");
+		}
+
+		foreach (var propertyDrawer in s_propertyEditorAttributes)
+		{
+			if (propertyDrawer.Attribute.Types.Any(property.HasAttribute))
+			{
+				var drawer = propertyDrawer.Type.Create<ControlWidget>();
+				if (drawer is IBlowoutEditorPropertyWidget initializable)
+				{
+					if (initializable.IsInitialized)
+						return drawer;
+
+					initializable.Awake();
+					initializable.Initialize(new BlowoutTeamSoft.Engine.Contexts.BlowoutInitializationContext<BlowoutTeamSoft.Engine.Interfaces.IBlowoutSubjectProperty>(property));
+					initializable.InstallAttributeData(propertyDrawer.Attribute.Types.Select(x => property.GetAttributes(x).FirstOrDefault()).FirstOrDefault(x=> x != null));
+				}
+
+				return drawer;
+			}
 		}
 
 		// Use the first editor we can successfully create
-		foreach ( var entry in allEditors )
+		foreach (var entry in allEditors)
 		{
-			var c = entry.editor.Type.Create<ControlWidget>( new[] { property } );
-			if ( c is not null )
+			var c = entry.editor.Type.Create<ControlWidget>(new[] { property });
+			if (c is not null)
 			{
-				if ( property.IsMultipleValues && !c.SupportsMultiEdit )
+				if (property.IsMultipleValues && !c.SupportsMultiEdit)
 				{
 					c.Destroy();
-					return new MultiEditNotSupported( property );
+					return new MultiEditNotSupported(property);
 				}
 
 				c.Prime();
@@ -223,45 +257,45 @@ public abstract class ControlWidget : Widget
 		}
 
 		// Nope - sorry, nothing for you
-		if ( property.IsMethod )
+		if (property.IsMethod)
 			return null;
 
-		var w = TryCreateGenericObjectControlWidget( property );
-		if ( w is not null ) return w;
+		var w = TryCreateGenericObjectControlWidget(property);
+		if (w is not null) return w;
 
-		return new MissingSerializedPropertyWidget( property );
+		return new MissingSerializedPropertyWidget(property);
 	}
 
-	public static ControlWidget TryCreateGenericObjectControlWidget( SerializedProperty property )
+	public static ControlWidget TryCreateGenericObjectControlWidget(SerializedProperty property)
 	{
 		//
 		// Is this appropriate for the GenericControlWidget?
 		//
 
 		// primitive, nope
-		if ( property.PropertyType.IsPrimitive ) return null;
+		if (property.PropertyType.IsPrimitive) return null;
 
 		// readonly struct
-		if ( property.PropertyType.IsValueType && property.PropertyType.GetCustomAttribute<System.Runtime.CompilerServices.IsReadOnlyAttribute>() is not null ) return null;
+		if (property.PropertyType.IsValueType && property.PropertyType.GetCustomAttribute<System.Runtime.CompilerServices.IsReadOnlyAttribute>() is not null) return null;
 
 
-		var foundType = EditorTypeLibrary.GetType<ControlWidget>( "GenericControlWidget" );
-		if ( foundType is null ) return default;
+		var foundType = EditorTypeLibrary.GetType<ControlWidget>("GenericControlWidget");
+		if (foundType is null) return default;
 
-		var w = foundType.Create<ControlWidget>( new[] { property } );
+		var w = foundType.Create<ControlWidget>(new[] { property });
 
 		return w;
 	}
 
-	protected virtual int ValueHash => HashCode.Combine( this, SerializedProperty?.GetValue<object>() );
+	protected virtual int ValueHash => HashCode.Combine(this, SerializedProperty?.GetValue<object>());
 
 	[EditorEvent.Frame]
 	public virtual void Think()
 	{
-		if ( !Visible )
+		if (!Visible)
 			return;
 
-		if ( SetContentHash( ValueHash, 0.1f ) )
+		if (SetContentHash(ValueHash, 0.1f))
 		{
 			OnValueChanged();
 			CheckDifferentState();
@@ -273,19 +307,19 @@ public abstract class ControlWidget : Widget
 	/// </summary>
 	public void Prime()
 	{
-		SetContentHash( ValueHash, -1000.0f );
+		SetContentHash(ValueHash, -1000.0f);
 		OnValueChanged();
 		UpdateDifferentState();
 	}
 
 	protected void PropertyStartEdit()
 	{
-		SerializedProperty.NoteStartEdit( SerializedProperty );
+		SerializedProperty.NoteStartEdit(SerializedProperty);
 	}
 
 	protected void PropertyFinishEdit()
 	{
-		SerializedProperty.NoteFinishEdit( SerializedProperty );
+		SerializedProperty.NoteFinishEdit(SerializedProperty);
 	}
 
 	protected virtual void OnValueChanged()
@@ -293,7 +327,7 @@ public abstract class ControlWidget : Widget
 
 	}
 
-	protected override void OnContextMenu( ContextMenuEvent e )
+	protected override void OnContextMenu(ContextMenuEvent e)
 	{
 		e.Accepted = true;
 	}
@@ -303,9 +337,9 @@ public abstract class ControlWidget : Widget
 	/// </summary>
 	private IDisposable PushSerializationOptions()
 	{
-		if ( SerializedProperty.GetContainingGameObject() is { } gameObject )
+		if (SerializedProperty.GetContainingGameObject() is { } gameObject)
 		{
-			return ActionGraph.PushTarget( InputDefinition.Target( typeof( GameObject ), gameObject ) );
+			return ActionGraph.PushTarget(InputDefinition.Target(typeof(GameObject), gameObject));
 		}
 
 		return null;
@@ -315,26 +349,26 @@ public abstract class ControlWidget : Widget
 	{
 		using var optionScope = PushSerializationOptions();
 
-		string str = Json.Serialize( SerializedProperty.GetValue<object>() );
-		if ( str?.StartsWith( '"' ) ?? false ) str = str.Substring( 1, str.Length - 2 );
+		string str = Json.Serialize(SerializedProperty.GetValue<object>());
+		if (str?.StartsWith('"') ?? false) str = str.Substring(1, str.Length - 2);
 		return str;
 	}
 
-	public virtual void FromClipboardString( string clipboard )
+	public virtual void FromClipboardString(string clipboard)
 	{
 		clipboard = clipboard.Trim();
 
-		if ( !clipboard.StartsWith( '{' ) && !clipboard.StartsWith( '[' ) && !clipboard.StartsWith( '"' ) )
+		if (!clipboard.StartsWith('{') && !clipboard.StartsWith('[') && !clipboard.StartsWith('"'))
 			clipboard = $"\"{clipboard}\"";
 
 		using var optionScope = PushSerializationOptions();
-		using var uniqueActionGuidScope = ActionGraph.PushMakeGuidsUnique( true );
+		using var uniqueActionGuidScope = ActionGraph.PushMakeGuidsUnique(true);
 
-		if ( Json.TryDeserialize( clipboard, SerializedProperty.PropertyType, out var jsonValue ) && jsonValue is not null )
+		if (Json.TryDeserialize(clipboard, SerializedProperty.PropertyType, out var jsonValue) && jsonValue is not null)
 		{
-			SerializedProperty.Parent.NoteStartEdit( SerializedProperty );
-			SerializedProperty.SetValue( jsonValue );
-			SerializedProperty.Parent.NoteFinishEdit( SerializedProperty );
+			SerializedProperty.Parent.NoteStartEdit(SerializedProperty);
+			SerializedProperty.SetValue(jsonValue);
+			SerializedProperty.Parent.NoteFinishEdit(SerializedProperty);
 		}
 	}
 
@@ -342,10 +376,10 @@ public abstract class ControlWidget : Widget
 
 	void CheckDifferentState()
 	{
-		if ( SerializedProperty is null ) // only possible in InvalidPropertyControlWidget
+		if (SerializedProperty is null) // only possible in InvalidPropertyControlWidget
 			return;
 
-		if ( _multipleDifferent == SerializedProperty.IsMultipleDifferentValues )
+		if (_multipleDifferent == SerializedProperty.IsMultipleDifferentValues)
 			return;
 
 		UpdateDifferentState();
@@ -354,10 +388,10 @@ public abstract class ControlWidget : Widget
 	void UpdateDifferentState()
 	{
 		_multipleDifferent = SerializedProperty.IsMultipleDifferentValues;
-		OnMultipleDifferentValues( _multipleDifferent );
+		OnMultipleDifferentValues(_multipleDifferent);
 	}
 
-	protected virtual void OnMultipleDifferentValues( bool state )
+	protected virtual void OnMultipleDifferentValues(bool state)
 	{
 
 	}
@@ -368,7 +402,7 @@ public abstract class ControlWidget : Widget
 /// </summary>
 file class MissingSerializedPropertyWidget : ControlWidget
 {
-	public MissingSerializedPropertyWidget( SerializedProperty property ) : base( property )
+	public MissingSerializedPropertyWidget(SerializedProperty property) : base(property)
 	{
 		ReadOnly = true;
 	}
@@ -382,12 +416,12 @@ file class MissingSerializedPropertyWidget : ControlWidget
 
 	protected override Vector2 SizeHint()
 	{
-		var text = SerializedProperty.GetValue( "Missing Value" );
+		var text = SerializedProperty.GetValue("Missing Value");
 		var sh = base.SizeHint();
 		sh.x -= 16;
-		var rect = Paint.MeasureText( new Rect( 0, sh ), text, TextFlag.LeftTop );
+		var rect = Paint.MeasureText(new Rect(0, sh), text, TextFlag.LeftTop);
 
-		if ( rect.Height < Theme.RowHeight )
+		if (rect.Height < Theme.RowHeight)
 			rect.Height = Theme.RowHeight;
 
 		return rect.Size;
@@ -395,9 +429,9 @@ file class MissingSerializedPropertyWidget : ControlWidget
 
 	protected override void OnPaint()
 	{
-		var text = SerializedProperty.GetValue( "Missing Value" );
-		Paint.SetPen( Theme.TextControl.WithAlpha( 0.5f ) );
-		Paint.DrawText( LocalRect.Shrink( 8, 0 ), text, TextFlag.LeftCenter );
+		var text = SerializedProperty.GetValue("Missing Value");
+		Paint.SetPen(Theme.TextControl.WithAlpha(0.5f));
+		Paint.DrawText(LocalRect.Shrink(8, 0), text, TextFlag.LeftCenter);
 	}
 }
 
@@ -413,17 +447,17 @@ file class InvalidPropertyControlWidget : ControlWidget
 		ReadOnly = true;
 		HorizontalSizeMode = SizeMode.Flexible;
 
-		Label = new Label( "Null Property" );
+		Label = new Label("Null Property");
 		Label.WordWrap = true;
-		Label.SetStyles( "background-color: transparent;" );
-		Label.ContentMargins = new Sandbox.UI.Margin( 6, 0 );
+		Label.SetStyles("background-color: transparent;");
+		Label.ContentMargins = new Sandbox.UI.Margin(6, 0);
 		Label.FixedHeight = Theme.RowHeight;
 
 		Layout = Layout.Column();
-		Layout.Add( Label );
+		Layout.Add(Label);
 	}
 
-	protected override Vector2 SizeHint() => new Vector2( 22, Theme.RowHeight );
+	protected override Vector2 SizeHint() => new Vector2(22, Theme.RowHeight);
 
 	protected override void OnValueChanged()
 	{
@@ -441,20 +475,20 @@ file class MultiEditNotSupported : ControlWidget
 {
 	Label Label;
 
-	public MultiEditNotSupported( SerializedProperty property ) : base( property )
+	public MultiEditNotSupported(SerializedProperty property) : base(property)
 	{
 		ReadOnly = true;
 		HorizontalSizeMode = SizeMode.Flexible;
 
-		Label = new Label( "Multiedit not supported", this );
+		Label = new Label("Multiedit not supported", this);
 		Label.WordWrap = true;
-		Label.SetStyles( "background-color: transparent;" );
-		Label.ContentMargins = new Sandbox.UI.Margin( 6, 0 );
-		Label.MaximumSize = new Vector2( 4096, Theme.RowHeight );
+		Label.SetStyles("background-color: transparent;");
+		Label.ContentMargins = new Sandbox.UI.Margin(6, 0);
+		Label.MaximumSize = new Vector2(4096, Theme.RowHeight);
 
 		Layout = Layout.Column();
-		Layout.Add( Label );
+		Layout.Add(Label);
 	}
 
-	protected override Vector2 SizeHint() => new Vector2( 22, Theme.RowHeight );
+	protected override Vector2 SizeHint() => new Vector2(22, Theme.RowHeight);
 }

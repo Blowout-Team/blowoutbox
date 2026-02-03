@@ -66,6 +66,10 @@ public partial class Surface : GameResource
 	[Range( 0, 100 ), Category( "Physics" ), DefaultValue( 40.0f )]
 	public float BounceThreshold { get; set; } = 40;
 
+	public Surface()
+	{
+	}
+
 	/// <summary>
 	/// Returns the base surface of this surface, or null if we are the default surface.
 	/// </summary>

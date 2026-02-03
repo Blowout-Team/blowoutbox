@@ -59,7 +59,7 @@ namespace Sandbox
 		}
 
 		/// <summary>
-		/// Adds given amount of velocity (<see cref="PhysicsBody.ApplyForce"/>) to all physics bodies in this group.
+		/// Adds given amount of velocity (ApplyForce) to all physics bodies in this group.
 		/// </summary>
 		/// <param name="vel">How much linear force to add?</param>
 		[ActionGraphInclude]
@@ -79,7 +79,7 @@ namespace Sandbox
 		}
 
 		/// <summary>
-		/// Adds given amount of linear impulse (<see cref="PhysicsBody.ApplyImpulse"/>) to all physics bodies in this group.
+		/// Adds given amount of linear impulse (ApplyImpulse) to all physics bodies in this group.
 		/// </summary>
 		/// <param name="vel">Velocity to apply.</param>
 		/// <param name="withMass">Whether to multiply the velocity by mass of the <see cref="PhysicsBody"/> on a per-body basis.</param>

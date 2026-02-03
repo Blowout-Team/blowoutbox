@@ -6,7 +6,7 @@ using Sandbox;
 [AssetType( Name = "Avatar Clothing Category", Extension = "clthgrp", Category = "Citizen" )]
 public class AvatarClothingCategory : GameResource
 {
-	[Property] public string Name { get; set; }
+	[Property] public new string Name { get; set; }
 
 	[Property] public Category[] Categories { get; set; }
 

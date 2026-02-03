@@ -1,4 +1,5 @@
 ﻿
+using BlowoutTeamSoft.Engine.Render;
 using Sandbox;
 using System.Globalization;
 using System.Runtime.CompilerServices;
@@ -104,6 +105,9 @@ public partial struct Color : IEquatable<Color>
 	{
 		return this with { a = alpha };
 	}
+
+	public BlowoutColor ToBlowoutColor() =>
+		new BlowoutColor(r, g, b, a);
 
 	/// <summary>
 	/// Similar to <see cref="WithAlpha"/> but multiplies the alpha instead of replacing.

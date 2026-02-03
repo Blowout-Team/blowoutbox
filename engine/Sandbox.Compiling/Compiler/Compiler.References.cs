@@ -8,6 +8,7 @@ partial class Compiler
 	HashSet<string> _references { get; } = new( StringComparer.OrdinalIgnoreCase )
 	{
 		"Sandbox.System",
+		"BlowoutTeamSoft.Engine",
 		"Sandbox.Engine",
 		"Sandbox.Filesystem",
 		"Sandbox.Reflection",

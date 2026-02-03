@@ -17,6 +17,7 @@
 		<ProjectReference Include="..\..\Sandbox.Compiling\Sandbox.Compiling.csproj" />
 		<ProjectReference Include="..\..\Sandbox.Engine\Sandbox.Engine.csproj" />
 		<ProjectReference Include="..\..\Sandbox.Menu\Sandbox.Menu.csproj" />
+		<ProjectReference Include="..\..\BlowoutTeamSoft\Engine\BlowoutTeamSoft.Engine.csproj" />
 	</ItemGroup>
 
 </Project>

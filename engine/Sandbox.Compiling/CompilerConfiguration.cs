@@ -73,6 +73,7 @@ partial class Compiler
 		{
 			return assemblyName.StartsWith( "Sandbox.", StringComparison.OrdinalIgnoreCase )
 				|| assemblyName.StartsWith( "Facepunch.", StringComparison.OrdinalIgnoreCase )
+				|| assemblyName.StartsWith("BlowoutTeamSoft.", StringComparison.OrdinalIgnoreCase)
 				|| assemblyName == "Microsoft.AspNetCore.Components";
 		}
 

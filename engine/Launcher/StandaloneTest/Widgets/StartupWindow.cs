@@ -20,9 +20,9 @@ public partial class StartupWindow : Window
 		HasMaximizeButton = false;
 		Visible = false;
 
-		WindowTitle = "Welcome to the s&box editor";
+		WindowTitle = "Welcome to the b&box editor";
 
-		SetWindowIcon( Pixmap.FromFile( "logo_rounded.png" ) );
+		SetWindowIcon( Pixmap.FromFile( "blow_logo_rounded.png" ) );
 
 		CreateUI();
 
@@ -70,6 +70,7 @@ public partial class StartupWindow : Window
 			//
 			{
 				sidebar.Add( new SidebarButton( "Documentation", "school", "https://sbox.game/dev/doc/" ) );
+				sidebar.Add( new SidebarButton( "Blowout Team Discrod", "monitor", "https://discord.com/invite/GjyDhXNbEV") );
 				sidebar.Add( new SidebarButton( $"Open {Global.BackendTitle}", "celebration", Global.BackendUrl ) );
 				sidebar.Add( new SidebarButton( "API Reference", "code", $"{Global.BackendUrl}/api" ) );
 			}
