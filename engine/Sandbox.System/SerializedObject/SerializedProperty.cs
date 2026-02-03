@@ -203,7 +203,7 @@ public abstract class SerializedProperty : IValid, IBlowoutSubjectProperty
 	/// Get the default value of a specific property type.
 	/// </summary>
 	/// <returns></returns>
-	public object GetDefault()
+	public virtual object GetDefault()
 	{
 		// DefaultValue codegen
 		if (TryGetAttribute<DefaultValueAttribute>(out var defaultValue))
