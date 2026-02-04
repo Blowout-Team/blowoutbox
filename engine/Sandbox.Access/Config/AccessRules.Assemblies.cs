@@ -6,6 +6,7 @@ public partial class AccessRules
 
 	void InitAssemblyList()
 	{
+		AssemblyWhitelist.Add("BlowoutTeamSoft.Engine");
 		AssemblyWhitelist.Add( "System.Private.CoreLib" );
 		AssemblyWhitelist.Add( "Sandbox.Engine" );
 		AssemblyWhitelist.Add( "Sandbox.Reflection" );

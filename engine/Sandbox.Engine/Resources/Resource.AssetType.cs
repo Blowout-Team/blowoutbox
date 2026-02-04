@@ -1,4 +1,6 @@
-﻿namespace Sandbox;
+﻿using BlowoutTeamSoft.Engine.Assets;
+
+namespace Sandbox;
 
 public partial class Resource
 {
@@ -18,18 +20,29 @@ public partial class Resource
 	{
 		// backwards compatibility
 #pragma warning disable CS0618
-		var gr = Game.TypeLibrary.GetAttribute<GameResourceAttribute>( this.GetType() );
+		var type = this.GetType();
+		var gr = Sandbox.Game.TypeLibrary.GetAttribute<GameResourceAttribute>(type);
+		var blowoutInstanceAttribute = Sandbox.Game.TypeLibrary.GetAttribute<BlowoutAssetInstanceIconAttribute>(type);
 
-		var icon = gr?.Icon ?? "question_mark";
-		Color fg = gr?.IconFgColor ?? "#1a2c17";
-		Color bg = gr?.IconBgColor ?? "#67ac5c";
+		var icon = blowoutInstanceAttribute?.IconName ?? gr?.Icon ?? "question_mark";
+		Color? foreground = null;
+		Color? background = null;
 
-		if ( string.IsNullOrEmpty( icon ) ) icon = "question_mark";
+		if (blowoutInstanceAttribute != null && !string.IsNullOrEmpty(blowoutInstanceAttribute.ForegroundColorHex))
+			foreground = blowoutInstanceAttribute.ForegroundColorHex;
+
+		if (blowoutInstanceAttribute != null && !string.IsNullOrEmpty(blowoutInstanceAttribute.BackgroundColorHex))
+			background = blowoutInstanceAttribute.BackgroundColorHex;
+
+		Color fg = foreground ?? gr?.IconFgColor ?? "#1a2c17";
+		Color bg = background ?? gr?.IconBgColor ?? "#67ac5c";
+
+		if (string.IsNullOrEmpty(icon)) icon = "question_mark";
 
 		// we're not supporting loading from paths anymore. I don't think we ever did?
-		if ( icon.Contains( "/" ) || icon.Contains( "\\" ) ) icon = "question_mark";
+		if (icon.Contains("/") || icon.Contains("\\")) icon = "question_mark";
 
-		return CreateSimpleAssetTypeIcon( icon, width, height, bg, fg );
+		return CreateSimpleAssetTypeIcon(icon, width, height, bg, fg);
 #pragma warning restore CS0618
 	}
 

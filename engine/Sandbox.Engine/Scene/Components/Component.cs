@@ -6,6 +6,8 @@ using Sandbox.Engine.Extensions;
 using Sandbox.Internal;
 using Sandbox.Utility;
 using System.Runtime.CompilerServices;
+using System.Runtime.Serialization;
+using System.Text.Json.Serialization;
 using System.Threading;
 
 namespace Sandbox;
@@ -29,12 +31,16 @@ public abstract partial class Component : IJsonConvert, IComponentLister, IValid
 	[ActionGraphInclude]
 	public GameTransform Transform => GameObject?.Transform;
 
+	[JsonIgnore, Hide]
 	public CancellationToken AliveToken => GameObject?.EnabledToken ?? new CancellationToken(true);
 
+	[JsonIgnore, Hide]
 	public bool IsAliveSystem => IsValid;
 
+	[JsonIgnore, Hide]
 	public bool IsActive => Active;
 
+	[JsonIgnore, Hide]
 	public BlowoutEngineGameObject SystemGameObject => GameObject;
 
 	/// <summary>
@@ -43,8 +49,10 @@ public abstract partial class Component : IJsonConvert, IComponentLister, IValid
 	[ActionGraphInclude]
 	public GameObject GameObject { get; internal set; }
 
+	[JsonIgnore, Hide]
 	public bool IsExecuting { get => Enabled; set => Enabled = value; }
 
+	[JsonIgnore, Hide]
 	public BlowoutSystemMode SystemMode
 	{
 		get => Flags.ToSystemMode();
@@ -56,6 +64,8 @@ public abstract partial class Component : IJsonConvert, IComponentLister, IValid
 	/// </summary>
 	protected TaskSource Task => GameObject?.Task ?? TaskSource.Cancelled;
 
+	[IgnoreDataMember]
+	[JsonIgnore]
 	public BlowoutEngineObject Native => GameObject;
 
 	/// <summary>
@@ -141,7 +151,7 @@ public abstract partial class Component : IJsonConvert, IComponentLister, IValid
 			if ( Scene is PrefabCacheScene ) return false;
 
 			// No scene? No execute.
-			if ( Scene is null ) return false;
+			if (Scene is null) return false;
 
 			// If we're an editor scene, only execute if ExecuteInEditor is enabled
 			if ( Scene.IsEditor && this is not ExecuteInEditor ) return false;
@@ -149,6 +159,8 @@ public abstract partial class Component : IJsonConvert, IComponentLister, IValid
 			// If we're a dedicated server, don't execute if DontExecuteOnServer is enabled
 			if ( Application.IsDedicatedServer && this is DontExecuteOnServer ) return false;
 
+
+			Log.Info($"This component can be executed: '{GameObject.Name}'");
 			// Maybe Scene.ExecutionEnabled should exist
 			return true;
 		}

@@ -1,4 +1,5 @@
-﻿using System.ComponentModel;
+﻿using BlowoutTeamSoft.Engine.Attributes;
+using System.ComponentModel;
 
 namespace Sandbox;
 
@@ -43,6 +44,12 @@ public class AssetTypeAttribute : System.Attribute, ITypeAttribute, IUninheritab
 		foreach ( var t in Game.TypeLibrary.GetTypesWithAttribute<AssetTypeAttribute>() )
 		{
 			if ( string.Equals( t.Attribute.Extension, extension, StringComparison.OrdinalIgnoreCase ) )
+				return t.Type;
+		}
+
+		foreach (var t in Game.TypeLibrary.GetTypesWithAttribute<BlowoutAssetInstanceAttribute>())
+		{
+			if (string.Equals(t.Attribute.Extension, extension, StringComparison.OrdinalIgnoreCase))
 				return t.Type;
 		}
 

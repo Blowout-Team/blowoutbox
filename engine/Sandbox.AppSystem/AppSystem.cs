@@ -1,4 +1,5 @@
-﻿using Sandbox.Diagnostics;
+﻿using BlowoutTeamSoft.Source2.Core;
+using Sandbox.Diagnostics;
 using Sandbox.Engine;
 using Sandbox.Internal;
 using Sandbox.Network;
@@ -101,6 +102,20 @@ public class AppSystem
 			//
 
 			Init();
+
+			try
+			{
+				BlowoutSource2Engine.Install(null,
+					null,
+					null,
+					null);
+				log.Info("Blowout Source 2 Engine succesfully installed!");
+			}
+			catch(Exception e)
+			{
+				log.Error($"Error while install blowout source 2: {e.Message} \n{e.StackTrace}");
+			}
+
 
 			NativeEngine.EngineGlobal.Plat_SetCurrentFrame( 0 );
 

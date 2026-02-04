@@ -33,8 +33,10 @@
     <Project Path="BlowoutTeamSoft/Sdk/BlowoutTeamSoft.Sdk.csproj" />
     <Project Path="BlowoutTeamSoft/Shaders/BlowoutTeamSoft.Shaders.csproj" />
     <Project Path="BlowoutTeamSoft/Source2/Source2.Core/BlowoutTeamSoft.Source2.Core.csproj">
-      <BuildType Solution="Blowout_Source2_Debug|*" Project="Release" />
-      <BuildType Solution="Blowout_Source2_Release|*" Project="Release" />
+      <BuildType Solution="Blowout_Source2_Debug|x64" Project="Release" />
+      <BuildType Solution="Blowout_Source2_Debug|x86" Project="Release" />
+      <BuildType Solution="Blowout_Source2_Release|x64" Project="Release" />
+      <BuildType Solution="Blowout_Source2_Release|x86" Project="Release" />
     </Project>
     <Project Path="BlowoutTeamSoft/Tests/BlowoutTeamSoft.Tests.csproj" />
     <Project Path="BlowoutTeamSoft/Threading/BlowoutTeamSoft.Threading.csproj" />

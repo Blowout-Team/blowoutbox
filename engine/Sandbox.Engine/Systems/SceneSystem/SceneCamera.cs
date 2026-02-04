@@ -24,7 +24,7 @@ public sealed partial class SceneCamera : IDisposable, IManagedCamera
 
 	internal Matrix ProjectionMatrix => Frustum.GetProj();
 
-	internal Matrix ViewMatrix => Frustum.GetViewProj();
+	//internal Matrix ViewMatrix => Frustum.GetViewProj();
 
 	public RenderAttributes Attributes { get; }
 
@@ -169,7 +169,7 @@ public sealed partial class SceneCamera : IDisposable, IManagedCamera
 		Attributes.Set( "drawShadows", true );
 
 		FieldOfView = 70.0f;
-
+		
 		Tonemap = new TonemapSystem( this );
 		Bloom = new BloomAccessor( this );
 	}

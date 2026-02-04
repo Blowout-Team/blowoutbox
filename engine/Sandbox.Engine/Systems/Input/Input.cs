@@ -122,18 +122,20 @@ public static partial class Input
 		if(Actions != LastActions)
 		{
 			// dehs: im not tested that shit yet.
+			// 04.02.2026: im tested this shit. ant this is really shit that crash editor.
 			ulong down = Actions & ~LastActions;
 
-			while(down != 0)
-			{
+			// while(down != 0)
+			//{
+			//
+			//	
+			//
+			//}
 				int index = BitOperations.TrailingZeroCount(down);
 				string actionName = GetActionFromnIndex(index);
-
-				OnAnyKey?.Invoke(new BlowoutInputKey(actionName, default, default));
-				OnAnyKeyOnce?.Invoke(new BlowoutInputKey(actionName, default, default));
-
+			OnAnyKey?.Invoke(new BlowoutInputKey(actionName, default, default));
+			OnAnyKeyOnce?.Invoke(new BlowoutInputKey(actionName, default, default)); 
 				OnAnyKeyOnce = default;
-			}
 		}
 
 		if ( Preferences.InvertMousePitch )

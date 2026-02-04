@@ -1,4 +1,6 @@
-﻿namespace Editor;
+﻿using BlowoutTeamSoft.Engine.Interfaces.Assets;
+
+namespace Editor;
 
 [CustomEditor( typeof( Resource ) )]
 public class ResourceControlWidget : ControlWidget
@@ -50,8 +52,8 @@ public class ResourceControlWidget : ControlWidget
 
 	protected override void PaintControl()
 	{
-		var resource = SerializedProperty.GetValue<Resource>( null );
-		var asset = resource != null ? AssetSystem.FindByPath( resource.ResourcePath ) : null;
+		var resource = SerializedProperty.GetValue<IBlowoutEngineAsset>( null );
+		var asset = resource != null ? AssetSystem.FindByPath( resource.Path ) : null;
 
 		var rect = new Rect( 0, Size );
 
@@ -85,7 +87,7 @@ public class ResourceControlWidget : ControlWidget
 
 			DrawContent( rect, asset.Name, asset.RelativePath );
 		}
-		else if ( resource != null && !string.IsNullOrEmpty( resource.ResourcePath ) )
+		else if ( resource != null && !string.IsNullOrEmpty( resource.Path ) )
 		{
 			Paint.SetBrush( Theme.Red.Darken( 0.8f ).WithAlpha( alpha ) );
 			Paint.DrawRect( iconRect, 2 );
@@ -93,7 +95,7 @@ public class ResourceControlWidget : ControlWidget
 			Paint.SetPen( Theme.Red.WithAlpha( alpha ) );
 			Paint.DrawIcon( iconRect, "error", Math.Max( 16, iconRect.Height / 2 ) );
 
-			DrawContent( rect, $"Missing {pickerName}", resource.ResourcePath );
+			DrawContent( rect, $"Missing {pickerName}", resource.Path );
 		}
 		else
 		{
@@ -164,10 +166,10 @@ public class ResourceControlWidget : ControlWidget
 
 		if ( ReadOnly ) return;
 
-		var resource = SerializedProperty.GetValue<Resource>( null );
-		var asset = resource != null ? AssetSystem.FindByPath( resource.ResourcePath ) : null;
+		var resource = SerializedProperty.GetValue<IBlowoutEngineAsset>( null );
+		var asset = resource != null ? AssetSystem.FindByPath( resource.Path ) : null;
 
-		var assetType = AssetType.FromType( resource.IsValid() ? resource.GetType() : SerializedProperty.PropertyType );
+		var assetType = AssetType.FromType( resource is Resource gmResource && gmResource.IsValid() ? resource.GetType() : SerializedProperty.PropertyType );
 
 		PropertyStartEdit();
 
@@ -192,7 +194,7 @@ public class ResourceControlWidget : ControlWidget
 		if ( asset is null ) return;
 		if ( !CanAssignAssetType( asset ) ) return;
 
-		Resource resource;
+		IBlowoutEngineAsset resource;
 		if ( SerializedProperty.PropertyType.IsInterface )
 		{
 			// For interface types, use the asset directly since we've already verified
@@ -349,10 +351,10 @@ public class ResourceControlWidget : ControlWidget
 
 	void Copy()
 	{
-		var resource = SerializedProperty.GetValue<Resource>( null );
+		var resource = SerializedProperty.GetValue<IBlowoutEngineAsset>( null );
 		if ( resource == null ) return;
 
-		var asset = AssetSystem.FindByPath( resource.ResourcePath );
+		var asset = AssetSystem.FindByPath( resource.Path );
 		if ( asset == null ) return;
 
 		EditorUtility.Clipboard.Copy( asset.Path );

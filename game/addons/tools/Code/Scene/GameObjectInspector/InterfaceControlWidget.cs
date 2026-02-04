@@ -1,4 +1,7 @@
-﻿namespace Editor;
+﻿using BlowoutTeamSoft.Engine.Assets;
+using BlowoutTeamSoft.Engine.Interfaces.Assets;
+
+namespace Editor;
 
 [CustomEditor( ForInterface = true )]
 public class InterfaceControlWidget : ControlWidget
@@ -82,7 +85,7 @@ public class InterfaceControlWidget : ControlWidget
 		if ( asset is null )
 			return;
 
-		Resource resource;
+		IBlowoutEngineAsset resource;
 
 		if ( SerializedProperty.PropertyType.IsInterface )
 		{
@@ -123,7 +126,7 @@ public class InterfaceControlWidget : ControlWidget
 		PropertyFinishEdit();
 	}
 
-	private GameResource GetGameResource( DragData data )
+	private IBlowoutEngineAsset GetGameResource( DragData data )
 	{
 		if ( !data.HasFileOrFolder )
 		{
@@ -133,6 +136,16 @@ public class InterfaceControlWidget : ControlWidget
 		var asset = AssetSystem.FindByPath( data.FileOrFolder );
 		if ( !asset.TryLoadResource<GameResource>( out var resource ) )
 		{
+			if(asset.TryLoadResource<BlowoutAssetInstancePackable>( out var blowoutPackableAsset ))
+			{
+				if ( !resource.GetType().IsAssignableTo( SerializedProperty.PropertyType ) )
+				{
+					return null;
+				}
+
+				return blowoutPackableAsset;
+			}
+
 			return null;
 		}
 

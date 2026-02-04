@@ -155,7 +155,8 @@ static class AssetThumbnail
 		//
 		{
 			var resource = asset.LoadResource();
-			var bitmap = resource?.RenderThumbnail( new() { Width = 256, Height = 256 } );
+			//var bitmap = resource?.RenderThumbnail( new() { Width = 256, Height = 256 } );
+			var bitmap = resource?.RenderThumbnail(256, 256);
 			if ( bitmap != null )
 			{
 				return Pixmap.FromBitmap( bitmap );
@@ -177,7 +178,7 @@ static class AssetThumbnail
 			{
 				ThreadSafe.AssertIsMainThread();
 
-				var pixmap = t.Method.InvokeWithReturn<Task<Bitmap>>( null, [asset] );
+				var pixmap = t.Method?.InvokeWithReturn<Task<Bitmap>>( null, [asset] );
 				if ( pixmap is null ) continue;
 
 				ThreadSafe.AssertIsMainThread();

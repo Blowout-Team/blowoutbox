@@ -16,7 +16,7 @@ using System.Runtime.CompilerServices;
 // #define TRACE_LEAKS
 
 // define DETECT_LEAKS to detect possible leaks
-// #if DEBUG
+// #if BLOWOUT_SOURCE2_DEBUG
 // #define DETECT_LEAKS  //for now always enable DETECT_LEAKS in debug.
 // #endif
 

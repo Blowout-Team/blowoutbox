@@ -1,4 +1,5 @@
 ﻿using BlowoutTeamSoft.Engine.Attributes;
+using BlowoutTeamSoft.Engine.Interfaces.Assets;
 using System;
 using System.Diagnostics;
 using System.Reflection;
@@ -161,13 +162,13 @@ public class AssetType
 
 	private void GenerateGlyphs( AssetTypeAttribute gr )
 	{
-		var temp = Activator.CreateInstance( gr.TargetType ) as Resource;
+		var temp = Activator.CreateInstance( gr.TargetType ) as IBlowoutEngineAsset;
 		if ( temp is not null )
 		{
-			Icon256 = Pixmap.FromBitmap( temp.GetAssetTypeIcon( 256, 256 ) );
-			Icon128 = Pixmap.FromBitmap( temp.GetAssetTypeIcon( 128, 128 ) );
-			Icon64 = Pixmap.FromBitmap( temp.GetAssetTypeIcon( 64, 64 ) );
-			Icon16 = Pixmap.FromBitmap( temp.GetAssetTypeIcon( 16, 16 ) );
+			Icon256 = Pixmap.FromBitmap( temp.GetAssetIcon( 256, 256 ) );
+			Icon128 = Pixmap.FromBitmap( temp.GetAssetIcon( 128, 128 ) );
+			Icon64 = Pixmap.FromBitmap( temp.GetAssetIcon( 64, 64 ) );
+			Icon16 = Pixmap.FromBitmap( temp.GetAssetIcon( 16, 16 ) );
 			return;
 		}
 
@@ -340,7 +341,8 @@ public class AssetType
 			{
 				Category = t.Attribute.Category,
 				Extension = t.Attribute.Extension,
-				Name = t.Attribute.Name
+				Name = t.Attribute.Name,
+				TargetType = t.Attribute.InstanceType
 			}) || bChanged;
 		}
 

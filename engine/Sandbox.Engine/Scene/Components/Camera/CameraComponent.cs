@@ -234,6 +234,7 @@ public sealed partial class CameraComponent : Component, Component.ExecuteInEdit
 	{
 		EnsureSceneCameraCreated();
 		Scene.Cameras.Add( this );
+
 	}
 
 	protected override void OnDestroy()
@@ -701,6 +702,7 @@ public sealed partial class CameraComponent : Component, Component.ExecuteInEdit
 	/// </summary>
 	public Matrix ProjectionMatrix => sceneCamera.ProjectionMatrix;
 
+	[JsonIgnore, Hide]
 	public float Aspect
 	{
 		get
@@ -723,11 +725,14 @@ public sealed partial class CameraComponent : Component, Component.ExecuteInEdit
 
 	public BlowoutCameraHandle Handle => new BlowoutCameraHandle(Id.Version);
 
+	[JsonIgnore, Hide]
 	System.Numerics.Matrix4x4 IBlowoutCamera.ProjectionMatrix =>
 		ProjectionMatrix;
 
+	[JsonIgnore, Hide]
 	public System.Numerics.Matrix4x4 WorldCameraMatrix =>
-		sceneCamera.ViewMatrix;
+		default;
+		//ceneCamera.ViewMatrix;
 
 	/// <summary>
 	/// Calculates a projection matrix with an oblique clip-plane defined in world space.

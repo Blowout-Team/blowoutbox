@@ -256,7 +256,7 @@ public class ResourceSystem
 
 			if (blowoutResource != null)
 			{
-				TypeCache[extension] = new AssetTypeAttribute() { Category = blowoutResource.Category, Extension = blowoutResource.Extension, Name = blowoutResource.Name };
+				TypeCache[extension] = new AssetTypeAttribute() { Category = blowoutResource.Category, Extension = blowoutResource.Extension, Name = blowoutResource.Name, TargetType = blowoutResource.InstanceType };
 				return true;
 			}
 		}
@@ -322,11 +322,13 @@ public class ResourceSystem
 			if (blowoutAttr == null)
 				return default;
 
+			blowoutAttr.InstanceType = typeof(T);
 			attr = new AssetTypeAttribute()
 			{
 				Category = blowoutAttr.Category,
 				Extension = blowoutAttr.Extension,
-				Name = blowoutAttr.Name
+				Name = blowoutAttr.Name,
+				TargetType = blowoutAttr.InstanceType
 			};
 		}
 
@@ -512,27 +514,27 @@ public static class ResourceLibrary
 		/// <summary>
 		/// Called when a new resource has been registered
 		/// </summary>
-		void OnRegister( GameResource resource ) { }
+		void OnRegister(IBlowoutEngineAsset resource ) { }
 
 		/// <summary>
 		/// Called when a previously known resource has been unregistered
 		/// </summary>
-		void OnUnregister( GameResource resource ) { }
+		void OnUnregister(IBlowoutEngineAsset resource ) { }
 
 		/// <summary>
 		/// Called when a resource has been saved
 		/// </summary>
-		void OnSave( GameResource resource ) { }
+		void OnSave(IBlowoutEngineAsset resource ) { }
 
 		/// <summary>
 		/// Called when the source file of a known resource has been externally modified on disk
 		/// </summary>
-		void OnExternalChanges( GameResource resource ) { }
+		void OnExternalChanges(IBlowoutEngineAsset resource ) { }
 
 		/// <summary>
 		/// Called when the source file of a known resource has been externally modified on disk
 		/// and after it has been fully loaded (after post load is called)
 		/// </summary>
-		void OnExternalChangesPostLoad( GameResource resource ) { }
+		void OnExternalChangesPostLoad(IBlowoutEngineAsset resource ) { }
 	}
 }

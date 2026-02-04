@@ -20,7 +20,8 @@ internal static class ResourceLoader
 			{
 				Category = blowoutResource.Category,
 				Extension = blowoutResource.Extension,
-				Name = blowoutResource.Name
+				Name = blowoutResource.Name,
+				TargetType = blowoutResource.InstanceType
 			});
 		}
 

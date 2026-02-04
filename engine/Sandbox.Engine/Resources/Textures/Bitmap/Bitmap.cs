@@ -1,8 +1,9 @@
-﻿using SkiaSharp;
+﻿using BlowoutTeamSoft.Engine.Interfaces;
+using SkiaSharp;
 
 namespace Sandbox;
 
-public sealed partial class Bitmap : IDisposable, IValid
+public sealed partial class Bitmap : IBlowoutBitmap, IDisposable, IValid
 {
 	private SKBitmap _bitmap;
 	private SKCanvas _canvas;
@@ -325,5 +326,10 @@ public sealed partial class Bitmap : IDisposable, IValid
 
 		// we can't determin that it's opaque so say it's not
 		return false;
+	}
+
+	unsafe void* IBlowoutBitmap.GetPointer()
+	{
+		return GetPointer();
 	}
 }

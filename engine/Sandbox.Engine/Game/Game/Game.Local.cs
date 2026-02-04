@@ -26,6 +26,7 @@ public static partial class Game
 		TypeLibrary.AddAssembly( Game.GameAssembly, false );
 		TypeLibrary.AddAssembly( typeof( EngineLoop ).Assembly, false );
 		TypeLibrary.AddAssembly( typeof( Facepunch.ActionGraphs.ActionGraph ).Assembly, false );
+		TypeLibrary.AddAssembly(typeof(BlowoutTeamSoft.Engine.BlowoutEngine).Assembly, false);
 
 		if ( NodeLibrary is null )
 		{

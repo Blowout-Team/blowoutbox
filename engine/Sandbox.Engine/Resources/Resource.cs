@@ -226,4 +226,10 @@ public abstract partial class Resource : BlowoutEngineObject, IValid, IJsonConve
 	{
 		// nothing do in native :P
 	}
+
+	public IBlowoutBitmap GetAssetIcon(int width, int height) =>
+		CreateAssetTypeIcon(width, height);
+
+	public IBlowoutBitmap RenderThumbnail(int width, int height) =>
+		RenderThumbnail(new ThumbnailOptions() { Width = width, Height = height });
 }

@@ -1,4 +1,5 @@
-﻿using NativeEngine;
+﻿using BlowoutTeamSoft.Engine.Assets;
+using NativeEngine;
 using System;
 using System.Collections.Concurrent;
 using System.ComponentModel;
@@ -264,6 +265,7 @@ public static partial class AssetSystem
 		// Make sure the ResoureLibrary has proper loaded version, so that properties that target
 		// GameResources do not break child assets if child asset was not loaded with Asset.CreateUI beforehand.
 		ret.TryLoadGameResource( typeof( GameResource ), out _, true );
+		ret.TryLoadGameResource( typeof( BlowoutAssetInstancePackable ), out _, true );
 
 		return ret;
 	}

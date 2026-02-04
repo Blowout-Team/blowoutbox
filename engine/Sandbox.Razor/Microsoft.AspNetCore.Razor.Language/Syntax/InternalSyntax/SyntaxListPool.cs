@@ -12,7 +12,7 @@ namespace Microsoft.AspNetCore.Razor.Language.Syntax.InternalSyntax
 		private ArrayElement<SyntaxListBuilder>[] _freeList = new ArrayElement<SyntaxListBuilder>[10];
 		private int _freeIndex;
 
-#if DEBUG
+#if BLOWOUT_SOURCE2_DEBUG
 		private readonly List<SyntaxListBuilder> _allocated = new List<SyntaxListBuilder>();
 #endif
 
@@ -34,7 +34,7 @@ namespace Microsoft.AspNetCore.Razor.Language.Syntax.InternalSyntax
 				item = new SyntaxListBuilder( 10 );
 			}
 
-#if DEBUG
+#if BLOWOUT_SOURCE2_DEBUG
 			Debug.Assert( !_allocated.Contains( item ) );
 			_allocated.Add( item );
 #endif
@@ -54,7 +54,7 @@ namespace Microsoft.AspNetCore.Razor.Language.Syntax.InternalSyntax
 			{
 				this.Grow();
 			}
-#if DEBUG
+#if BLOWOUT_SOURCE2_DEBUG
 			Debug.Assert( _allocated.Contains( item ) );
 
 			_allocated.Remove( item );

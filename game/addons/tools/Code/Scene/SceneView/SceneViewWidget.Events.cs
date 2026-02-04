@@ -1,12 +1,16 @@
+using BlowoutTeamSoft.Engine.Interfaces.Assets;
+
 namespace Editor;
 
 public partial class SceneViewWidget : ResourceLibrary.IEventListener
 {
 	private PopupDialogWidget _externalChangesDialog;
 
-	void ResourceLibrary.IEventListener.OnExternalChanges( GameResource resource )
+	void ResourceLibrary.IEventListener.OnExternalChanges( IBlowoutEngineAsset resource )
 	{
-		if ( resource != Session.Scene.Source ) return;
+		if(resource is not GameResource gameResource)
+			return;
+		if ( gameResource != Session.Scene.Source ) return;
 
 		if ( _externalChangesDialog.IsValid() ) // already showing one
 			return;

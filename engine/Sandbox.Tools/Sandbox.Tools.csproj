@@ -39,6 +39,7 @@
     <ProjectReference Include="../Sandbox.GameInstance/Sandbox.GameInstance.csproj" />
     <ProjectReference Include="../Sandbox.Reflection/Sandbox.Reflection.csproj" />
     <ProjectReference Include="..\BlowoutTeamSoft\Editor.Drawers\BlowoutTeamSoft.Editor.Drawers.csproj" />
+    <ProjectReference Include="..\BlowoutTeamSoft\Engine\BlowoutTeamSoft.Engine.csproj" />
   </ItemGroup>
 
   <ItemGroup>

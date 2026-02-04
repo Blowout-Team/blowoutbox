@@ -73,7 +73,7 @@ public partial class StartupWindow : Window
 				sidebar.Add( new SidebarButton( "Blowout Team Discrod", "monitor", "https://discord.com/invite/GjyDhXNbEV") );
 				sidebar.Add( new SidebarButton( $"Open {Global.BackendTitle}", "celebration", Global.BackendUrl ) );
 				sidebar.Add( new SidebarButton( "API Reference", "code", $"{Global.BackendUrl}/api" ) );
-			}
+			} 
 
 			sidebar.AddSpacer();
 

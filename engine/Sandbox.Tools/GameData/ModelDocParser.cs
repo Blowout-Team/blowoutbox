@@ -1,4 +1,5 @@
 ﻿using System;
+using System.ComponentModel;
 using System.Reflection;
 using System.Text.Json.Serialization;
 
@@ -75,6 +76,10 @@ internal static partial class ModelDocParser
 				Log.Warning( $"FGDWriter: Ignoring property {type.Name}.{prop.Name} that has same type {prop.PropertyType} as its parent." );
 				continue;
 			}
+
+			var skipEditorAttr = prop.GetCustomAttribute<BrowsableAttribute>(true);
+			if (skipEditorAttr != null && !skipEditorAttr.Browsable)
+				continue;
 
 			var skipAttr = prop.GetCustomAttribute<HideAttribute>( true );
 			if ( skipAttr != null ) continue;

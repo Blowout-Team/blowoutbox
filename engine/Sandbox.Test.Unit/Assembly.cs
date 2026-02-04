@@ -47,5 +47,6 @@ public class TestInit
 		GlobalToolsNamespace.EditorTypeLibrary.AddAssembly( typeof( EngineLoop ).Assembly, false );
 		GlobalToolsNamespace.EditorTypeLibrary.AddAssembly( typeof( Facepunch.ActionGraphs.ActionGraph ).Assembly, false );
 		GlobalToolsNamespace.EditorTypeLibrary.AddAssembly( typeof( TestInit ).Assembly, true );
+		GlobalToolsNamespace.EditorTypeLibrary.AddAssembly( typeof( BlowoutTeamSoft.Engine.BlowoutEngine ).Assembly, true );
 	}
 }

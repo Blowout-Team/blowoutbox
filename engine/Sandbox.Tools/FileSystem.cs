@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using BlowoutTeamSoft.Engine.Assets;
+using System.IO;
 
 namespace Editor;
 
@@ -126,6 +127,11 @@ public static class FileSystem
 			if ( asset.TryLoadResource<GameResource>( out var gameResource ) )
 			{
 				asset.Compile( false );
+			}
+
+			if (asset.TryLoadResource<BlowoutAssetInstancePackable>(out var packableAsset))
+			{
+				asset.Compile(false);
 			}
 		}
 

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.ComponentModel;
 using System.Reflection;
 
 namespace Editor;
@@ -40,6 +41,10 @@ internal static partial class EntityParser
 				Log.Warning( $"FGDWriter: Ignoring property {type.Name}.{prop.Name} that has same type {prop.PropertyType} as its parent." );
 				continue;
 			}
+
+			var skipEditor = prop.GetCustomAttribute<BrowsableAttribute>();
+			if (skipEditor != null && !skipEditor.Browsable)
+				continue;
 
 			var skipAttr = prop.GetCustomAttribute<HideAttribute>( true );
 			if ( skipAttr != null ) continue;

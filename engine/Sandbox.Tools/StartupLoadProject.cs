@@ -219,6 +219,7 @@ static class StartupLoadProject
 			await RefreshCloudAssets( ct );
 		}
 
+		Log.Info("Trying to compile assets and shaders");
 		// Go through and compile all assets
 		using ( var _ = Bootstrap.StartupTiming?.ScopeTimer( $"Load Project: CompileAllAssets" ) )
 		{
@@ -298,10 +299,15 @@ static class StartupLoadProject
 	{
 		var sw = Stopwatch.StartNew();
 		var gr = AssetSystem.All.Where( x => !x.IsTrivialChild && x.CanRecompile && !x.IsCompiledAndUpToDate ).ToArray();
-		if ( gr.Length == 0 ) return;
+		if ( gr.Length == 0 )
+		{
+			Log.Warning("Not a single asset was noticed, skipping compilation of assets");
+			return;
+		}
 
 		FastTimer timer = FastTimer.StartNew();
 
+		Log.Info($"Blowout: Collected assets: '{gr.Length}'");
 		int i = 0;
 		foreach ( var r in gr )
 		{

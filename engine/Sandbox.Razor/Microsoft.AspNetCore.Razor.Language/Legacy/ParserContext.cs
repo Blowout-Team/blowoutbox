@@ -59,7 +59,7 @@ namespace Microsoft.AspNetCore.Razor.Language.Legacy
 
 	// Debug Helpers
 
-#if DEBUG
+#if BLOWOUT_SOURCE2_DEBUG
 	[DebuggerDisplay( "{" + nameof( DebuggerToString ) + "(),nq}" )]
 	internal partial class ParserContext
 	{

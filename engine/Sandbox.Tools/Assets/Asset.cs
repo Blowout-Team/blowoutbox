@@ -1,5 +1,11 @@
-﻿using NativeEngine;
+﻿using BlowoutTeamSoft.Engine;
+using BlowoutTeamSoft.Engine.Assets;
+using BlowoutTeamSoft.Engine.Attributes;
+using BlowoutTeamSoft.Engine.Interfaces.Assets;
+using NativeEngine;
+using Sandbox.Engine;
 using System;
+using System.Text.Json.Nodes;
 
 namespace Editor;
 
@@ -10,12 +16,12 @@ public abstract partial class Asset
 
 	internal Asset()
 	{
-		Tags = new AssetTags( this );
+		Tags = new AssetTags(this);
 	}
 
 	public override string ToString() => Path;
 
-	internal abstract void UpdateInternals( bool compileImmediately = true );
+	internal abstract void UpdateInternals(bool compileImmediately = true);
 
 	/// <summary>
 	/// Tags for this asset, for filtering purposes in the Asset Browser.
@@ -85,12 +91,12 @@ public abstract partial class Asset
 	/// <summary>
 	/// This asset is generated in the transient folder. You don't need to see it, or keep it around. It will re-generate from something else.
 	/// </summary>
-	public virtual bool IsTransient => AbsolutePath.Contains( "/.sbox/transient/" );
+	public virtual bool IsTransient => AbsolutePath.Contains("/.sbox/transient/");
 
 	/// <summary>
 	/// This asset is from the cloud, it's in the cloud folder
 	/// </summary>
-	public virtual bool IsCloud => AbsolutePath.Contains( "/.sbox/cloud/" );
+	public virtual bool IsCloud => AbsolutePath.Contains("/.sbox/cloud/");
 
 	/// <summary>
 	/// The asset was generated from another asset compile and has no source asset of its own. For example model break gibs .vmdl, .vtex files for materials, etc.
@@ -112,14 +118,14 @@ public abstract partial class Asset
 	/// </summary>
 	public void Delete()
 	{
-		var compiled = GetCompiledFile( true );
-		var source = GetSourceFile( true );
+		var compiled = GetCompiledFile(true);
+		var source = GetSourceFile(true);
 
-		if ( !string.IsNullOrWhiteSpace( compiled ) )
-			EditorUtility.SendToRecycleBin( compiled );
+		if (!string.IsNullOrWhiteSpace(compiled))
+			EditorUtility.SendToRecycleBin(compiled);
 
-		if ( !string.IsNullOrWhiteSpace( source ) )
-			EditorUtility.SendToRecycleBin( source );
+		if (!string.IsNullOrWhiteSpace(source))
+			EditorUtility.SendToRecycleBin(source);
 
 		IsDeleted = true;
 	}
@@ -129,14 +135,14 @@ public abstract partial class Asset
 	/// </summary>
 	/// <param name="absolute">Whether the path should be absolute or relative.</param>F
 	/// <returns>The compiled file path, or null if the asset was not compiled.</returns>
-	public abstract string GetCompiledFile( bool absolute = false );
+	public abstract string GetCompiledFile(bool absolute = false);
 
 	/// <summary>
 	/// Returns the source file path, if the sources are present.
 	/// </summary>
 	/// <param name="absolute">Whether the path should be absolute or relative.</param>
 	/// <returns>The source file path, or null if the source files are not present.</returns>
-	public abstract string GetSourceFile( bool absolute = false );
+	public abstract string GetSourceFile(bool absolute = false);
 
 	internal Pixmap CachedThumbnail;
 	public bool HasCachedThumbnail => CachedThumbnail is not null && CachedThumbnail != AssetType?.Icon256;
@@ -144,42 +150,42 @@ public abstract partial class Asset
 	/// <summary>
 	/// Returns the asset preview thumbnail, with fallback to the asset type icon if there is no preview.
 	/// </summary>
-	public Pixmap GetAssetThumb( bool generateIfNotInCache = true )
+	public Pixmap GetAssetThumb(bool generateIfNotInCache = true)
 	{
-		return AssetThumbnail.GetAssetThumb( this, generateIfNotInCache );
+		return AssetThumbnail.GetAssetThumb(this, generateIfNotInCache);
 	}
 
 	public void CancelThumbBuild()
 	{
-		AssetThumbnail.DequeueThumbBuild( this );
+		AssetThumbnail.DequeueThumbBuild(this);
 	}
 
-	internal abstract int FindIntEditInfo( string name );
+	internal abstract int FindIntEditInfo(string name);
 
-	public abstract string FindStringEditInfo( string name );
+	public abstract string FindStringEditInfo(string name);
 
 	/// <summary>
 	/// Delete existing cached thumbnail, optionally queuing for building a new one ASAP.
 	/// </summary>
 	/// <param name="startBuild">Queue building the new thumbnail ASAP, as opposed to waiting when it is actually needed and doing it then.</param>
-	public void RebuildThumbnail( bool startBuild = true )
+	public void RebuildThumbnail(bool startBuild = true)
 	{
-		var fullPath = AssetThumbnail.GetThumbnailFile( this, false );
+		var fullPath = AssetThumbnail.GetThumbnailFile(this, false);
 
 		try
 		{
-			if ( System.IO.File.Exists( fullPath ) )
-				System.IO.File.Delete( fullPath );
+			if (System.IO.File.Exists(fullPath))
+				System.IO.File.Delete(fullPath);
 		}
-		catch ( System.Exception )
+		catch (System.Exception)
 		{
 			return;
 		}
 
 		CachedThumbnail = thumbnailOverride ?? AssetType.Icon256;
 
-		if ( startBuild )
-			AssetThumbnail.QueueThumbBuild( this );
+		if (startBuild)
+			AssetThumbnail.QueueThumbBuild(this);
 		else
 			CachedThumbnail = null;
 	}
@@ -189,30 +195,30 @@ public abstract partial class Asset
 	/// You can specify nativeEditor to open in a specific editor.
 	/// </summary>
 	/// <param name="nativeEditor">A native editor specified in enginetools.txt (e.g modeldoc_editor, hammer, pet..)</param>
-	public abstract void OpenInEditor( string nativeEditor = null );
+	public abstract void OpenInEditor(string nativeEditor = null);
 
 	/// <summary>
 	/// Returns assets that this asset references/uses.
 	/// </summary>
 	/// <param name="deep">Whether to recurse. For example, will also include textures referenced by the materials used by this model asset, as opposed to returning just the materials.</param>
-	public abstract List<Asset> GetReferences( bool deep );
+	public abstract List<Asset> GetReferences(bool deep);
 
 	/// <summary>
 	/// Returns assets that depend/use this asset.
 	/// </summary>
 	/// <param name="deep">Whether to recurse. For example, will also include maps that are using models which use this material asset, as opposed to returning just the models.</param>
-	public abstract List<Asset> GetDependants( bool deep );
+	public abstract List<Asset> GetDependants(bool deep);
 
-	List<Asset> GetAssetList( NativeEngine.CUtlVectorAsset v, bool free )
+	List<Asset> GetAssetList(NativeEngine.CUtlVectorAsset v, bool free)
 	{
 		var l = new List<Asset>();
 
-		for ( int i = 0; i < v.Count(); i++ )
+		for (int i = 0; i < v.Count(); i++)
 		{
-			l.Add( AssetSystem.Get( v.Element( i ) ) );
+			l.Add(AssetSystem.Get(v.Element(i)));
 		}
 
-		if ( free )
+		if (free)
 			v.DeleteThis();
 
 		return l;
@@ -237,7 +243,7 @@ public abstract partial class Asset
 	/// Forcibly recompile the asset.
 	/// </summary>
 	/// <param name="full">TODO</param>
-	public abstract bool Compile( bool full );
+	public abstract bool Compile(bool full);
 
 	MetaData _metadata;
 
@@ -248,25 +254,25 @@ public abstract partial class Asset
 	{
 		get
 		{
-			if ( _metadata != null ) return _metadata;
+			if (_metadata != null) return _metadata;
 
-			var f = GetSourceFile( true );
-			if ( string.IsNullOrEmpty( f ) ) f = GetCompiledFile( true );
-			if ( string.IsNullOrEmpty( f ) ) return null;
+			var f = GetSourceFile(true);
+			if (string.IsNullOrEmpty(f)) f = GetCompiledFile(true);
+			if (string.IsNullOrEmpty(f)) return null;
 
 			// tony: Don't make metadata for cloud assets.. not my favourite addition ever
 			// we're mounting all the downloaded cloud assets first, and checking their tags, which is making fake metadata
 			// using the wrong paths
-			if ( f.Contains( "/.sbox/cloud/" ) ) return null;
+			if (f.Contains("/.sbox/cloud/")) return null;
 
 			// modelname.vmdl_c -> modelname.vmdl
-			if ( f.EndsWith( "_c" ) )
-				f = f.Substring( 0, f.Length - 2 );
+			if (f.EndsWith("_c"))
+				f = f.Substring(0, f.Length - 2);
 
 			// modelname.vmdl -> modelname.vmdl.meta
 			f += ".meta";
 
-			_metadata = new MetaData( f );
+			_metadata = new MetaData(f);
 			return _metadata;
 		}
 	}
@@ -280,10 +286,10 @@ public abstract partial class Asset
 		var thumbPath = $"{AbsolutePath}.png";
 
 		// Thumbnail might not be valid (e.g. not a supported asset type)
-		if ( thumb == null )
+		if (thumb == null)
 			return;
 
-		thumb.SavePng( thumbPath );
+		thumb.SavePng(thumbPath);
 	}
 
 	/// <summary>
@@ -292,7 +298,7 @@ public abstract partial class Asset
 	/// <returns>The rendered preview thumbnail, or null if asset type does not support previews.</returns>
 	public Task<Pixmap> RenderThumb()
 	{
-		return AssetThumbnail.RenderAssetThumb( this );
+		return AssetThumbnail.RenderAssetThumb(this);
 	}
 
 	/// <summary>
@@ -304,47 +310,59 @@ public abstract partial class Asset
 	/// Try to load this asset as an automatically determined resource type.
 	/// If this isn't a resource type (like an Image) then it will return null.
 	/// </summary>
-	public Resource LoadResource()
+	public IBlowoutEngineAsset LoadResource()
 	{
-		if ( AssetType.ResourceType is not { } type )
+		if (AssetType.ResourceType is not { } type)
 		{
 			return null;
 		}
 
-		return LoadResource( type );
+		return LoadResource(type);
 	}
 
 	/// <summary>
-	/// Try to load this asset as a <see cref="Resource"/> of given type.
+	/// Try to load this asset as a of given type.
 	/// </summary>
 	/// <typeparam name="T">The type of resource to try to load.</typeparam>
-	/// <returns>The loaded <see cref="Resource"/> instance of given type, or null on failure.</returns>
-	public T LoadResource<T>() where T : Resource
+	/// <returns>The loaded instance of given type, or null on failure.</returns>
+	public T LoadResource<T>() where T : IBlowoutEngineAsset
 	{
-		return LoadResource( typeof( T ) ) as T;
+		var resource = LoadResource(typeof(T));
+		if (resource is T target)
+			return target;
+
+		return default;
 	}
 
 	/// <summary>
-	/// Try to load this asset as a <see cref="Resource"/> of given type.
+	/// Try to load this asset as a of given type.
 	/// </summary>
-	/// <returns>The loaded <see cref="Resource"/> instance of given type, or null on failure.</returns>
-	public Resource LoadResource( Type resourceType )
+	/// <returns>The loaded instance of given type, or null on failure.</returns>
+	public IBlowoutEngineAsset LoadResource(Type resourceType)
 	{
-		if ( resourceType.IsAssignableTo( typeof( GameResource ) ) )
+		if (resourceType.IsAssignableFrom(typeof(BlowoutAssetInstancePackable)))
 		{
-			if ( TryLoadGameResource( resourceType, out var o ) )
+			if (TryLoadBlowoutAssetPackable(resourceType, out var b))
+				return b;
+
+			return null;
+		}
+
+		if (resourceType.IsAssignableTo(typeof(GameResource)))
+		{
+			if (TryLoadGameResource(resourceType, out var o))
 				return o;
 
 			return null;
 		}
 
-		if ( resourceType.IsAssignableTo( typeof( Texture ) ) )
+		if (resourceType.IsAssignableTo(typeof(Texture)))
 		{
 			// Use the relative path here so we can load png/jpg/ect not *just* vtex
-			return Texture.Load( RelativePath );
+			return Texture.Load(RelativePath);
 		}
 
-		return Resource.Load( resourceType, Path );
+		return Resource.Load(resourceType, Path);
 	}
 
 	/// <summary>
@@ -353,17 +371,17 @@ public abstract partial class Asset
 	/// <typeparam name="T">The type of resource to try to load.</typeparam>
 	/// <param name="obj">Output resource on success, null on failure.</param>
 	/// <returns>true if <paramref name="obj"/> was successfully set.</returns>
-	public bool TryLoadResource<T>( out T obj ) where T : Resource
+	public bool TryLoadResource<T>(out T obj) where T : IBlowoutEngineAsset
 	{
 		obj = LoadResource<T>();
 		return obj != null;
 	}
 
-	private bool TryLoadGameResource<T>( out T obj ) where T : GameResource
+	private bool TryLoadGameResource<T>(out T obj) where T : GameResource
 	{
 		obj = null;
 
-		if ( TryLoadGameResource( typeof( T ), out GameResource resource ) == false )
+		if (TryLoadGameResource(typeof(T), out GameResource resource) == false)
 		{
 			return false;
 		}
@@ -372,53 +390,100 @@ public abstract partial class Asset
 		return obj is not null;
 	}
 
-	internal virtual bool TryLoadGameResource( Type t, out GameResource obj, bool allowCreate = false )
+	internal virtual bool TryLoadBlowoutAssetPackable(Type t, out BlowoutAssetInstancePackable obj, bool allowCreate = false)
 	{
 		obj = null;
 
-		if ( !Game.Resources.TryGetType( AssetType.FileExtension, out var attribute ) )
+		if (!Game.Resources.TryGetType(AssetType.FileExtension, out var attribute))
 			return false;
 
-		if ( !attribute.TargetType.IsAssignableTo( t ) || attribute.TargetType.IsAbstract )
+		if (!attribute.TargetType.IsAssignableTo(t) || attribute.TargetType.IsAbstract)
 			return false;
 
 		// Make sure we have an up to date compiled version
-		if ( CanRecompile )
+		if (CanRecompile)
 		{
-			Compile( false );
+			Compile(false);
 		}
 
-		obj = GameResource.GetPromise( attribute.TargetType, Path );
-		if ( obj != null && !obj.IsPromise )
+		obj = (BlowoutAssetInstancePackable)BlowoutEngine.CreateAsset(attribute.TargetType, Path);
+		if (obj != null)
+			return true;
+
+		// get compiled path
+		var compiledFilePath = GetCompiledFile(true);
+
+		if (string.IsNullOrEmpty(compiledFilePath))
+		{
+			if (allowCreate) return true;
+
+			Log.Warning($"Tried to load {this} but couldn't get compiled file");
+			return false;
+		}
+
+		if (!System.IO.File.Exists(compiledFilePath))
+		{
+			Log.Warning($"Tried to load {this} but compiled file doesn't exist ({compiledFilePath})");
+			return false;
+		}
+
+		var data = System.IO.File.ReadAllBytes(compiledFilePath);
+		if (data == null)
+		{
+			Log.Warning($"Tried to load {this} but couldn't read file");
+			return false;
+		}
+
+		return true;
+	}
+
+	internal virtual bool TryLoadGameResource(Type t, out GameResource obj, bool allowCreate = false)
+	{
+		obj = null;
+
+		if (!Game.Resources.TryGetType(AssetType.FileExtension, out var attribute))
+			return false;
+
+		if (!attribute.TargetType.IsAssignableTo(t) || attribute.TargetType.IsAbstract)
+			return false;
+
+		// Make sure we have an up to date compiled version
+		if (CanRecompile)
+		{
+			Compile(false);
+		}
+
+		obj = GameResource.GetPromise(attribute.TargetType, Path);
+		if (obj != null && !obj.IsPromise)
 			return true; // already exists and loaded
 
 		// get compiled path
-		var compiledFilePath = GetCompiledFile( true );
+		var compiledFilePath = GetCompiledFile(true);
 
-		if ( string.IsNullOrEmpty( compiledFilePath ) )
+		if (string.IsNullOrEmpty(compiledFilePath))
 		{
-			if ( allowCreate ) return true;
+			if (allowCreate) return true;
 
-			Log.Warning( $"Tried to load {this} but couldn't get compiled file" );
+			Log.Warning($"Tried to load {this} but couldn't get compiled file");
 			return false;
 		}
 
-		if ( !System.IO.File.Exists( compiledFilePath ) )
+		if (!System.IO.File.Exists(compiledFilePath))
 		{
-			Log.Warning( $"Tried to load {this} but compiled file doesn't exist ({compiledFilePath})" );
+			Log.Warning($"Tried to load {this} but compiled file doesn't exist ({compiledFilePath})");
 			return false;
 		}
 
-		var data = System.IO.File.ReadAllBytes( compiledFilePath );
-		if ( data == null )
+		var data = System.IO.File.ReadAllBytes(compiledFilePath);
+		if (data == null)
 		{
-			Log.Warning( $"Tried to load {this} but couldn't read file" );
+			Log.Warning($"Tried to load {this} but couldn't read file");
 			return false;
 		}
 
-		if ( !obj.TryLoadFromData( data ) )
+		if (!obj.TryLoadFromData(data))
 		{
-			Log.Warning( $"Tried to load {this} but couldn't load from data" );
+			Log.Warning($"Tried to load {this} but couldn't load from data");
 			return false;
 		}
 
@@ -431,46 +496,46 @@ public abstract partial class Asset
 	public unsafe string ReadJson()
 	{
 		// Don't bother
-		if ( !AssetType.IsGameResource )
+		if (!AssetType.IsGameResource)
 			return null;
 
 		try
 		{
-			var filename = GetSourceFile( true );
+			var filename = GetSourceFile(true);
 
 			// If we only have the compiled, load from that
 			// this isn't the ideal, but right now this lets us show info
 			// in the editor - even if they can't edit it.
-			if ( string.IsNullOrWhiteSpace( filename ) )
+			if (string.IsNullOrWhiteSpace(filename))
 			{
-				filename = GetCompiledFile( true );
-				var data = System.IO.File.ReadAllBytes( filename );
+				filename = GetCompiledFile(true);
+				var data = System.IO.File.ReadAllBytes(filename);
 
-				fixed ( byte* ptr = data )
+				fixed (byte* ptr = data)
 				{
-					return EngineGlue.ReadCompiledResourceFileJson( (IntPtr)ptr );
+					return EngineGlue.ReadCompiledResourceFileJson((IntPtr)ptr);
 				}
 			}
 			else
 			{
-				var txt = System.IO.File.ReadAllText( filename );
+				var txt = System.IO.File.ReadAllText(filename);
 
 				// This isn't json, it's the the keyvalues system. Lets update
 				// it by converting to json and then returning the new json value
 				// We should be able to get rid of this code in a few months when
 				// there are no more keyvalue assets.
-				if ( txt.First() == '<' )
+				if (txt.First() == '<')
 				{
-					var kv = EngineGlue.LoadKeyValues3( txt );
-					if ( kv.IsNull ) return null;
+					var kv = EngineGlue.LoadKeyValues3(txt);
+					if (kv.IsNull) return null;
 
-					var json = EngineGlue.KeyValues3ToJson( kv.FindOrCreateMember( "data" ) );
+					var json = EngineGlue.KeyValues3ToJson(kv.FindOrCreateMember("data"));
 					kv.DeleteThis();
 
 					// Upgrade with json
-					if ( json is not null )
+					if (json is not null)
 					{
-						System.IO.File.WriteAllText( filename, json );
+						System.IO.File.WriteAllText(filename, json);
 					}
 
 					return json;
@@ -479,11 +544,11 @@ public abstract partial class Asset
 				return txt;
 			}
 		}
-		catch ( System.IO.DirectoryNotFoundException )
+		catch (System.IO.DirectoryNotFoundException)
 		{
 			return null;
 		}
-		catch ( System.IO.FileNotFoundException )
+		catch (System.IO.FileNotFoundException)
 		{
 			return null;
 		}
@@ -494,46 +559,145 @@ public abstract partial class Asset
 	/// </summary>
 	/// <param name="obj">The instance data to save.</param>
 	/// <returns>Whether the instance was successfully saved or not.</returns>
-	public virtual bool SaveToDisk( GameResource obj )
+	public virtual bool SaveToDisk(GameResource obj)
 	{
-		if ( obj == null )
+		if (obj == null)
 			return false;
 
-		var filename = GetSourceFile( true );
+		var filename = GetSourceFile(true);
 
-		if ( string.IsNullOrWhiteSpace( filename ) )
+		if (string.IsNullOrWhiteSpace(filename))
 			return false;
 
-		var attribute = EditorTypeLibrary.GetAttributes<AssetTypeAttribute>().Where( x => x.Extension == AssetType.FileExtension ).FirstOrDefault();
+		var attribute = EditorTypeLibrary.GetAttributes<AssetTypeAttribute>().Where(x => x.Extension == AssetType.FileExtension).FirstOrDefault();
 
-		if ( attribute == null || !obj.GetType().IsAssignableTo( attribute.TargetType ) )
+		if (attribute == null)
+		{
+			var blowoutAttribute = EditorTypeLibrary.GetAttributes<BlowoutAssetInstanceAttribute>().Where(x => x.Extension == AssetType.FileExtension).FirstOrDefault();
+			if (blowoutAttribute != null)
+				attribute = new AssetTypeAttribute()
+				{
+					Category = blowoutAttribute.Category,
+					Extension = blowoutAttribute.Extension,
+					Name = blowoutAttribute.Name,
+					TargetType = blowoutAttribute.InstanceType
+				};
+		}
+
+		if (attribute == null || !obj.GetType().IsAssignableTo(attribute.TargetType))
 			return false;
 
 		RecordOpened();
 
 		var json = obj.Serialize();
-		var jsonString = json.ToJsonString( Json.options );
+		var jsonString = json.ToJsonString(Json.options);
 
-		for ( int retry = 0; retry < 10; retry++ )
+		for (int retry = 0; retry < 10; retry++)
 		{
 			try
 			{
-				obj.SaveToDisk( filename, jsonString );
+				obj.SaveToDisk(filename, jsonString);
 
-				Compile( false );
-				obj.Register( Path );
+				Compile(false);
+				obj.Register(Path);
 				return true;
 			}
-			catch ( System.Exception e )
+			catch (System.Exception e)
 			{
-				Log.Warning( e, $"Problem writing {filename} - retrying" );
+				Log.Warning(e, $"Problem writing {filename} - retrying");
 
-				if ( retry == 9 )
+				if (retry == 9)
 				{
-					Log.Warning( "Aborting - couldn't write." );
+					Log.Warning("Aborting - couldn't write.");
 				}
 
-				System.Threading.Thread.Sleep( 200 );
+				System.Threading.Thread.Sleep(200);
+			}
+		}
+
+		return false;
+	}
+
+	public virtual bool SaveToDisk(BlowoutAssetInstancePackable obj)
+	{
+		if (obj == null)
+			return false;
+
+		var filename = GetSourceFile(true);
+
+		if (string.IsNullOrWhiteSpace(filename))
+			return false;
+
+		var attribute = EditorTypeLibrary.GetAttributes<AssetTypeAttribute>().Where(x => x.Extension == AssetType.FileExtension).FirstOrDefault();
+
+		if (attribute == null || !obj.GetType().IsAssignableTo(attribute.TargetType))
+			return false;
+
+		RecordOpened();
+
+		JsonObject json;
+		byte[] capturedData;
+		using (var blobs = BlobDataSerializer.Capture())
+		{
+			json = Json.SerializeAsObject(obj);
+
+			capturedData = blobs.ToByteArray();
+		}
+
+		json["__version"] = "blowout_default";
+
+		var jsonString = json.ToJsonString(Json.options);
+
+		for (int retry = 0; retry < 10; retry++)
+		{
+			try
+			{
+				System.IO.File.WriteAllText(filename, jsonString);
+
+				// Write binary data if present
+				if (capturedData != null && capturedData.Length > 0)
+				{
+					try
+					{
+						var blobPath = filename + "_d";
+						System.IO.File.WriteAllBytes(blobPath, capturedData);
+					}
+					catch (Exception e)
+					{
+						Log.Warning(e, $"Failed to write binary data file: {e.Message}");
+					}
+					finally
+					{
+						capturedData = null;
+					}
+				}
+
+				IToolsDll.Current?.RunEvent<ResourceLibrary.IEventListener>(i => i.OnSave(obj));
+
+				Compile(false);
+
+				if (!string.IsNullOrEmpty(filename))
+				{
+					filename = filename.NormalizeFilename(false);
+					if (filename.EndsWith("_c")) filename = filename[..^2];
+					filename = filename.TrimStart('/');
+
+					obj.InitializeAsset(filename, filename.FastHash(), null);
+					Game.Resources.Register(obj);
+				}
+
+				return true;
+			}
+			catch (System.Exception e)
+			{
+				Log.Warning(e, $"Problem writing {filename} - retrying");
+
+				if (retry == 9)
+				{
+					Log.Warning("Aborting - couldn't write.");
+				}
+
+				System.Threading.Thread.Sleep(200);
 			}
 		}
 
@@ -564,12 +728,12 @@ public abstract partial class Asset
 	/// Returns a task that will resolve when the asset is compiled. If the asset is already compiled, do nothing. Does not support maps.
 	/// </summary>
 	/// <returns>true if the compile was needed, and was successful.</returns>
-	public abstract ValueTask<bool> CompileIfNeededAsync( float timeout = 30.0f );
+	public abstract ValueTask<bool> CompileIfNeededAsync(float timeout = 30.0f);
 
 	/// <summary>
 	/// Override the Assets thumbnail with given one.
 	/// </summary>
-	public void OverrideThumbnail( Pixmap pixmap )
+	public void OverrideThumbnail(Pixmap pixmap)
 	{
 		thumbnailOverride = pixmap;
 		RebuildThumbnail();
@@ -595,7 +759,7 @@ public abstract partial class Asset
 	/// Set data for this asset which will be compiled in memory. This is used to preview
 	/// asset changes (like materials) before committing to disk.
 	/// </summary>
-	public abstract bool SetInMemoryReplacement( string sourceData );
+	public abstract bool SetInMemoryReplacement(string sourceData);
 
 	/// <summary>
 	/// Reverse the changes of SetInMemoryReplacement
@@ -603,5 +767,5 @@ public abstract partial class Asset
 	public abstract void ClearInMemoryReplacement();
 
 	internal virtual void Uncache() { }
-	internal virtual Task<bool> CacheAsync() { return Task.FromResult( false ); }
+	internal virtual Task<bool> CacheAsync() { return Task.FromResult(false); }
 }

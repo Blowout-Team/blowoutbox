@@ -645,6 +645,11 @@ public struct BBox : System.IEquatable<BBox>, IBlowoutBounds
 		return Min == other.Min && Max == other.Max;
 	}
 
-	public readonly string ToString(string format, IFormatProvider formatProvider) =>
-		string.Format(formatProvider, format, Mins, Maxs);
+	public readonly string ToString(string format, IFormatProvider formatProvider)
+	{
+		if (formatProvider == null)
+			return string.Format(format, Mins, Maxs);
+
+		return string.Format(formatProvider, format, Mins, Maxs);
+	}
 }

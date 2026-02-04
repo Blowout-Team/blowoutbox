@@ -1,4 +1,5 @@
-﻿using Native;
+﻿using BlowoutTeamSoft.Engine.Interfaces;
+using Native;
 using System;
 
 namespace Qt
@@ -150,6 +151,16 @@ namespace Editor
 			return p;
 		}
 
+		public static Pixmap FromBitmap(IBlowoutBitmap bitmap)
+		{
+			if (!HasGraphics)
+				return null;
+
+			Pixmap p = new Pixmap(bitmap.Width, bitmap.Height);
+			p.UpdateFromPixels(bitmap);
+			return p;
+		}
+
 		/// <summary>
 		/// Create a pixmap from a texture.
 		/// </summary>
@@ -273,7 +284,7 @@ namespace Editor
 		/// <summary>
 		/// Copy from a bitmap
 		/// </summary>
-		public unsafe bool UpdateFromPixels( Bitmap bitmap )
+		public unsafe bool UpdateFromPixels( IBlowoutBitmap bitmap )
 		{
 			if ( bitmap.IsFloatingPoint )
 				return false;

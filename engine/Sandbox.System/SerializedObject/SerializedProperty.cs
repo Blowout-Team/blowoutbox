@@ -7,6 +7,7 @@ using BlowoutTeamSoft.Engine.Interfaces.Animator;
 using BlowoutTeamSoft.Engine.Interfaces.Geometry;
 using Facepunch.ActionGraphs;
 using Sandbox.Internal;
+using System.ComponentModel;
 using static Facepunch.ActionGraphs.Node;
 using static Sandbox.SerializedObject;
 
@@ -543,6 +544,10 @@ public abstract class SerializedProperty : IValid, IBlowoutSubjectProperty
 	/// </summary>
 	public bool ShouldShow()
 	{
+		var editorBrowsable = GetAttributes<BrowsableAttribute>();
+		if (editorBrowsable.Any() && !editorBrowsable.First().Browsable)
+			return false;
+
 		if (HasAttribute<HideAttribute>()) return false;
 		if (Parent is null) return true;
 

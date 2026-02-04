@@ -1,4 +1,5 @@
-﻿using Editor.Wizards;
+﻿using BlowoutTeamSoft.Engine.Interfaces.Assets;
+using Editor.Wizards;
 
 namespace Editor.Inspectors;
 
@@ -47,7 +48,11 @@ sealed class AssetPublishWidget : Widget, AssetSystem.IEventListener
 			return context;
 		}
 
-		resource.ConfigurePublishing( context );
+		if(resource is Resource publishable)
+		{
+			publishable.ConfigurePublishing( context );
+		}
+
 		return context;
 	}
 

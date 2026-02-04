@@ -111,7 +111,7 @@ internal static unsafe class XxHashShared
 	public const uint Prime32_4 = 0x27D4EB2FU;
 	public const uint Prime32_5 = 0x165667B1U;
 
-#if DEBUG
+#if BLOWOUT_SOURCE2_DEBUG
 	static XxHashShared()
 	{
 		// Make sure DefaultSecret is the custom secret derived from a seed of 0.

@@ -31,6 +31,8 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\BlowoutTeamSoft\Sdk\BlowoutTeamSoft.Sdk.csproj" />
+    <ProjectReference Include="..\BlowoutTeamSoft\Source2\Source2.Core\BlowoutTeamSoft.Source2.Core.csproj" />
     <ProjectReference Include="..\Sandbox.GameInstance\Sandbox.GameInstance.csproj" />
     <ProjectReference Include="..\Sandbox.Menu\Sandbox.Menu.csproj" />
     <ProjectReference Include="..\Sandbox.Tools\Sandbox.Tools.csproj" />

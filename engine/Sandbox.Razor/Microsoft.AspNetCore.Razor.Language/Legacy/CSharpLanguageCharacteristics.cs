@@ -152,7 +152,7 @@ namespace Microsoft.AspNetCore.Razor.Language.Legacy
 
 		protected CSharpLanguageCharacteristics()
 		{
-#if DEBUG
+#if BLOWOUT_SOURCE2_DEBUG
 			var values = Enum.GetValues( typeof( CSharpKeyword ) );
 
 			Debug.Assert( values.Length == _keywordNames.Count, "_keywordNames and CSharpKeyword are out of sync" );

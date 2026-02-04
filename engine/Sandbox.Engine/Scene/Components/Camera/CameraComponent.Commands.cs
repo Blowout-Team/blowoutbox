@@ -78,18 +78,18 @@ public sealed partial class CameraComponent : Component, Component.ExecuteInEdit
 					if ( entry.List.Flags.Contains( CommandList.Flag.PostProcess ) && !currentCamera.EnablePostProcessing )
 						continue;
 
-					Matrix? currentProjectionMatrix = null;
-
-					if(entry.List.ProjectionMatrix != null)
-					{
-						currentProjectionMatrix = sceneCamera.CustomProjectionMatrix;
-						sceneCamera.CustomProjectionMatrix = entry.List.ViewMatrix;
-					}
+					//Matrix? currentProjectionMatrix = null;
+					//
+					//if(entry.List.ProjectionMatrix != null)
+					//{
+					//	currentProjectionMatrix = sceneCamera.CustomProjectionMatrix;
+					//	sceneCamera.CustomProjectionMatrix = entry.List.ViewMatrix;
+					//}
 
 					entry.List.ExecuteOnRenderThread();
 
-					if (currentProjectionMatrix != null)
-						sceneCamera.CustomProjectionMatrix = currentProjectionMatrix;
+					//if (currentProjectionMatrix != null)
+					//	sceneCamera.CustomProjectionMatrix = currentProjectionMatrix;
 				}
 			}
 		}

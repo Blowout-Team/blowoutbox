@@ -7,6 +7,7 @@ internal class BuildManaged( string name, bool clean = false ) : Step( name )
 	protected override ExitCode RunInternal()
 	{
 		string engineDir = Path.Combine( Directory.GetCurrentDirectory(), "engine" );
+		string blowoutTeamSoftDir = Path.Combine( Directory.GetCurrentDirectory(), "engine", "BlowoutTeamSoft");
 		string rootDir = Directory.GetCurrentDirectory();
 
 		try
@@ -69,6 +70,11 @@ internal class BuildManaged( string name, bool clean = false ) : Step( name )
 
 			// blowout team realization.
 			if (!Utility.RunDotnetCommand(engineDir, "build -c Blowout_Source2_Release Sandbox-Engine.slnx"))
+				return ExitCode.Failure;
+
+			Log.Info("Step 6: Build BlowoutTeamSoft.Engine");
+
+			if (!Utility.RunDotnetCommand(blowoutTeamSoftDir, "build -c Blowout_Source2_Release BlowoutTeamSoft.sln"))
 				return ExitCode.Failure;
 
 			Log.Info( "Build completed successfully!" );

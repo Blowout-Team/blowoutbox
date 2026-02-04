@@ -1,3 +1,4 @@
+using BlowoutTeamSoft.Engine.Interfaces.Assets;
 using Facepunch.ActionGraphs;
 using Sandbox.ActionGraphs;
 using Sandbox.Engine;
@@ -13,7 +14,7 @@ namespace Sandbox;
 /// You can define your own <a href="https://sbox.game/dev/doc/assetsresources/custom-assets/">Custom Asset Types</a>.
 /// </summary>
 [Library]
-public abstract partial class GameResource : Resource, ISourceLineProvider
+public abstract partial class GameResource : Resource, ISourceLineProvider, IBlowoutEngineAsset
 {
 	/// <summary>
 	/// Allows tools to post process the serialized json object

@@ -298,7 +298,7 @@ namespace Sandbox.Upgraders
 			changed = HasStructChangedUncached( oldType, newType );
 			ChangedStructsCache.Add( oldType, changed );
 
-#if DEBUG
+#if BLOWOUT_SOURCE2_DEBUG
 			Log( HotloadEntryType.Trace, $"HasStructChanged({oldType}): {changed}" );
 #endif
 

@@ -1,4 +1,6 @@
-﻿namespace Editor.AssetBrowsing.Nodes;
+﻿using BlowoutTeamSoft.Engine.Interfaces.Assets;
+
+namespace Editor.AssetBrowsing.Nodes;
 
 partial class CloudLocalNode : AssetFilterNode, ResourceLibrary.IEventListener
 {
@@ -13,8 +15,8 @@ partial class CloudLocalNode : AssetFilterNode, ResourceLibrary.IEventListener
 		EditorEvent.Unregister( this );
 	}
 
-	void ResourceLibrary.IEventListener.OnSave( GameResource resource ) => UpdateCount();
-	void ResourceLibrary.IEventListener.OnExternalChanges( GameResource resource ) => UpdateCount();
+	void ResourceLibrary.IEventListener.OnSave( IBlowoutEngineAsset resource ) => UpdateCount();
+	void ResourceLibrary.IEventListener.OnExternalChanges( IBlowoutEngineAsset resource ) => UpdateCount();
 
 	void UpdateCount()
 	{

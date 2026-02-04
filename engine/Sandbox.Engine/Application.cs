@@ -153,7 +153,7 @@ public static class Application
 	/// </summary>
 	internal static string GameIdent { get; set; }
 
-#if DEBUG
+#if BLOWOUT_SOURCE2_DEBUG
 	public static bool IsDebug => true;
 #endif
 
