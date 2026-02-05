@@ -6,6 +6,7 @@
 # Blowout Dependencies
 #
 !gitassets/*
+!game/core/tools/images/blow_*
 
 # Git
 !.gitignore
