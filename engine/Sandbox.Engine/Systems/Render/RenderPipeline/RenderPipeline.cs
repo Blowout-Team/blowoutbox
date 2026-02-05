@@ -59,6 +59,10 @@ internal partial class RenderPipeline
 			var smallPrepass = DepthNormalSmallPrepass.AddToView( view, viewport );
 			smallPrepass.SetBoundingVolumeSizeCullThresholdInPercent( -60 );
 
+			bool disableDepthPrepassCulling = view.GetRenderAttributesPtr().GetBoolValue( "NoPrepassCulling", false );
+			largePrepass.SetLayerNoCull( disableDepthPrepassCulling );
+			smallPrepass.SetLayerNoCull( disableDepthPrepassCulling );
+
 			// Pass that DepthNormals are enabled to the rest of the pipeline
 			view.GetRenderAttributesPtr().SetIntValue( "NormalsTextureIndex", gbufferColor.ColorTarget.Index );
 		}
@@ -116,7 +120,8 @@ internal partial class RenderPipeline
 
 		var mainCamera = IManagedCamera.GetMainCamera();
 
-		if ( viewCamera == mainCamera )
+		// Only record from the main camera that belongs to the active game scene
+		if ( viewCamera == mainCamera && viewCamera is SceneCamera sceneCamera && sceneCamera.World == Game.ActiveScene?.SceneWorld )
 		{
 			RecordMovieFrameLayer.AddToView( view, viewport );
 			PostRecordMovieFrameLayer.AddToView( view, viewport );
