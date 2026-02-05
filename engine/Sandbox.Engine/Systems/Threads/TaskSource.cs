@@ -193,6 +193,14 @@ public struct TaskSource
 		return DelayInternal( ms, _cancellation );
 	}
 
+	public Task Delay( TimeSpan time, CancellationToken token)
+	{
+		using ( CancellationTokenSource combined = CancellationTokenSource.CreateLinkedTokenSource( _cancellation, token ) )
+		{
+			return DelayInternal( (int)time.TotalMilliseconds, combined.Token );
+		}
+	}
+
 	/// <summary>
 	/// A task that does nothing for given amount of time in milliseconds.
 	/// </summary>

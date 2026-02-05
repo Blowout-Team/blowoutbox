@@ -89,6 +89,7 @@ public static partial class Game
 	/// A shared random that is automatically seeded on tick
 	/// </summary>
 	public static System.Random Random => SandboxSystem.Random;
+	public static float RandomSeed => SandboxSystem.CurrentSeed;
 
 	/// <summary>
 	/// Set the seed for Game.Random

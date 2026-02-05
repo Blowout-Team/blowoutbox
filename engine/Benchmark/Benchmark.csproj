@@ -8,6 +8,7 @@
     <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
 	<IsPublishable>false</IsPublishable>
 	<IsPackable>false</IsPackable>
+	<Configurations>Debug;Release;Blowout_Source2_Debug;Blowout_Source2_Release</Configurations>
   </PropertyGroup>
 
   <ItemGroup>

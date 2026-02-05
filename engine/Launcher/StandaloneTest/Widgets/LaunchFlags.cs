@@ -19,11 +19,6 @@ public partial class ProjectRow
 		/// Enable Vulkan validation layers
 		/// </summary>
 		VulkanValidation = 1 << 2,
-
-		/// <summary>
-		/// Enable VR debug layers (also enables VR)
-		/// </summary>
-		VRDebug = 1 << 3
 	}
 }
 

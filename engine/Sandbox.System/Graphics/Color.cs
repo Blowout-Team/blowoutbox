@@ -1,4 +1,5 @@
 ﻿
+using BlowoutTeamSoft.Engine.Render;
 using Sandbox;
 using System.Globalization;
 using System.Runtime.CompilerServices;
@@ -553,6 +554,9 @@ public partial struct Color : IEquatable<Color>
 		c.Saturation *= 1.0f + fraction;
 		return c;
 	}
+
+	public readonly BlowoutColor ToBlowoutColor() =>
+		new BlowoutColor( r, g, b, a );
 
 	/// <summary>
 	/// Returns how many color components would be changed between this color and another color

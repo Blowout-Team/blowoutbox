@@ -9,6 +9,7 @@
 		<OutputPath>..\..\..\game\bin\managed</OutputPath>
 		<AllowUnsafeBlocks>True</AllowUnsafeBlocks>
 		<SentryDisableSourceGenerator>true</SentryDisableSourceGenerator>
+		<Configurations>Debug;Release;Blowout_Source2_Debug;Blowout_Source2_Release</Configurations>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -16,6 +17,7 @@
 		<ProjectReference Include="..\..\Sandbox.Compiling\Sandbox.Compiling.csproj" />
 		<ProjectReference Include="..\..\Sandbox.Engine\Sandbox.Engine.csproj" />
 		<ProjectReference Include="..\..\Sandbox.Menu\Sandbox.Menu.csproj" />
+		<ProjectReference Include="..\..\BlowoutTeamSoft\Engine\BlowoutTeamSoft.Engine.csproj" />
 	</ItemGroup>
 
 </Project>

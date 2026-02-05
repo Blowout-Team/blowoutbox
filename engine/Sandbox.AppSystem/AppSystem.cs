@@ -102,6 +102,7 @@ public class AppSystem
 
 			Init();
 
+
 			NativeEngine.EngineGlobal.Plat_SetCurrentFrame( 0 );
 
 			while ( RunFrame() )

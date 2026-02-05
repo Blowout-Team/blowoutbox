@@ -6,6 +6,8 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text.Json.Serialization;
 
+namespace Sandbox;
+
 /// <summary>
 /// A 2-dimensional vector. Typically represents a position, size, or direction in 2D space.
 /// </summary>

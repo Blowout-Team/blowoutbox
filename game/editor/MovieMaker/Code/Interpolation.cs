@@ -1,6 +1,6 @@
-﻿using System.Numerics;
-using Sandbox.MovieMaker;
+﻿using Sandbox.MovieMaker;
 using Sandbox.Utility;
+using System.Numerics;
 
 namespace Editor.MovieMaker;
 
@@ -87,7 +87,7 @@ file interface INumericTransformer<T> : ITransformer<T>
 
 file sealed class DefaultTransformer :
 	INumericTransformer<int>, INumericTransformer<float>, INumericTransformer<double>,
-	ITransformer<Vector2>, ITransformer<Vector3>, ITransformer<Vector4>,
+	ITransformer<Sandbox.Vector2>, ITransformer<Sandbox.Vector3>, ITransformer<Sandbox.Vector4>,
 	ITransformer<Rotation>, ITransformer<Angles>,
 	ITransformer<Color>,
 	ITransformer<Transform>
@@ -105,14 +105,14 @@ file sealed class DefaultTransformer :
 	public Rotation Invert( Rotation value ) => value.Inverse;
 	public Rotation Apply( Rotation outer, Rotation inner ) => outer * inner;
 
-	public Vector4 Invert( Vector4 value ) => -value;
-	public Vector4 Apply( Vector4 outer, Vector4 inner ) => outer + inner;
+	public Sandbox.Vector4 Invert( Sandbox.Vector4 value ) => -value;
+	public Sandbox.Vector4 Apply( Sandbox.Vector4 outer, Sandbox.Vector4 inner ) => outer + inner;
 
-	public Vector3 Invert( Vector3 value ) => -value;
-	public Vector3 Apply( Vector3 outer, Vector3 inner ) => outer + inner;
+	public Sandbox.Vector3 Invert( Sandbox.Vector3 value ) => -value;
+	public Sandbox.Vector3 Apply( Sandbox.Vector3 outer, Sandbox.Vector3 inner ) => outer + inner;
 
-	public Vector2 Invert( Vector2 value ) => -value;
-	public Vector2 Apply( Vector2 outer, Vector2 inner ) => outer + inner;
+	public Sandbox.Vector2 Invert( Sandbox.Vector2 value ) => -value;
+	public Sandbox.Vector2 Apply( Sandbox.Vector2 outer, Sandbox.Vector2 inner ) => outer + inner;
 
 	public Transform Invert( Transform value ) => value.ToLocal( Transform.Zero );
 	public Transform Apply( Transform outer, Transform inner ) => outer.ToWorld( inner );

@@ -2,9 +2,17 @@
 
 public static class Log
 {
+	public static void Trace(string message)
+	{
+		Console.WriteLine(message);
+	}
+
 	public static void Info( string message )
 	{
+		var before = Console.ForegroundColor;
+		Console.ForegroundColor = ConsoleColor.Green;
 		Console.WriteLine( message );
+		Console.ForegroundColor = before;
 	}
 
 	public static void Warning( string message )

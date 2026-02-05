@@ -6,6 +6,8 @@ using System.Runtime.InteropServices;
 using System.Runtime.Serialization;
 using System.Text.Json.Serialization;
 
+namespace Sandbox;
+
 /// <summary>
 /// A 4-dimensional vector/point.
 /// </summary>

@@ -1,9 +1,44 @@
 <Solution>
   <Configurations>
+    <BuildType Name="Blowout_Source2_Debug" />
+    <BuildType Name="Blowout_Source2_Release" />
+    <BuildType Name="Debug" />
+    <BuildType Name="Release" />
     <Platform Name="Any CPU" />
     <Platform Name="x64" />
     <Platform Name="x86" />
   </Configurations>
+  <Folder Name="/BlowoutTeamSoft/">
+    <Project Path="BlowoutTeamSoft/AI/BlowoutTeamSoft.AI.csproj" />
+    <Project Path="BlowoutTeamSoft/Animator/BlowoutTeamSoft.Animator.csproj" />
+    <Project Path="BlowoutTeamSoft/Audio/BlowoutTeamSoft.Audio.csproj" />
+    <Project Path="BlowoutTeamSoft/BlowoutTeamSoft.OdinSerializer/BlowoutTeamSoft.OdinSerializer.csproj" />
+    <Project Path="BlowoutTeamSoft/BlueRaja/BlowoutTeamSoft.BlueRaja.csproj" />
+    <Project Path="BlowoutTeamSoft/CodeGenerator/BlowoutTeamSoft.CodeGenerator.csproj" />
+    <Project Path="BlowoutTeamSoft/Compilation/BlowoutTeamSoft.Compilation.csproj" />
+    <Project Path="BlowoutTeamSoft/Configuration.Ini/BlowoutTeamSoft.Configuration.Ini.csproj" />
+    <Project Path="BlowoutTeamSoft/Configuration.Serializer/BlowoutTeamSoft.Configuration.Serializer.csproj" />
+    <Project Path="BlowoutTeamSoft/Configuration/BlowoutTeamSoft.Configuration.csproj" />
+    <Project Path="BlowoutTeamSoft/Debugger/BlowoutTeamSoft.Debugger.csproj" />
+    <Project Path="BlowoutTeamSoft/DependencyInjection/BlowoutTeamSoft.DependencyInjection.csproj" />
+    <Project Path="BlowoutTeamSoft/Editor.Drawers/BlowoutTeamSoft.Editor.Drawers.csproj" />
+    <Project Path="BlowoutTeamSoft/Editor/BlowoutTeamSoft.Editor.csproj" />
+    <Project Path="BlowoutTeamSoft/Engine.GPU/BlowoutTeamSoft.Engine.GPU.csproj" />
+    <Project Path="BlowoutTeamSoft/Engine.Systems/BlowoutTeamSoft.Engine.Systems.csproj" />
+    <Project Path="BlowoutTeamSoft/Engine/BlowoutTeamSoft.Engine.csproj" />
+    <Project Path="BlowoutTeamSoft/Physics/BlowoutTeamSoft.Physics.csproj" />
+    <Project Path="BlowoutTeamSoft/Procedural/BlowoutTeamSoft.Procedural.csproj" />
+    <Project Path="BlowoutTeamSoft/Reflection/BlowoutTeamSoft.Reflection.csproj" />
+    <Project Path="BlowoutTeamSoft/Sdk/BlowoutTeamSoft.Sdk.csproj" />
+    <Project Path="BlowoutTeamSoft/Shaders/BlowoutTeamSoft.Shaders.csproj" />
+    <Project Path="BlowoutTeamSoft/Source2/Source2.Core/BlowoutTeamSoft.Source2.Core.csproj" />
+    <Project Path="BlowoutTeamSoft/Tests/BlowoutTeamSoft.Tests.csproj" />
+    <Project Path="BlowoutTeamSoft/Threading/BlowoutTeamSoft.Threading.csproj" />
+    <Project Path="BlowoutTeamSoft/UI.Generators/BlowoutTeamSoft.UI.Generators.csproj" />
+    <Project Path="BlowoutTeamSoft/UI/BlowoutTeamSoft.UI.csproj" />
+    <Project Path="BlowoutTeamSoft/UIResources/BlowoutTeamSoft.UIResources.csproj" />
+    <Project Path="BlowoutTeamSoft/XTreeLang/BlowoutTeamSoft.XTreeLang.csproj" />
+  </Folder>
   <Folder Name="/Engine/" />
   <Folder Name="/Engine/Dev/">
     <Project Path="Definitions/Definitions.csproj" />
@@ -51,7 +86,7 @@
     <Project Path="Mounting/Sandbox.Mounting/Sandbox.Mounting.csproj" />
   </Folder>
   <Folder Name="/Engine/Tier1/">
-    <Project Path="Sandbox.Engine/Sandbox.Engine.csproj" DefaultStartup="true" />
+    <Project Path="Sandbox.Engine/Sandbox.Engine.csproj" />
   </Folder>
   <Folder Name="/Engine/Tier2/">
     <Project Path="Sandbox.AppSystem/Sandbox.AppSystem.csproj" />
@@ -65,8 +100,8 @@
   <Folder Name="/Tests/">
     <Project Path="Benchmark/Benchmark.csproj" />
     <Project Path="Sandbox.Hotload.Test/Sandbox.Hotload.Test.csproj" />
-    <Project Path="Sandbox.Test/Sandbox.Test.csproj" />
     <Project Path="Sandbox.Test.Unit/Sandbox.Test.Unit.csproj" />
+    <Project Path="Sandbox.Test/Sandbox.Test.csproj" />
   </Folder>
   <Folder Name="/Tests/Resources/">
     <Project Path="Sandbox.Test.Generate/Sandbox.Test.Generate.csproj" />

@@ -127,7 +127,7 @@ namespace Editor
 			DeleteOnClose = true;
 			_mainWindow.setAnimated( false );
 
-			SetWindowIcon( "logo_rounded.png" );
+			SetWindowIcon( "blow_logo_rounded.png" );
 		}
 
 		protected override void OnResize()

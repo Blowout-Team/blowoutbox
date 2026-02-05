@@ -15,9 +15,14 @@
 		<OutputPath>../../game/bin/managed</OutputPath>
 		<LangVersion>14</LangVersion>
 		<AllowedReferenceRelatedFileExtensions>.pdb</AllowedReferenceRelatedFileExtensions>
+		<Configurations>Debug;Release;Blowout_Source2_Debug;Blowout_Source2_Release</Configurations>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+	  <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Blowout_Source2_Debug|AnyCPU'">
 	  <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
 	</PropertyGroup>
 
@@ -27,6 +32,10 @@
 
 	<PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
 		<DefineConstants>WIN;$(DefineConstants)</DefineConstants>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Blowout_Source2_Debug|AnyCPU'">
+	  <DefineConstants>WIN;$(DefineConstants)</DefineConstants>
 	</PropertyGroup>
 
 	<PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
@@ -59,6 +68,7 @@
 		<ProjectReference Include="../Sandbox.System/Sandbox.System.csproj" />
 		<ProjectReference Include="../Sandbox.Generator/Sandbox.Generator.csproj" />
 		<ProjectReference Include="../ThirdParty/Topten.RichTextKit/Topten.RichTextKit.csproj" />
+		<ProjectReference Include="..\BlowoutTeamSoft\Engine\BlowoutTeamSoft.Engine.csproj" />
 		<ProjectReference Include="..\Microsoft.AspNetCore.Components\Microsoft.AspNetCore.Components.csproj" />
 	</ItemGroup>
 

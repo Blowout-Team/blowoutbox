@@ -19,7 +19,7 @@ internal class WindowsPlatform : Platform
 		}
 
 		string buildTarget = forceRebuild ? "/t:Rebuild" : "/t:Build";
-		return RunCommandWithVsEnv( vsDevCmdPath, $"msbuild {solutionName}.slnx {buildTarget} /p:Configuration=Release /p:Platform=x64 /m /v:minimal /clp:Summary" );
+		return RunCommandWithVsEnv( vsDevCmdPath, $"msbuild {solutionName}.slnx {buildTarget} /p:Configuration=Blowout_Source2_Release /p:Platform=x64 /m /v:minimal /clp:Summary" );
 	}
 
 	/// <summary>
