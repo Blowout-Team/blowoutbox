@@ -1,4 +1,5 @@
-﻿using System.ComponentModel;
+﻿using BlowoutTeamSoft.Engine.Interfaces;
+using System.ComponentModel;
 
 namespace Sandbox;
 
@@ -12,6 +13,7 @@ public sealed class GameObjectDirectory
 	private Scene scene;
 
 	Dictionary<Guid, Component> componentsById = new();
+	Dictionary<Guid, IBlowoutGameSystem> blowoutSystemById = new();
 	Dictionary<Guid, GameObject> objectsById = new();
 	Dictionary<Guid, GameObjectSystem> systemsById = new();
 
@@ -32,6 +34,8 @@ public sealed class GameObjectDirectory
 	internal Action<GameObject> OnGameObjectAdded;
 
 	internal Action<Component> OnComponentAdded;
+
+	internal Action<IBlowoutGameSystem> OnGameSystemAdded;
 
 	internal void Add( GameObjectSystem system )
 	{
@@ -60,6 +64,36 @@ public sealed class GameObjectDirectory
 
 		componentsById[component.Id] = component;
 		OnComponentAdded?.Invoke( component );
+	}
+
+	internal void Add( IBlowoutGameSystem system )
+	{
+		if(system is GameObjectSystem gameObjectSystem )
+		{
+			Add( gameObjectSystem );
+			return;
+		}
+
+		if(system is Component component )
+		{
+			Add( component );
+			return;
+		}
+
+		if ( componentsById.TryGetValue( system.Id, out var existing ) )
+		{
+			Log.Warning( $"{system}: Guid {system.Id} is already taken by {existing} - changing" );
+			system.ForceChangeId( Guid.NewGuid() );
+		}
+
+		if ( objectsById.TryGetValue( system.Id, out var go ) )
+		{
+			Log.Warning( $"{system}: Guid {system.Id} is already taken by {go} - changing" );
+			system.ForceChangeId( Guid.NewGuid() );
+		}
+
+		blowoutSystemById[system.Id] = system;
+		OnGameSystemAdded?.Invoke( system );
 	}
 
 	internal void Add( GameObject go )
@@ -181,6 +215,20 @@ public sealed class GameObjectDirectory
 	{
 		if ( componentsById.TryGetValue( guid, out var found ) )
 			return found;
+
+		return null;
+	}
+
+	public IBlowoutGameSystem FindBlowoutSystemByGuid( Guid guid )
+	{
+		if ( componentsById.TryGetValue( guid, out var found ) )
+			return found;
+
+		if ( systemsById.TryGetValue( guid, out GameObjectSystem system ))
+			return system;
+
+		if ( blowoutSystemById.TryGetValue( guid, out var isolated ) )
+			return isolated;
 
 		return null;
 	}

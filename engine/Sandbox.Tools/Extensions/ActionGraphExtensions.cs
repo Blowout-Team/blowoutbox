@@ -1,4 +1,6 @@
-﻿using Facepunch.ActionGraphs;
+﻿using BlowoutTeamSoft.Engine.Interfaces;
+using BlowoutTeamSoft.Engine.NativeHandles;
+using Facepunch.ActionGraphs;
 
 namespace Sandbox.ActionGraphs;
 
@@ -100,6 +102,23 @@ public static class ActionGraphEditorExtensions
 		return new Dictionary<string, object>
 		{
 			{ "component", ComponentReference.FromInstance( component ) }
+		};
+	}
+
+	public static IReadOnlyDictionary<string, object> GetNodeProperties( IBlowoutGameSystem component )
+	{
+		if(component is Component comp)
+		{
+			return new Dictionary<string, object>
+		{
+			{ "component", ComponentReference.FromInstance( comp ) }
+		};
+		}
+
+		var t = Game.TypeLibrary.GetType( component.GetType() );
+		return new Dictionary<string, object>
+		{
+			{ "system", new BlowoutGameSystemReference(BlowoutGameSystemReference.EXPECTED_REFERENCE_TYPE, component.Id, component.SystemGameObject.Id, t?.ClassName) }
 		};
 	}
 }

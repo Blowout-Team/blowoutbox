@@ -26,7 +26,10 @@ internal static class ManagedTools
 		// Init steam and log into the api
 		//
 		{
-			Steamworks.SteamClient.Init( (int)Sandbox.Application.AppId );
+			//Steamworks.SteamClient.Init( (int)Sandbox.Application.AppId );
+			//AccountLoginTask = AccountInformation.Update();
+
+			Log.Info( "Blowout: Skip steam auth. We don't need that." );
 			AccountLoginTask = AccountInformation.Update();
 		}
 

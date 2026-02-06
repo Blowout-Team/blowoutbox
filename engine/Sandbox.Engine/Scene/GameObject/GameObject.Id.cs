@@ -3,18 +3,20 @@
 public partial class GameObject
 {
 	private Guid _id;
-	public Guid Id
+	public override Guid Id
 	{
 		get => _id;
-		private set
-		{
-			if ( _id == value ) return;
+		protected set => _SetIdCore( value );
+	}
 
-			var oldId = _id;
-			_id = value;
+	internal void _SetIdCore(Guid value)
+	{
+		if ( _id == value ) return;
 
-			Scene?.Directory?.Add( this, oldId );
-		}
+		var oldId = _id;
+		_id = value;
+
+		Scene?.Directory?.Add( this, oldId );
 	}
 
 	/// <summary>
@@ -31,6 +33,6 @@ public partial class GameObject
 	/// </summary>
 	internal void SetDeterministicId( Guid id )
 	{
-		Id = id;
+		_SetIdCore( id );
 	}
 }

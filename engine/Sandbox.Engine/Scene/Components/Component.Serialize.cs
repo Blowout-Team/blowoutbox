@@ -1,11 +1,36 @@
-﻿using Facepunch.ActionGraphs;
+﻿using BlowoutTeamSoft.Configuration.Serializer.Interfaces;
+using Facepunch.ActionGraphs;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
 namespace Sandbox;
 
+public record struct BlowoutComponentSerializationResult(JsonNode result) : IBlowoutSerializeResult
+{
+	public JsonNode ToJson() => result;
+}
+
 public abstract partial class Component : BytePack.ISerializer
 {
+	public IBlowoutSerializeResult Serialize( IBlowoutSerializationOptions options )
+	{
+		if ( options is GameObject.SerializeOptions serializeOptions )
+			return new BlowoutComponentSerializationResult(Serialize( serializeOptions ));
+
+		return new BlowoutComponentSerializationResult( Serialize( new GameObject.SerializeOptions()
+		{
+			SceneForNetwork = options.IsNetwork,
+			SingleNetworkObject = options.IsSingleNetworkObject,
+			IgnoreComponents = options.IgnoreSystems
+		} ) );
+	}
+
+	public void DeserializeLazy( JsonObject node ) =>
+		Deserialize( node );
+
+	public void DeserializeNow() =>
+		PostDeserialize();
+
 	public JsonNode Serialize( GameObject.SerializeOptions options = null )
 	{
 		var isSceneForNetwork = options?.SceneForNetwork ?? false;

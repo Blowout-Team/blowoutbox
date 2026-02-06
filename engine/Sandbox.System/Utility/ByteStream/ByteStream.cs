@@ -1,4 +1,5 @@
-﻿using System.Buffers;
+﻿using BlowoutTeamSoft.Configuration.Serializer.Interfaces;
+using System.Buffers;
 using System.IO;
 using System.IO.Compression;
 using System.Runtime.CompilerServices;
@@ -11,7 +12,7 @@ namespace Sandbox;
 /// <summary>
 /// Write and read bytes to a stream. This aims to be as allocation free as possible while also being as fast as possible.
 /// </summary>
-public unsafe ref struct ByteStream
+public unsafe ref struct ByteStream : IBlowoutSerializationByteWriter, IBlowoutSerializationByteReader
 {
 	byte[]? writeData;
 	ReadOnlySpan<byte> readSpan;
@@ -40,12 +41,14 @@ public unsafe ref struct ByteStream
 		}
 	}
 
-	internal readonly int BufferSize => writeData?.Length ?? usedSize;
+	public readonly int BufferSize => writeData?.Length ?? usedSize;
 
 	/// <summary>
 	/// The total size of the data
 	/// </summary>
 	public readonly int Length => usedSize;
+
+	public byte[]? Captured => writeData;
 
 	internal ByteStream( int size )
 	{
@@ -325,7 +328,7 @@ public unsafe ref struct ByteStream
 	/// <summary>
 	/// Get the data as a span. Note this can't be kept around after disposing the ByteStream
 	/// </summary>
-	internal readonly ReadOnlySpan<byte> ToSpan()
+	public readonly ReadOnlySpan<byte> ToSpan()
 	{
 		return writeData is not null
 			? writeData.AsSpan( 0, usedSize )
@@ -757,4 +760,27 @@ public unsafe ref struct ByteStream
 
 		return CreateReader( decompressedStream.ToArray() );
 	}
+
+	public void WriteSpan<T>( ReadOnlySpan<T> span ) where T : unmanaged =>
+		WriteArray<T>( span );
+
+	public void Write( IBlowoutSerializationByteReader reader )
+	{
+		if ( writeData is not null && reader.Captured == writeData )
+			return;
+
+		var len = reader.BufferSize;
+		if ( len == 0 ) return;
+
+		Write( reader.ToSpan() );
+	}
+
+
+	public void Write( IBlowoutSerializationByteReader reader, int offset, int maxSize )
+	{
+		throw new NotImplementedException();
+	}
+
+	public void WriteArray<T>( ReadOnlySpan<T> span, bool includeCount = true ) where T : unmanaged =>
+		WriteArray( span.ToArray(), includeCount );
 }

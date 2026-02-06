@@ -1,4 +1,6 @@
-﻿using Facepunch.ActionGraphs;
+﻿using BlowoutTeamSoft.Configuration.Serializer.Interfaces;
+using BlowoutTeamSoft.Engine;
+using Facepunch.ActionGraphs;
 using Sandbox.ActionGraphs;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -14,12 +16,14 @@ public partial class GameObject
 	/// </summary>
 	private bool _removeAfterDeserializationRefresh = false;
 
-	public class SerializeOptions
+	public class SerializeOptions : IBlowoutSerializationOptions
 	{
 		/// <summary>
 		/// If we're serializing for network, we won't include any networked objects
 		/// </summary>
 		public bool SceneForNetwork { get; set; }
+
+		public bool IsNetwork { get => SceneForNetwork; set => SceneForNetwork = value; }
 
 		/// <summary>
 		/// We're cloning this object
@@ -31,6 +35,10 @@ public partial class GameObject
 		/// We're going to send a single network object
 		/// </summary>
 		public bool SingleNetworkObject { get; set; }
+
+		public bool IsSingleNetworkObject { get => SingleNetworkObject; set => SingleNetworkObject = value; }
+
+		public bool IgnoreSystems { get => IgnoreComponents; set => IgnoreComponents = value; }
 
 		/// <summary>
 		/// Serialize the full hierarchy, prefab instances will be expanded to include all their children and components.
@@ -218,10 +226,21 @@ public partial class GameObject
 
 				try
 				{
-					var result = component.Serialize( options );
-					if ( result is null ) continue;
+					if ( component is Component sourceComponent )
+					{
+						var result = sourceComponent.Serialize( options );
+						if ( result is null ) continue;
 
-					components.Add( result );
+						components.Add( result );
+					}else if(component is IBlowoutSerializable serializable )
+					{
+						var serializationResult = serializable.Serialize( options );
+						if ( serializationResult is null )
+							continue;
+
+						components.Add(serializationResult.ToJson());
+					}
+
 				}
 				catch ( System.Exception e )
 				{
@@ -499,7 +518,7 @@ public partial class GameObject
 				// For network refresh, filter out components that shouldn't be networked
 				if ( options.IsNetworkRefresh )
 				{
-					existingComponents.RemoveWhere( c => c.Flags.Contains( ComponentFlags.NotNetworked ) );
+					existingComponents.RemoveWhere( c => c.SystemMode.HasFlag( BlowoutTeamSoft.Engine.Enums.BlowoutSystemMode.ExcludeNetwork ) );
 				}
 
 				// Common operation for both refresh types
@@ -566,8 +585,20 @@ public partial class GameObject
 			}
 		}
 
-		Components.ForEach( "OnLoadInternal", true, c => c.OnLoadInternal() );
-		Components.ForEach( "OnValidate", true, c => c.Validate() );
+		Components.ForEach( "OnLoadInternal", true, c =>
+		{
+			if ( c is Component comp )
+			{
+				comp.OnLoadInternal();
+			}
+		} );
+		Components.ForEach( "OnValidate", true, c =>
+		{
+			if(c is Component comp )
+			{
+				comp.OnValidateInternal();
+			}
+		} );
 
 		// PostDeserialize recurses into children, so if our parent is deserializing
 		// we don't need to queue a call to it ourselves
@@ -808,7 +839,16 @@ public partial class GameObject
 	{
 		using var prefabContext = PushDeserializeContext();
 
-		Components.ForEach( "PostDeserialize", true, c => c.PostDeserialize() );
+		Components.ForEach( "PostDeserialize", true, c =>
+		{
+			if(c is Component comp )
+			{
+				comp.PostDeserialize();
+			}else if(c is IBlowoutSerializable serializable)
+			{
+				serializable.DeserializeNow();
+			}
+		} );
 
 		for ( int i = 0; i < Children.Count; i++ )
 		{
@@ -835,7 +875,13 @@ public partial class GameObject
 					child.DestroyImmediate();
 				}
 			}
-			Components.ForEach( "OnRefresh", true, c => c.OnRefreshInternal() );
+			Components.ForEach( "OnRefresh", true, c =>
+			{
+				if(c is Component comp )
+				{
+					comp.OnRefreshInternal();
+				}
+			} );
 		}
 
 		Flags &= ~GameObjectFlags.Deserializing;

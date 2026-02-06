@@ -9,6 +9,8 @@ partial class Compiler
 	{
 		"Sandbox.System",
 		"Sandbox.Engine",
+		"BlowoutTeamSoft.Engine",
+		"BlowoutTeamSoft.Configuration.Serializer",
 		"Sandbox.Filesystem",
 		"Sandbox.Reflection",
 		"Sandbox.Mounting",

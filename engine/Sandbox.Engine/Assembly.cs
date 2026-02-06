@@ -28,6 +28,9 @@ using System.Runtime.CompilerServices;
 [assembly: InternalsVisibleTo( "benchmark" )]
 [assembly: InternalsVisibleTo( "CreateGameCache" )]
 
+[assembly: InternalsVisibleTo("BlowoutTeamSoft.Engine")]
+[assembly: InternalsVisibleTo( "BlowoutTeamSoft.Engine.Systems" )]
+
 [assembly: TasksPersistOnContextReset]
 
 // Moved filesystem to its own assembly

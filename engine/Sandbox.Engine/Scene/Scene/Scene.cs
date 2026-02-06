@@ -1,10 +1,14 @@
-﻿using Sandbox.Utility;
+﻿using BlowoutTeamSoft.Engine;
+using BlowoutTeamSoft.Engine.Interfaces;
+using BlowoutTeamSoft.Engine.Interfaces.Maps;
+using Sandbox.Utility;
 using Sandbox.Volumes;
 using System.Text.Json.Serialization;
+using System.Threading;
 
 namespace Sandbox;
 
-public partial class Scene : GameObject
+public partial class Scene : GameObject, IBlowoutMap
 {
 	public bool IsEditor { get; private set; }
 
@@ -15,6 +19,10 @@ public partial class Scene : GameObject
 	public bool HasUnsavedChanges { get; private set; }
 
 	public GameResource Source { get; internal set; }
+
+	public bool IsReady => this.IsValid();
+
+	public IProgress<float> Progress => default;
 
 	/// <summary>
 	/// For scenes within a hammer MapWorld, for action graph stack traces,
@@ -335,5 +343,38 @@ public partial class Scene : GameObject
 	public IEnumerable<GameObject> FindAllWithTag( string tag )
 	{
 		return Directory.AllGameObjects.Where( x => x.Tags.Has( tag ) );
+	}
+
+	public IEnumerable<GameObject> FindAllWithName( string name, IEqualityComparer<string> comparer = null )
+	{
+		comparer ??= StringComparer.Ordinal;
+		return Directory.AllGameObjects.Where( x => comparer.Equals(name, x.ObjectName) );
+	}
+
+	public IEnumerable<GameObject> FindAllWithName( ReadOnlySpan<char> name, StringComparison comparison = StringComparison.Ordinal )
+	{
+		List<GameObject> targets = new List<GameObject>( 5 );
+		foreach(var gameObject in Directory.AllGameObjects )
+		{
+			if ( name.Equals( gameObject.ObjectName, comparison ) )
+				targets.Add(gameObject);
+		}
+
+		return targets;
+	}
+
+	public BlowoutEngineObject FindObjectById( Guid id ) =>
+		Directory.FindByGuid( id );
+
+	public IBlowoutGameSystem FindGameSystemById( Guid id ) =>
+		Directory.FindBlowoutSystemByGuid( id );
+
+	public void Load()
+	{
+	}
+
+	public Task LoadAsync( CancellationToken token = default )
+	{
+		return Task.CompletedTask;
 	}
 }

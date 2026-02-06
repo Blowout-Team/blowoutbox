@@ -1,4 +1,5 @@
 ﻿using System.IO;
+using BlowoutTeamSoft.Engine.Interfaces;
 
 namespace Editor;
 
@@ -402,7 +403,7 @@ internal partial class ComponentTypeSelectorWidget : Widget
 		selection.ItemList.Add( selection.CategoryHeader );
 
 		// entity components
-		var types = EditorTypeLibrary.GetTypes<Component>().Where( x => !x.IsAbstract && !x.HasAttribute<HideAttribute>() && !x.HasAttribute<ObsoleteAttribute>() );
+		var types = EditorTypeLibrary.GetTypes<IBlowoutGameSystem>().Where( x => !x.IsAbstract && !x.HasAttribute<HideAttribute>() && !x.HasAttribute<ObsoleteAttribute>() );
 
 		if ( HideBaseComponents )
 		{

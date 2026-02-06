@@ -1,4 +1,5 @@
-﻿using Facepunch.ActionGraphs;
+﻿using BlowoutTeamSoft.Engine.Interfaces;
+using Facepunch.ActionGraphs;
 using Sandbox.ActionGraphs;
 using System;
 using System.IO;
@@ -376,6 +377,11 @@ public partial class SceneEditorSession : Scene.ISceneEditorSession
 	/// Resolve a Component to an editor session.
 	/// </summary>
 	public static Scene.ISceneEditorSession Resolve( Component component ) => Resolve( component?.GameObject );
+
+	public static Scene.ISceneEditorSession Resolve( IBlowoutGameSystem component )
+	{
+		return Resolve( (GameObject)component?.SystemGameObject );
+	}
 
 	/// <summary>
 	/// Resolve a GameObject to an editor session.

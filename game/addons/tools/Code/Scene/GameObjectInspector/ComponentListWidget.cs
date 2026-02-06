@@ -1,4 +1,7 @@
 ﻿using Sandbox.Diagnostics;
+using BlowoutTeamSoft.Engine.Enums;
+using BlowoutTeamSoft.Engine.Interfaces;
+using BlowoutTeamSoft.Configuration.Serializer.Interfaces;
 
 public class ComponentListWidget : Widget
 {
@@ -16,7 +19,7 @@ public class ComponentListWidget : Widget
 		Frame();
 	}
 
-	Dictionary<Component, ComponentSheet> current = new Dictionary<Component, ComponentSheet>();
+	Dictionary<IBlowoutGameSystem, ComponentSheet> current = new Dictionary<IBlowoutGameSystem, ComponentSheet>();
 
 	int hotloadCount;
 
@@ -38,8 +41,8 @@ public class ComponentListWidget : Widget
 		current = new();
 
 		// A list of components we've already seen
-		HashSet<Component> used = new HashSet<Component>();
-		HashSet<Component> toRemove = new HashSet<Component>();
+		HashSet<IBlowoutGameSystem> used = new HashSet<IBlowoutGameSystem>();
+		HashSet<IBlowoutGameSystem> toRemove = new HashSet<IBlowoutGameSystem>();
 
 		//
 		// Here we build a list of all components that are on all the selected game objects
@@ -57,14 +60,23 @@ public class ComponentListWidget : Widget
 		//
 		foreach ( var component in gobs[0].Components.GetAll() )
 		{
-			if ( !component.IsValid() ) continue;
-			if ( component.Flags.HasFlag( ComponentFlags.Hidden ) ) continue;
-			var baseType = EditorTypeLibrary.GetType( component.GetType() )?.BaseType?.TargetType;
-			if ( !(baseType == typeof( Component ) || (baseType?.IsSubclassOf( typeof( Component ) ) ?? false)) )
+			if ( !component.IsAliveSystem ) continue;
+			if ( component.SystemMode.HasFlag( BlowoutSystemMode.HideHierarchy ) ||
+				 component.SystemMode.HasFlag( BlowoutSystemMode.HideEditor ) ) continue;
+
+			var type = component.GetType();
+			if ( type == null || type.IsAssignableFrom(typeof( IBlowoutGameSystem )) )
 			{
 				toRemove.Add( component );
 				continue;
 			}
+
+			//var baseType = EditorTypeLibrary.GetType( component.GetType() )?.BaseType?.TargetType;
+			//if ( !(baseType == typeof( Component ) || (baseType?.IsSubclassOf( typeof( Component ) ) ?? false)) )
+			//{
+			//	toRemove.Add( component );
+			//	continue;
+			//}
 
 			// Get all the components of this type on all the selected game objects
 			var allGobs = gobs.Select( x => x.Components.GetAll()
@@ -75,7 +87,7 @@ public class ComponentListWidget : Widget
 
 			// Must be one on every go to show up
 			if ( allGobs.Length != gobs.Length ) continue;
-			if ( allGobs.Any( x => !x.IsValid() ) ) continue;
+			if ( allGobs.Any( x => !x.IsAliveSystem ) ) continue;
 
 			if ( old.TryGetValue( component, out var existingSheet ) )
 			{
@@ -104,7 +116,7 @@ public class ComponentListWidget : Widget
 			mso.OnPropertyChanged += p => PropertyChanged( p, mso.Targets.OfType<Component>() );
 
 			var sheet = new ComponentSheet( GameObjectId, mso );
-			sheet.ReadOnly = component.Flags.Contains( ComponentFlags.NotEditable );
+			sheet.ReadOnly = component.SystemMode.HasFlag( BlowoutSystemMode.EditorReadonly );
 			sheet.Header.ContextMenu += ( menu ) => ContextMenu( component, menu, mso.TypeName );
 			newLayout.Add( sheet );
 
@@ -113,7 +125,8 @@ public class ComponentListWidget : Widget
 
 		foreach ( var t in toRemove )
 		{
-			t?.Destroy();
+			if ( t is Component comp )
+				comp?.Destroy();
 		}
 
 		Layout.Clear( true );
@@ -155,7 +168,7 @@ public class ComponentListWidget : Widget
 		undoScope = null;
 	}
 
-	void ContextMenu( Component component, Menu menu, string title )
+	void ContextMenu( IBlowoutGameSystem component, Menu menu, string title )
 	{
 		if ( SerializedObject.IsMultipleTargets )
 		{
@@ -166,131 +179,151 @@ public class ComponentListWidget : Widget
 		var gameObject = SerializedObject.Targets.OfType<GameObject>().Single();
 		var componentList = gameObject.Components;
 
-		var editable = !component.Flags.Contains( ComponentFlags.NotEditable );
+		var editable = !component.SystemMode.HasFlag( BlowoutSystemMode.EditorReadonly );
 
 		if ( editable )
 		{
-			menu.AddOption( "Reset", "restart_alt", action: () =>
+			if ( component is Component comps )
 			{
-				var session = SceneEditorSession.Resolve( gameObject );
-				using var scene = session.Scene.Push();
-				using ( session.UndoScope( $"Reset {component.GetType().Name}" ).WithComponentChanges( component ).Push() )
+
+				menu.AddOption( "Reset", "restart_alt", action: () =>
 				{
-					component.Reset();
-				}
-			} );
+					var session = SceneEditorSession.Resolve( gameObject );
+					using var scene = session.Scene.Push();
+					using ( session.UndoScope( $"Reset {component.GetType().Name}" ).WithComponentChanges( comps ).Push() )
+					{
+						comps.Reset();
+					}
+				} );
 
-			menu.AddSeparator();
+				menu.AddSeparator();
 
-			var componentIndex = componentList.GetAll().ToList().IndexOf( component );
-			var componentId = component.Id;
-			var canMoveUp = componentList.Count > 1 && componentIndex > 0;
-			var canMoveDown = componentList.Count > 1 && componentIndex < componentList.Count - 1;
+				var componentIndex = componentList.GetAll().ToList().IndexOf( comps );
+				var componentId = component.Id;
+				var canMoveUp = componentList.Count > 1 && componentIndex > 0;
+				var canMoveDown = componentList.Count > 1 && componentIndex < componentList.Count - 1;
 
-			menu.AddOption( "Move Up", "expand_less", action: () =>
-			{
-				var session = SceneEditorSession.Resolve( gameObject );
-				using var scene = session.Scene.Push();
-				using ( session.UndoScope( "Change Component Order" ).WithGameObjectChanges( component.GameObject, GameObjectUndoFlags.Components ).Push() )
+				menu.AddOption( "Move Up", "expand_less", action: () =>
 				{
-					component.Components.Move( component, -1 );
-				}
+					var session = SceneEditorSession.Resolve( gameObject );
+					using var scene = session.Scene.Push();
+					using ( session.UndoScope( "Change Component Order" ).WithGameObjectChanges( comps.GameObject, GameObjectUndoFlags.Components ).Push() )
+					{
+						comps.Components.Move( comps, -1 );
+					}
 
-				Rebuild();
-			} ).Enabled = canMoveUp;
+					Rebuild();
+				} ).Enabled = canMoveUp;
 
-			menu.AddOption( "Move Down", "expand_more", action: () =>
-			{
-				var session = SceneEditorSession.Resolve( gameObject );
-				using var scene = session.Scene.Push();
-				using ( session.UndoScope( "Change Component Order" ).WithGameObjectChanges( component.GameObject, GameObjectUndoFlags.Components ).Push() )
+				menu.AddOption( "Move Down", "expand_more", action: () =>
 				{
-					component.Components.Move( component, +1 );
-				}
-				Rebuild();
-			} ).Enabled = canMoveDown;
+					var session = SceneEditorSession.Resolve( gameObject );
+					using var scene = session.Scene.Push();
+					using ( session.UndoScope( "Change Component Order" ).WithGameObjectChanges( comps.GameObject, GameObjectUndoFlags.Components ).Push() )
+					{
+						comps.Components.Move( comps, +1 );
+					}
+					Rebuild();
+				} ).Enabled = canMoveDown;
 
-			menu.AddSeparator();
+				menu.AddSeparator();
 
-			menu.AddOption( $"Cut {title}", "content_cut", action: () =>
-			{
-				var session = SceneEditorSession.Resolve( gameObject );
-				using var scene = session.Scene.Push();
-				using ( session.UndoScope( $"Cut {component.GetType().Name} Component" ).WithComponentDestructions( component ).Push() )
+				menu.AddOption( $"Cut {title}", "content_cut", action: () =>
 				{
-					component.CopyToClipboard();
-					component.Destroy();
-				}
-			} );
+					var session = SceneEditorSession.Resolve( gameObject );
+					using var scene = session.Scene.Push();
+					using ( session.UndoScope( $"Cut {comps.GetType().Name} Component" ).WithComponentDestructions( comps ).Push() )
+					{
+						comps.CopyToClipboard();
+						component.Destroy();
+					}
+				} );
+			}
 		}
 
-		menu.AddOption( $"Copy {title}", "copy_all", action: () => component.CopyToClipboard() );
+		if ( component is Component comp )
+		{
+			menu.AddOption( $"Copy {title}", "copy_all", action: () => comp.CopyToClipboard() );
+		}
 
 		if ( editable )
 		{
 			bool clipboardComponent = SceneEditor.HasComponentInClipboard();
-			menu.AddOption( "Paste Values", "content_paste", action: () => component.PasteValues() ).Enabled = clipboardComponent;
-			menu.AddOption( "Paste As New", "content_paste_go", action: () => component.GameObject.PasteComponent() ).Enabled = clipboardComponent;
+			if ( component is Component compf )
+			{
+				menu.AddOption( "Paste Values", "content_paste", action: () => compf.PasteValues() ).Enabled = clipboardComponent;
+				menu.AddOption( "Paste As New", "content_paste_go", action: () => compf.GameObject.PasteComponent() ).Enabled = clipboardComponent;
+			}
 		}
 
 		menu.AddSeparator();
 
-		if ( component.GameObject.IsPrefabInstance )
+		if ( component is Component compd )
 		{
-			var isComponentModified = EditorUtility.Prefabs.IsComponentInstanceModified( component );
 
-			var prefabName = EditorUtility.Prefabs.GetOuterMostPrefabName( component );
-
-			var revertChangesActionName = "Revert Changes";
-			menu.AddOption( revertChangesActionName, "history", action: () =>
+			if ( component.SystemGameObject is GameObject sandboxGameobject && sandboxGameobject.IsPrefabInstance )
 			{
-				var session = SceneEditorSession.Resolve( gameObject );
-				using var scene = session.Scene.Push();
-				using ( session.UndoScope( revertChangesActionName ).WithComponentChanges( component ).Push() )
+				var isComponentModified = EditorUtility.Prefabs.IsComponentInstanceModified( compd );
+
+				var prefabName = EditorUtility.Prefabs.GetOuterMostPrefabName( component );
+
+
+				var revertChangesActionName = "Revert Changes";
+				menu.AddOption( revertChangesActionName, "history", action: () =>
 				{
-					EditorUtility.Prefabs.RevertComponentInstanceChanges( component );
-				}
-			} ).Enabled = isComponentModified;
+					var session = SceneEditorSession.Resolve( gameObject );
+					using var scene = session.Scene.Push();
+					using ( session.UndoScope( revertChangesActionName ).WithComponentChanges( compd ).Push() )
+					{
+						EditorUtility.Prefabs.RevertComponentInstanceChanges( compd );
+					}
+				} ).Enabled = isComponentModified;
 
 
-			menu.AddOption( "Apply to Prefab", "save", action: () =>
-			{
-				var session = SceneEditorSession.Resolve( gameObject );
-				using var scene = session.Scene.Push();
-				EditorUtility.Prefabs.ApplyComponentInstanceChangesToPrefab( component );
+				menu.AddOption( "Apply to Prefab", "save", action: () =>
+				{
+					var session = SceneEditorSession.Resolve( gameObject );
+					using var scene = session.Scene.Push();
+					EditorUtility.Prefabs.ApplyComponentInstanceChangesToPrefab( compd );
 
-			} ).Enabled = isComponentModified;
+				} ).Enabled = isComponentModified;
 
-			menu.AddSeparator();
+
+				menu.AddSeparator();
+			}
+
 		}
 
 		menu.AddOption( "Remove Component", "remove", action: () =>
 		{
 			var session = SceneEditorSession.Resolve( gameObject );
 			using var scene = session.Scene.Push();
-			using ( session.UndoScope( $"Remove {component.GetType().Name} Component" ).WithComponentDestructions( component ).Push() )
+			using ( session.UndoScope( $"Remove {component.GetType().Name} Component" ).WithBlowoutGameSystemDestructions( component ).Push() )
 			{
 				component.Destroy();
 			}
 		} );
 
-		var replace = menu.AddMenu( "Replace Component", "find_replace" );
-		replace.AddWidget( new MenuComponentTypeSelectorWidget( replace )
+		if ( component is Component serializableComponent )
 		{
-			OnSelect = ( t ) =>
+			var replace = menu.AddMenu( "Replace Component", "find_replace" );
+			replace.AddWidget( new MenuComponentTypeSelectorWidget( replace )
 			{
-				var session = SceneEditorSession.Resolve( gameObject );
-				using var scene = session.Scene.Push();
-				using ( session.UndoScope( $"Replace {component.GetType().Name} Component" ).WithComponentDestructions( component ).WithComponentCreations().Push() )
+				OnSelect = ( t ) =>
 				{
-					var go = component.GameObject;
-					var jso = component.Serialize().AsObject();
-					component.Destroy();
-					var newComponent = go.Components.Create( t );
-					newComponent.DeserializeImmediately( jso );
+					var session = SceneEditorSession.Resolve( gameObject );
+					using var scene = session.Scene.Push();
+					using ( session.UndoScope( $"Replace {component.GetType().Name} Component" ).WithComponentDestructions( serializableComponent ).WithComponentCreations().Push() )
+					{
+						var go = (GameObject)component.SystemGameObject;
+						var jso = serializableComponent.Serialize().AsObject();
+						component.Destroy();
+						var newComponent = go.Components.Create( t );
+						newComponent.DeserializeImmediately( jso );
+					}
 				}
-			}
-		} );
+			} );
+		}
 
 		menu.AddSeparator();
 
@@ -303,11 +336,11 @@ public class ComponentListWidget : Widget
 		}
 	}
 
-	void ContextMenuMultiple( Component component, Menu menu, string title )
+	void ContextMenuMultiple( IBlowoutGameSystem component, Menu menu, string title )
 	{
-		var componentList = component.GameObject.Components;
+		var componentList = ((GameObject)component.SystemGameObject).Components;
 		var index = componentList.GetAll( component.GetType(), FindMode.EverythingInSelf ).ToList().IndexOf( component );
-		var components = new List<Component>();
+		var components = new List<IBlowoutGameSystem>();
 		if ( index >= 0 )
 		{
 			foreach ( var obj in SerializedObject.Targets.OfType<GameObject>() )
@@ -327,22 +360,25 @@ public class ComponentListWidget : Widget
 		if ( components.Count == 0 )
 			return;
 
-		var editable = !components.Any( x => x.Flags.Contains( ComponentFlags.NotEditable ) );
+		var editable = !components.Any( x => x.SystemMode.HasFlag( BlowoutSystemMode.EditorReadonly ) );
 
 		if ( editable )
 		{
-			menu.AddOption( "Reset All", "restart_alt", action: () =>
+			if ( component is Component targetComponent )
 			{
-				var session = SceneEditorSession.Resolve( components.FirstOrDefault() );
-				using var scene = session.Scene.Push();
-				using ( session.UndoScope( $"Reset Component(s)" ).WithComponentChanges( components ).Push() )
+				menu.AddOption( "Reset All", "restart_alt", action: () =>
 				{
-					foreach ( var c in components )
+					var session = SceneEditorSession.Resolve( components.FirstOrDefault() );
+					using var scene = session.Scene.Push();
+					using ( session.UndoScope( $"Reset Component(s)" ).WithComponentChanges( targetComponent ).Push() )
 					{
-						c.Reset();
+						foreach ( var c in components )
+						{
+							targetComponent.Reset();
+						}
 					}
-				}
-			} );
+				} );
+			}
 
 			menu.AddSeparator();
 
@@ -350,7 +386,7 @@ public class ComponentListWidget : Widget
 			{
 				var session = SceneEditorSession.Resolve( components.FirstOrDefault() );
 				using var scene = session.Scene.Push();
-				using ( session.UndoScope( $"Removed Component(s)" ).WithComponentDestructions( components ).Push() )
+				using ( session.UndoScope( $"Removed Component(s)" ).WithBlowoutGameSystemDestructions( components ).Push() )
 				{
 					foreach ( var c in components )
 					{
@@ -367,15 +403,18 @@ public class ComponentListWidget : Widget
 					{
 						var session = SceneEditorSession.Resolve( components.FirstOrDefault() );
 						using var scene = session.Scene.Push();
-						using ( session.UndoScope( $"Replace Component(s)" ).WithComponentDestructions( components ).WithComponentCreations().Push() )
+						using ( session.UndoScope( $"Replace Component(s)" ).WithBlowoutGameSystemDestructions( components ).WithComponentCreations().Push() )
 						{
 							foreach ( var c in components )
 							{
-								var go = c.GameObject;
-								var jso = c.Serialize().AsObject();
+								var go = c.SystemGameObject;
+								var jso = c is IBlowoutSerializable serializable ?
+									serializable.Serialize( null ).ToJson().AsObject() : null;
+
 								c.Destroy();
-								var newComponent = go.Components.Create( t );
-								newComponent.DeserializeImmediately( jso );
+								var newComponent = (IBlowoutSerializable)go.Unsafe.AddGameSystem( t.TargetType );
+								newComponent.DeserializeLazy( jso );
+								newComponent.DeserializeNow();
 							}
 						}
 					}
@@ -386,7 +425,7 @@ public class ComponentListWidget : Widget
 			{
 				menu.AddOption( "Paste Values", "content_paste", action: () =>
 				{
-					foreach ( var c in components )
+					foreach ( var c in components.OfType<Component>() )
 					{
 						c.PasteValues();
 					}
@@ -395,7 +434,8 @@ public class ComponentListWidget : Widget
 				{
 					foreach ( var c in components )
 					{
-						c.GameObject.PasteComponent();
+						var go = (GameObject)c.SystemGameObject;
+						go.PasteComponent();
 					}
 				} );
 			}
@@ -426,7 +466,7 @@ public class ComponentListWidget : Widget
 
 		hc.Add( hotloadCount );
 
-		foreach ( var c in SerializedObject.Targets.OfType<GameObject>().SelectMany( x => x.Components.GetAll().Where( c => c.IsValid() && !c.Flags.HasFlag( ComponentFlags.Hidden ) ) ) )
+		foreach ( var c in SerializedObject.Targets.OfType<GameObject>().SelectMany( x => x.Components.GetAll().Where( c => c.IsAliveSystem && (!c.SystemMode.HasFlag( BlowoutSystemMode.HideHierarchy )) && !c.SystemMode.HasFlag( BlowoutSystemMode.HideEditor ) ) ) )
 		{
 			hc.Add( c );
 		}

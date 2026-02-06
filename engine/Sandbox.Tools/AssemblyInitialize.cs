@@ -46,6 +46,7 @@ internal static class AssemblyInitialize
 		Game.TypeLibrary.AddIntrinsicTypes();
 		Game.TypeLibrary.AddAssembly( Assembly.Load( "Sandbox.System" ), false );
 		Game.TypeLibrary.AddAssembly( Assembly.Load( "Sandbox.Engine" ), false );
+		Game.TypeLibrary.AddAssembly( Assembly.Load( "BlowoutTeamSoft.Engine" ), false );
 
 		try
 		{

@@ -885,7 +885,7 @@ internal class PrefabInstanceData
 
 		// Find all Components
 		var requiredComponentGuids = go.Components.GetAll( FindMode.InSelf | FindMode.InDescendants )
-			.Where( component => !component.Flags.Contains( ComponentFlags.NotSaved ) )
+			.Where( component => !component.SystemMode.HasFlag( BlowoutTeamSoft.Engine.Enums.BlowoutSystemMode.NotSavedYet ) )
 			.Select( component => component.Id );
 
 		return requiredGameObjectGuids

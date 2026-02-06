@@ -1,4 +1,5 @@
 ﻿using System.Text.Json.Nodes;
+using BlowoutTeamSoft.Engine.Interfaces;
 using Facepunch.ActionGraphs;
 
 namespace Sandbox;
@@ -7,17 +8,23 @@ public abstract partial class Component
 {
 	// Set only during the cloning process
 	// We store this on the component to avoid the need reverse lookup table during the clone process
-	private Component _cloneOriginal = null;
+	private IBlowoutGameSystem _cloneOriginal = null;
 
 	/// <summary>
 	/// Runs after this clone has been created by a cloned GameObject.
 	/// </summary>
 	/// <param name="original">The original component that was cloned.</param>
 	/// <param name="originalToClonedObject">During the cloning process, we build a mapping from original objects to their clone, so we will need to add ourselves to it.</param>
-	internal void InitClone( Component original, Dictionary<object, object> originalToClonedObject )
+	internal void InitClone( IBlowoutGameSystem original, Dictionary<object, object> originalToClonedObject )
 	{
 		originalToClonedObject[original] = this;
 		_cloneOriginal = original;
+	}
+
+	object IBlowoutGameSystem.InstallParentClone( IBlowoutGameSystem gameSystem )
+	{
+		_cloneOriginal = gameSystem;
+		return this;
 	}
 
 	/// <summary>
@@ -28,7 +35,7 @@ public abstract partial class Component
 	/// </summary>
 	internal void PostClone( Dictionary<object, object> originalToClonedObject, Dictionary<Guid, Guid> originalIdToCloneId )
 	{
-		if ( !_cloneOriginal.IsValid() )
+		if ( !_cloneOriginal.IsAliveSystem )
 		{
 			// Nothing todo this component is not a proper clone. It was created through side effects while cloning properties.
 			return;

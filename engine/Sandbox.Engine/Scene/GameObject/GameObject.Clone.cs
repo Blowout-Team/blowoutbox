@@ -175,7 +175,7 @@ public partial class GameObject
 			{
 				if ( originalComponent is null ) continue;
 
-				if ( originalComponent.Flags.Contains( ComponentFlags.NotCloned ) ) continue;
+				if ( originalComponent.SystemMode.HasFlag( BlowoutTeamSoft.Engine.Enums.BlowoutSystemMode.NotClonable ) ) continue;
 
 				if ( originalComponent is MissingComponent missing )
 				{
@@ -186,8 +186,8 @@ public partial class GameObject
 					continue;
 				}
 
-				var clonedComp = Components.Create( originalComponent.GetType(), originalComponent.Enabled );
-				clonedComp.InitClone( originalComponent, originalToClonedObject );
+				var clonedComp = Components.Create( originalComponent.GetType(), originalComponent.IsExecuting );
+				originalToClonedObject[originalComponent] = clonedComp.InstallParentClone( originalComponent );
 			}
 		}
 
@@ -285,7 +285,13 @@ public partial class GameObject
 
 		if ( Components.Count > 0 )
 		{
-			Components.ForEach( "PostClone", true, c => c.PostClone( originalToClonedObject, originalIdToCloneId ) );
+			Components.ForEach( "PostClone", true, c =>
+			{
+				if(c is Component comp )
+				{
+					comp.PostClone( originalToClonedObject, originalIdToCloneId );
+				}
+			} );
 		}
 
 		if ( Children.Any() )
@@ -306,8 +312,20 @@ public partial class GameObject
 		_isCloningPrefab = false;
 		Flags &= ~GameObjectFlags.Deserializing;
 
-		Components.ForEach( "OnLoadInternal", true, c => c.OnLoadInternal() );
-		Components.ForEach( "OnValidate", true, c => c.Validate() );
+		Components.ForEach( "OnLoadInternal", true, c =>
+		{
+			if ( c is Component comp )
+			{
+				comp.OnLoadInternal();
+			}
+		} );
+		Components.ForEach( "OnValidate", true, c =>
+		{
+			if(c is Component comp )
+			{
+				comp.Validate();
+			}
+		} );
 	}
 
 	/// <summary>

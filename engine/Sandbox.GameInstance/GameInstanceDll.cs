@@ -867,6 +867,11 @@ internal partial class GameInstanceDll : Engine.IGameInstanceDll
 				Sandbox.ReflectionUtility.PreJIT( typeof( Bootstrap ).Assembly );
 			}
 
+			using ( e.ScopeTimer( "BlowoutTeamSoft.Engine" ) )
+			{
+				Sandbox.ReflectionUtility.PreJIT( typeof( BlowoutTeamSoft.Engine.BlowoutEngine ).Assembly );
+			}
+
 			e.Submit();
 		}
 	}

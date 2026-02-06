@@ -10,6 +10,12 @@ public partial class GameObject
 	/// </summary>
 	internal void OnTagsUpdatedInternal()
 	{
-		Components.ForEach( "TagsUpdated", false, c => c.OnTagsUpdatedInternal() );
+		Components.ForEach( "TagsUpdated", false, c =>
+		{
+			if(c is Component comp )
+			{
+				comp.OnTagsUpdatedInternal();
+			}
+		} );
 	}
 }

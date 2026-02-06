@@ -1,4 +1,6 @@
-﻿namespace Editor;
+﻿using BlowoutTeamSoft.Engine.Interfaces;
+
+namespace Editor;
 
 public class GameObjectSceneBrowser : Widget
 {
@@ -24,6 +26,7 @@ public class GameObjectSceneBrowser : Widget
 
 	HashSet<SceneGameObjectNode> ObjectNodes = new();
 	HashSet<SceneComponentNode> ComponentNodes = new();
+	HashSet<SceneGameSystemNode> GameSystemNodes = new();
 	SceneLocations Locations;
 	TreeView SceneTree;
 
@@ -88,13 +91,25 @@ public class GameObjectSceneBrowser : Widget
 		}
 	}
 
-	public void SelectComponent( Component component )
+	public void SelectComponent( IBlowoutGameSystem component )
 	{
-		var componentNode = ComponentNodes.FirstOrDefault( x => x.Component == component );
-		if ( componentNode is not null )
+		if ( component is Component comp )
 		{
-			SceneTree.SelectItem( componentNode );
+			var componentNode = ComponentNodes.FirstOrDefault( x => x.Component == component );
+			if ( componentNode is not null )
+			{
+				SceneTree.SelectItem( componentNode );
+			}
 		}
+		else
+		{
+			var systemNode = GameSystemNodes.FirstOrDefault( x => x.System == component );
+			if ( systemNode is not null )
+			{
+				SceneTree.SelectItem( systemNode );
+			}
+		}
+
 	}
 
 	TreeNode AddGameObject( GameObject gameObject, TreeNode parent )
@@ -122,9 +137,19 @@ public class GameObjectSceneBrowser : Widget
 			if ( !component.GetType().IsAssignableTo( ComponentType ) )
 				continue;
 
-			var node = new SceneComponentNode( component );
-			ComponentNodes.Add( node );
-			parent.AddItem( node );
+			if ( component is Component comp )
+			{
+
+				var node = new SceneComponentNode( comp );
+				ComponentNodes.Add( node );
+				parent.AddItem( node );
+			}
+			else
+			{
+				var node = new SceneGameSystemNode( component );
+				GameSystemNodes.Add(node);
+				parent.AddItem(node);
+			}
 		}
 	}
 }
@@ -224,6 +249,57 @@ class SceneGameObjectNode : TreeNode
 
 		Paint.SetPen( Theme.TextLight.WithAlpha( Alpha ) );
 		Paint.DrawIcon( rect, "layers", 16, TextFlag.LeftCenter );
+	}
+}
+
+class SceneGameSystemNode : TreeNode
+{
+	public IBlowoutGameSystem System;
+	string DisplayName;
+	string Icon = "category";
+	Color Color = Theme.Blue;
+
+	public SceneGameSystemNode( IBlowoutGameSystem system ) : base()
+	{
+		System = system;
+		var type = system.GetType();
+		DisplayName = type.Name.ToTitleCase();
+		var title = TypeLibrary.GetAttribute<TitleAttribute>( type );
+		if ( title is not null )
+		{
+			DisplayName = title.Value;
+		}
+
+		var description = TypeLibrary.GetAttribute<System.ComponentModel.DescriptionAttribute>( type );
+		if ( description is not null )
+		{
+			DisplayName = description.Description;
+		}
+
+		var icon = TypeLibrary.GetAttribute<IconAttribute>( type );
+		if ( icon is not null )
+		{
+			Icon = icon.Value;
+		}
+		var tint = TypeLibrary.GetAttribute<TintAttribute>( type );
+		if ( tint is not null )
+		{
+			Color = Theme.GetTint( tint.Tint );
+		}
+	}
+
+	public override void OnPaint( VirtualWidget item )
+	{
+		PaintSelection( item );
+
+		var rect = item.Rect;
+
+		Paint.SetPen( Theme.Text );
+		Paint.SetDefaultFont();
+		var nameRect = Paint.DrawText( rect.Shrink( 24, 0 ), DisplayName, TextFlag.LeftCenter );
+
+		Paint.SetPen( Color );
+		Paint.DrawIcon( rect, Icon, 16, TextFlag.LeftCenter );
 	}
 }
 

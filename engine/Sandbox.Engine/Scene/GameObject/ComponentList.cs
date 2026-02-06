@@ -1,4 +1,6 @@
-﻿namespace Sandbox;
+﻿using BlowoutTeamSoft.Engine.Interfaces;
+
+namespace Sandbox;
 
 /// <summary>
 /// Flags to search for Components.
@@ -69,17 +71,17 @@ public class ComponentList
 	/// This is the hard list of components.
 	/// This isn't a HashSet because we need the order to stay.
 	/// </summary>
-	List<Component> _list;
+	List<IBlowoutGameSystem> _list;
 	internal ComponentList( GameObject o )
 	{
 		go = o;
-		_list = new List<Component>();
+		_list = new List<IBlowoutGameSystem>();
 	}
 
 	/// <summary>
 	/// Get all components, including disabled ones
 	/// </summary>
-	public IEnumerable<Component> GetAll()
+	public IEnumerable<IBlowoutGameSystem> GetAll()
 	{
 		return _list;
 	}
@@ -112,20 +114,56 @@ public class ComponentList
 		return t;
 	}
 
-	/// <summary>
-	/// Add a component of this type
-	/// </summary>
-	public T Create<T>( bool startEnabled = true ) where T : Component, new()
+	public T CreateFromAlias<T>( IDictionary<Type, Func<GameObject, IBlowoutGameSystem>> alias, bool startEnabled = true )
+		where T : IBlowoutGameSystem
 	{
 		using var batch = CallbackBatch.Batch();
-		var t = new T();
+		var currentType = typeof( T );
+		T t = default;
+		bool isFounded = false;
+		foreach ( var type in alias )
+		{
+			if ( currentType.IsInterface && currentType.IsAssignableFrom( type.Key ) )
+			{
+				t = (T)type.Value( go );
+				isFounded = true;
+				break;
+			}
+			else if ( type.Key == currentType )
+			{
+				t = (T)type.Value( go );
+				isFounded = true;
+				break;
+			}
+		}
 
-		t.GameObject = go;
+		if ( !isFounded )
+		{
+			if ( Create( currentType, startEnabled ) is T target )
+				return target;
+
+			return default;
+		}
+
 		_list.Add( t );
 
-		t.InitializeComponent();
-		t.Enabled = startEnabled;
-		go.OnComponentAdded( t );
+		if ( t is Component component )
+		{
+			go.OnComponentAdded( component );
+			component.GameObject = go;
+			_list.Add( t );
+
+			component.InitializeComponent();
+			component.Enabled = startEnabled;
+			go.OnComponentAdded( component );
+		}
+		else if ( t is IBlowoutObjectGameSystem objectGameSystem )
+		{
+			objectGameSystem.InstallSourceObject( go );
+			_list.Add( t );
+
+			objectGameSystem.InitializeSystem( startEnabled );
+		}
 
 		return t;
 	}
@@ -133,21 +171,63 @@ public class ComponentList
 	/// <summary>
 	/// Add a component of this type
 	/// </summary>
-	internal Component Create( Type type, bool startEnabled = true )
+	public T Create<T>( bool startEnabled = true ) where T : IBlowoutGameSystem, new()
 	{
-		if ( !type.IsAssignableTo( typeof( Component ) ) )
+		using var batch = CallbackBatch.Batch();
+		var t = new T();
+
+		if ( t is Component component )
+		{
+			go.OnComponentAdded( component );
+			component.GameObject = go;
+			_list.Add( t );
+
+			component.InitializeComponent();
+			component.Enabled = startEnabled;
+			go.OnComponentAdded( component );
+		}
+		else if ( t is IBlowoutObjectGameSystem objectGameSystem )
+		{
+			objectGameSystem.InstallSourceObject( go );
+			_list.Add( t );
+
+			objectGameSystem.InitializeSystem( startEnabled );
+		}
+		go.OnGameSystemAdded( t );
+
+
+		return t;
+	}
+
+	/// <summary>
+	/// Add a component of this type
+	/// </summary>
+	internal IBlowoutGameSystem Create( Type type, bool startEnabled = true )
+	{
+		if ( !type.IsAssignableTo( typeof( IBlowoutGameSystem ) ) )
 			return null;
 
 		using var batch = CallbackBatch.Batch();
-		var t = (Component)Activator.CreateInstance( type );
+		var t = (IBlowoutGameSystem)Activator.CreateInstance( type );
 
-		t.GameObject = go;
-		_list.Add( t );
+		if ( t is Component component )
+		{
+			component.GameObject = go;
+			_list.Add( t );
 
-		t.InitializeComponent();
-		t.Enabled = startEnabled;
-		go.OnComponentAdded( t );
+			component.InitializeComponent();
+			component.Enabled = startEnabled;
+			go.OnComponentAdded( component );
+			return t;
+		}
+		else if ( t is IBlowoutObjectGameSystem objectGameSystem )
+		{
+			objectGameSystem.InstallSourceObject( go );
+			_list.Add( t );
 
+			objectGameSystem.InitializeSystem( startEnabled );
+		}
+		go.OnGameSystemAdded( t );
 		return t;
 	}
 
@@ -162,7 +242,7 @@ public class ComponentList
 	/// <summary>
 	/// Get a component of this type
 	/// </summary>
-	public Component Get( Type type, FindMode find = FindMode.EnabledInSelf )
+	public IBlowoutGameSystem Get( Type type, FindMode find = FindMode.EnabledInSelf )
 	{
 		return GetAll( type, find ).FirstOrDefault();
 	}
@@ -170,7 +250,7 @@ public class ComponentList
 	/// <summary>
 	/// Get all components of this type
 	/// </summary>
-	public IEnumerable<Component> GetAll( Type type, FindMode find )
+	public IEnumerable<IBlowoutGameSystem> GetAll( Type type, FindMode find )
 	{
 		return GetAll<Component>( find ).Where( x => x.GetType().IsAssignableTo( type ) );
 	}
@@ -178,7 +258,7 @@ public class ComponentList
 	/// <summary>
 	/// Get all components
 	/// </summary>
-	public IEnumerable<Component> GetAll( FindMode find ) => GetAll<Component>( find );
+	public IEnumerable<IBlowoutGameSystem> GetAll( FindMode find ) => GetAll<IBlowoutGameSystem>( find );
 
 	/// <summary>
 	/// Get a list of components on this game object, optionally recurse when deep is true
@@ -218,8 +298,8 @@ public class ComponentList
 				var component = _list[i];
 				if ( component is null ) continue;
 
-				if ( enabledOnly && !component.Active ) continue;
-				if ( disabledOnly && component.Active ) continue;
+				if ( enabledOnly && !component.IsActive ) continue;
+				if ( disabledOnly && component.IsActive ) continue;
 
 				if ( component is T c )
 				{
@@ -301,7 +381,7 @@ public class ComponentList
 			var component = _list[i];
 			if ( component is null ) continue;
 
-			if ( component is T target && component.Active )
+			if ( component is T target && component.IsActive )
 			{
 				action.Invoke( target );
 			}
@@ -342,8 +422,8 @@ public class ComponentList
 				var component = _list[i];
 				if ( component is null ) continue;
 
-				if ( enabledOnly && !component.Active ) continue;
-				if ( disabledOnly && component.Active ) continue;
+				if ( enabledOnly && !component.IsActive ) continue;
+				if ( disabledOnly && component.IsActive ) continue;
 
 				if ( component is T target )
 				{
@@ -412,7 +492,7 @@ public class ComponentList
 	/// <summary>
 	/// Allows linq style queries
 	/// </summary>
-	public Component FirstOrDefault( Func<Component, bool> value ) => _list.FirstOrDefault( value );
+	public IBlowoutGameSystem FirstOrDefault( Func<IBlowoutGameSystem, bool> value ) => _list.FirstOrDefault( value );
 
 	/// <summary>
 	/// Amount of components - including disabled
@@ -426,7 +506,7 @@ public class ComponentList
 
 		for ( int i = _list.Count - 1; i >= 0 && i < _list.Count; i-- )
 		{
-			Component c = _list[i];
+			IBlowoutGameSystem c = _list[i];
 
 			if ( c is null )
 			{
@@ -434,7 +514,7 @@ public class ComponentList
 				continue;
 			}
 
-			if ( !includeDisabled && !c.Active )
+			if ( !includeDisabled && !c.IsActive )
 				continue;
 
 			if ( c is not T t )
@@ -451,7 +531,7 @@ public class ComponentList
 		}
 	}
 
-	public void ForEach( string name, bool includeDisabled, Action<Component> action ) => ForEach<Component>( name, includeDisabled, action );
+	public void ForEach( string name, bool includeDisabled, Action<IBlowoutGameSystem> action ) => ForEach<IBlowoutGameSystem>( name, includeDisabled, action );
 
 	internal void RemoveNull()
 	{
@@ -615,10 +695,15 @@ public class ComponentList
 		return Get<T>( f );
 	}
 
+	internal bool RemoveGameSystem( IBlowoutGameSystem gameSystem )
+	{
+		return _list.RemoveAll( x => x == gameSystem ) > 0;
+	}
+
 	/// <summary>
 	/// Find component on this gameobject with the specified id
 	/// </summary>
-	public Component Get( Guid id )
+	public IBlowoutGameSystem Get( Guid id )
 	{
 		return GetAll().FirstOrDefault( x => x.Id.Equals( id ) );
 	}

@@ -1,4 +1,6 @@
-﻿namespace Sandbox;
+﻿using BlowoutTeamSoft.Engine.Interfaces;
+
+namespace Sandbox;
 
 public partial class GameObject
 {
@@ -143,10 +145,18 @@ public partial class GameObject
 
 				Components.ForEach( "DrawGizmos", false, c =>
 				{
-					if ( !c.Flags.Contains( ComponentFlags.Hidden ) )
+					if ( !c.SystemMode.HasFlag( BlowoutTeamSoft.Engine.Enums.BlowoutSystemMode.HideHierarchy ) )
 					{
 						using var scope = Gizmo.Scope();
-						c.DrawGizmosInternal();
+						if ( c is Component comp )
+						{
+							comp.DrawGizmosInternal();
+						}
+						if(c is IBlowoutLogOperatable operatable )
+						{
+							Log.Error("Rendering game systems with operatable not available for now");
+							//operatable.OperateLogs( new BlowoutTeamSoft.Engine.Logger.BlowoutLogsOperatorContext(new List<>) );
+						}
 						clicked = clicked || Gizmo.WasClicked;
 					}
 				} );

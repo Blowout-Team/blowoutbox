@@ -61,8 +61,8 @@ internal readonly struct ComponentReference
 	{
 		ReferenceType = referenceType;
 		ComponentId = componentId;
-		GameObjectId = gameObjectId;
-		ComponentTypeName = componentTypeName;
+		GameObjectId = gameObjectId;eName;
+		ComponentTypeName = componentTyp
 	}
 
 	/// <summary>
@@ -141,7 +141,7 @@ internal readonly struct ComponentReference
 				targetType = resolvedType;
 			}
 
-			component = go.Components.Get( targetType, FindMode.EverythingInSelf );
+			component = go.Components.Get( targetType, FindMode.EverythingInSelf ) as Component;
 
 			if ( component is not null )
 				return component;

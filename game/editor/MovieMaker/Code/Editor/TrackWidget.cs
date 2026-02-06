@@ -7,6 +7,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
 using Sandbox.MovieMaker.Compiled;
+using BlowoutTeamSoft.Engine.Interfaces;
 
 namespace Editor.MovieMaker;
 
@@ -497,7 +498,7 @@ public partial class TrackWidget : Widget
 
 		if ( View.Target is ITrackReference<GameObject> { IsBound: true, Value: { Components.Count: > 0 } go } )
 		{
-			foreach ( var component in go.Components.GetAll() )
+			foreach ( var component in go.Components.GetAll().OfType<Component>() )
 			{
 				var type = component.GetType();
 
@@ -960,7 +961,7 @@ file sealed class ReflectionHelper<T>
 			{
 				track.ReferenceId = value switch
 				{
-					Component cmp => cmp.Id,
+					IBlowoutGameSystem gameSys => gameSys.Id,
 					GameObject go => go.Id,
 					_ => null
 				};

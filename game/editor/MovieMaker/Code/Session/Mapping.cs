@@ -292,7 +292,7 @@ partial class Session
 		{
 			var component = rootGameObject.Components.FirstOrDefault( childPreset.PropertyType.IsInstanceOfType );
 
-			return component is null ? null : GetOrCreateTrack( component );
+			return component is not Component comp ? null : GetOrCreateTrack( comp );
 		}
 
 		return GetOrCreateTrack( rootTrack, childPreset.PropertyName );

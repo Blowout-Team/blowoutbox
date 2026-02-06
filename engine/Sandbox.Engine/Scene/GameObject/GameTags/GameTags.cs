@@ -49,6 +49,26 @@ public class GameTags : ITagSet
 	}
 
 	/// <summary>
+	/// Rewrite all tags with collection.
+	/// </summary>
+	public bool Overwrite( IEnumerable<string> tags )
+	{
+		_tokens.Clear();
+		_tags.Clear();
+
+		bool isChanged = false;
+		foreach ( var tag in tags )
+		{
+			isChanged = AddSingle( tag ) || isChanged;
+		}
+
+		if ( isChanged )
+			MarkDirty();
+
+		return isChanged;
+	}
+
+	/// <summary>
 	/// Returns true if this object has given tag.
 	/// </summary>
 	[Pure, ActionGraphInclude]
