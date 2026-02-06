@@ -9,7 +9,7 @@ namespace Sandbox;
 public partial class SceneFile : GameResource
 {
 	[JsonPropertyName( "__guid" )]
-	public Guid Id { get; set; }
+	public new Guid Id { get; set; }
 
 	public JsonObject[] GameObjects { get; set; }
 	public JsonObject SceneProperties { get; set; }

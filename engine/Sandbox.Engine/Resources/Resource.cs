@@ -1,4 +1,12 @@
-﻿using System.Text.Json.Serialization;
+﻿using BlowoutTeamSoft.Engine;
+using BlowoutTeamSoft.Engine.Contexts;
+using BlowoutTeamSoft.Engine.Core;
+using BlowoutTeamSoft.Engine.Extensions;
+using BlowoutTeamSoft.Engine.Interfaces;
+using BlowoutTeamSoft.Engine.Interfaces.Assets;
+using BlowoutTeamSoft.Engine.Interfaces.ScriptEngines;
+using BlowoutTeamSoft.Engine.Logger;
+using System.Text.Json.Serialization;
 
 namespace Sandbox;
 
@@ -6,7 +14,9 @@ namespace Sandbox;
 /// A resource loaded in the engine, such as a <see cref="Model"/> or <see cref="Material"/>.
 /// </summary>
 [Expose]
-public abstract partial class Resource : IValid, IJsonConvert, BytePack.ISerializer
+public abstract partial class Resource : BlowoutEngineObject, IValid, IJsonConvert, BytePack.ISerializer,
+	IBlowoutEngineAsset,
+	IBlowoutSdkSyncObject
 {
 	/// <summary>
 	/// ID of this resource,
@@ -34,6 +44,21 @@ public abstract partial class Resource : IValid, IJsonConvert, BytePack.ISeriali
 
 	[Hide, JsonIgnore] public abstract bool IsValid { get; }
 
+	[Hide, JsonIgnore]
+	public string AssetName { get => ResourceName; set => ResourceName = value; }
+
+	[Hide, JsonIgnore]
+	public override string ObjectName { get => AssetName; set => AssetName = value; }
+
+	[Hide, JsonIgnore]
+	public int AssetId { get => ResourceId; set => ResourceId = value; }
+
+	[Hide, JsonIgnore]
+	public override Guid Id { get => new Guid( ResourceId, 0, 0, new byte[8] ); protected set => ResourceId = value.ToByteArray()[0]; }
+
+	[Hide, JsonIgnore]
+	public string AssetPath => ResourcePath; 
+
 	/// <summary>
 	/// True if this resource has been changed but the changes aren't written to disk
 	/// </summary>
@@ -53,6 +78,36 @@ public abstract partial class Resource : IValid, IJsonConvert, BytePack.ISeriali
 	~Resource()
 	{
 		Destroy();
+	}
+
+	public override BlowoutEngineObject CreateClone()
+	{
+		var clone = (Resource)MemberwiseClone();
+		Game.Resources.Register( clone );
+
+		return clone;
+	}
+
+	public override bool TryAsGameObject( out BlowoutEngineGameObject gameObject )
+	{
+		gameObject = null;
+		return false;
+	}
+
+	public override T CastTo<T>()
+	{
+		if ( this is T target )
+			return target;
+
+		return default;
+	}
+
+	public override BlowoutEngineGameObject CreateInstance()
+	{
+		if ( this is PrefabFile prefabFile )
+			return GameObject.Clone( prefabFile ).CreateInstance();
+
+		return null;
 	}
 
 	internal static string FixPath( string filename )
@@ -141,4 +196,40 @@ public abstract partial class Resource : IValid, IJsonConvert, BytePack.ISeriali
 
 		bs.Write( resource.ResourceId );
 	}
+	public bool Equals( IBlowoutEngineAsset other )
+	{
+		return other is Resource res ? res == this : other.ObjectName == ObjectName && other.AssetId == AssetId;
+	}
+
+	public BlowoutScriptValueContext ToContext( string name, IBlowoutScriptEngine scriptEngine ) =>
+		scriptEngine.TransformToContext( this );
+
+	public void Sync( BlowoutScriptValueContext context, IBlowoutScriptEngine scriptEngine )
+	{
+		foreach ( var property in scriptEngine.PropertiesDispatcher.GetProperties( this, GetType() ) )
+		{
+			if ( property.SetValue == null )
+				continue;
+			var anyValue = context.GetAnyScriptValue( scriptEngine.NameNicify.Nicify( property.Name ) );
+			if ( anyValue.EntityType == BlowoutTeamSoft.Engine.Enums.Sdk.BlowoutSdkTypeEntity.Unsupported )
+			{
+				BlowoutDebug.Logger.Warning( "Unsupported sdk entity type in source 2 resource packable asset: '" + property.Name + "'" );
+				continue;
+			}
+
+			var target = scriptEngine.TransformToTarget( property.PropertyTarget, anyValue );
+			property.SetValue( target );
+		}
+	}
+
+	public void InitializeAsset( string path, int hash, IDisposable manifest )
+	{
+		// nothing do in native :P
+	}
+
+	public IBlowoutBitmap GetAssetIcon( int width, int height ) =>
+		CreateAssetTypeIcon( width, height );
+
+	public IBlowoutBitmap RenderThumbnail( int width, int height ) =>
+		RenderThumbnail( new ThumbnailOptions() { Width = width, Height = height } );
 }
