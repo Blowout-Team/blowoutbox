@@ -61,8 +61,8 @@ internal readonly struct ComponentReference
 	{
 		ReferenceType = referenceType;
 		ComponentId = componentId;
-		GameObjectId = gameObjectId;eName;
-		ComponentTypeName = componentTyp
+		GameObjectId = gameObjectId;
+		ComponentTypeName = componentTypeName;
 	}
 
 	/// <summary>
