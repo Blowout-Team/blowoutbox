@@ -232,4 +232,9 @@ public abstract partial class Resource : BlowoutEngineObject, IValid, IJsonConve
 
 	public IBlowoutBitmap RenderThumbnail( int width, int height ) =>
 		RenderThumbnail( new ThumbnailOptions() { Width = width, Height = height } );
+
+	void IBlowoutEngineAsset.Destroy()
+	{
+		Destroy();
+	}
 }

@@ -1,4 +1,5 @@
-﻿using NativeEngine;
+﻿using BlowoutTeamSoft.Engine.Interfaces.Assets;
+using NativeEngine;
 using Sandbox.Engine;
 using System.Reflection;
 using System.Runtime.InteropServices;
@@ -8,13 +9,13 @@ namespace Sandbox;
 
 public class ResourceSystem
 {
-	private Dictionary<int, Resource> ResourceIndex { get; } = new();
+	private Dictionary<int, IBlowoutEngineAsset> ResourceIndex { get; } = new();
 
-	internal void Register( Resource resource )
+	internal void Register( IBlowoutEngineAsset resource )
 	{
-		Log.Trace( $"Registering {resource.GetType()} ( {resource.ResourcePath} ) as {resource.ResourceId}" );
+		Log.Trace( $"Registering {resource.GetType()} ( {resource.AssetPath} ) as {resource.AssetId}" );
 
-		ResourceIndex[resource.ResourceId] = resource;
+		ResourceIndex[resource.AssetId] = resource;
 
 		if ( resource is GameResource gameResource && !gameResource.IsPromise )
 		{
@@ -22,23 +23,23 @@ public class ResourceSystem
 		}
 	}
 
-	internal void Unregister( Resource resource )
+	internal void Unregister( IBlowoutEngineAsset resource )
 	{
 		// This isn't thread safe
 		ThreadSafe.AssertIsMainThread();
 
 		// Make sure we're unregistering the currently indexed resource
 
-		if ( ResourceIndex.TryGetValue( resource.ResourceId, out var existing ) && existing == resource )
+		if ( ResourceIndex.TryGetValue( resource.AssetId, out var existing ) && existing == resource )
 		{
 			// native asset system doesn't support asset removal right now,
 			// so just remove it from the index to ensure we don't retrieve it anymore
 
-			ResourceIndex.Remove( resource.ResourceId );
+			ResourceIndex.Remove( resource.AssetId );
 		}
 		else
 		{
-			Log.Trace( $"Unregistering \"{resource.ResourcePath}\", but it wasn't registered" );
+			Log.Trace( $"Unregistering \"{resource.AssetPath}\", but it wasn't registered" );
 		}
 
 		if ( resource is GameResource gameResource && !gameResource.IsPromise )
@@ -74,7 +75,7 @@ public class ResourceSystem
 		TypeCache.Clear();
 	}
 
-	internal Resource Get( System.Type t, int identifier )
+	internal IBlowoutEngineAsset Get( System.Type t, int identifier )
 	{
 		if ( !ResourceIndex.TryGetValue( identifier, out var resource ) )
 			return null;
@@ -85,7 +86,7 @@ public class ResourceSystem
 		return null;
 	}
 
-	internal Resource Get( System.Type t, string filepath )
+	internal IBlowoutEngineAsset Get( System.Type t, string filepath )
 	{
 		filepath = Resource.FixPath( filepath );
 
@@ -97,12 +98,15 @@ public class ResourceSystem
 	/// </summary>
 	/// <typeparam name="T">Resource type to get.</typeparam>
 	/// <param name="identifier">Resource hash to look up.</param>
-	public T Get<T>( int identifier ) where T : Resource
+	public T Get<T>( int identifier ) where T : IBlowoutEngineAsset
 	{
 		if ( !ResourceIndex.TryGetValue( identifier, out var resource ) )
 			return default;
 
-		return resource as T;
+		if ( resource is T target )
+			return target;
+
+		return default;
 	}
 
 	/// <summary>
@@ -110,7 +114,7 @@ public class ResourceSystem
 	/// </summary>
 	/// <typeparam name="T">Resource type to get.</typeparam>
 	/// <param name="filepath">File path to the resource.</param>
-	public T Get<T>( string filepath ) where T : Resource
+	public T Get<T>( string filepath ) where T : IBlowoutEngineAsset
 	{
 		filepath = Resource.FixPath( filepath );
 
@@ -124,7 +128,7 @@ public class ResourceSystem
 	/// <param name="filepath">File path to the resource.</param>
 	/// <param name="resource">The retrieved resource, if any.</param>
 	/// <returns>True if resource was retrieved successfully.</returns>
-	public bool TryGet<T>( string filepath, out T resource ) where T : Resource
+	public bool TryGet<T>( string filepath, out T resource ) where T : IBlowoutEngineAsset
 	{
 		resource = Get<T>( filepath );
 		return resource != null;
@@ -145,16 +149,16 @@ public class ResourceSystem
 	/// <typeparam name="T">Resource type to get.</typeparam>
 	/// <param name="filepath">The path of the folder to check.</param>
 	/// <param name="recursive">Whether or not to check folders within the specified folder.</param>
-	public IEnumerable<T> GetAll<T>( string filepath, bool recursive = true ) where T : Resource
+	public IEnumerable<T> GetAll<T>( string filepath, bool recursive = true ) where T : IBlowoutEngineAsset
 	{
 		filepath = filepath.Replace( '\\', '/' );
 		if ( !filepath.EndsWith( "/" ) ) filepath += "/";
 		return ResourceIndex.Values.OfType<T>().Distinct().Where( x =>
 		{
-			if ( x.ResourcePath.StartsWith( filepath ) )
+			if ( x.AssetPath.StartsWith( filepath ) )
 			{
 				if ( recursive ) return true;
-				if ( !x.ResourcePath.Substring( filepath.Length ).Contains( "/" ) ) return true;
+				if ( !x.AssetPath.Substring( filepath.Length ).Contains( "/" ) ) return true;
 			}
 			return false;
 		} );
@@ -367,14 +371,14 @@ public static class ResourceLibrary
 	/// </summary>
 	/// <typeparam name="T">Resource type to get.</typeparam>
 	/// <param name="identifier">Resource hash to look up.</param>
-	public static T Get<T>( int identifier ) where T : Resource => Game.Resources.Get<T>( identifier );
+	public static T Get<T>( int identifier ) where T : IBlowoutEngineAsset => Game.Resources.Get<T>( identifier );
 
 	/// <summary>
 	/// Get a cached resource by its file path.
 	/// </summary>
 	/// <typeparam name="T">Resource type to get.</typeparam>
 	/// <param name="filepath">File path to the resource.</param>
-	public static T Get<T>( string filepath ) where T : Resource => Game.Resources.Get<T>( filepath );
+	public static T Get<T>( string filepath ) where T : IBlowoutEngineAsset => Game.Resources.Get<T>( filepath );
 
 	/// <summary>
 	/// Try to get a cached resource by its file path.
@@ -383,7 +387,7 @@ public static class ResourceLibrary
 	/// <param name="filepath">File path to the resource.</param>
 	/// <param name="resource">The retrieved resource, if any.</param>
 	/// <returns>True if resource was retrieved successfully.</returns>
-	public static bool TryGet<T>( string filepath, out T resource ) where T : Resource => Game.Resources.TryGet<T>( filepath, out resource );
+	public static bool TryGet<T>( string filepath, out T resource ) where T : IBlowoutEngineAsset => Game.Resources.TryGet<T>( filepath, out resource );
 
 	/// <summary>
 	/// Get all cached resources of given type.
@@ -397,12 +401,13 @@ public static class ResourceLibrary
 	/// <typeparam name="T">Resource type to get.</typeparam>
 	/// <param name="filepath">The path of the folder to check.</param>
 	/// <param name="recursive">Whether or not to check folders within the specified folder.</param>
-	public static IEnumerable<T> GetAll<T>( string filepath, bool recursive = true ) where T : Resource => Game.Resources.GetAll<T>( filepath, recursive );
+	public static IEnumerable<T> GetAll<T>( string filepath, bool recursive = true ) where T : IBlowoutEngineAsset => 
+		Game.Resources.GetAll<T>( filepath, recursive );
 
 	/// <summary>
 	/// Load a resource by its file path.
 	/// </summary>
-	public static async Task<T> LoadAsync<T>( string path ) where T : Resource
+	public static async Task<T> LoadAsync<T>( string path ) where T : IBlowoutEngineAsset
 	{
 		// try to load cached version first
 		if ( TryGet<T>( path, out var cached ) )
