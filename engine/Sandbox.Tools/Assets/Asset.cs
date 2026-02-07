@@ -1,4 +1,7 @@
-﻿using NativeEngine;
+﻿using BlowoutTeamSoft.Engine;
+using BlowoutTeamSoft.Engine.Assets;
+using BlowoutTeamSoft.Engine.Interfaces.Assets;
+using NativeEngine;
 using System;
 
 namespace Editor;
@@ -309,7 +312,7 @@ public abstract partial class Asset
 	/// Try to load this asset as an automatically determined resource type.
 	/// If this isn't a resource type (like an Image) then it will return null.
 	/// </summary>
-	public Resource LoadResource()
+	public IBlowoutEngineAsset LoadResource()
 	{
 		if ( AssetType.ResourceType is not { } type )
 		{
@@ -324,17 +327,29 @@ public abstract partial class Asset
 	/// </summary>
 	/// <typeparam name="T">The type of resource to try to load.</typeparam>
 	/// <returns>The loaded <see cref="Resource"/> instance of given type, or null on failure.</returns>
-	public T LoadResource<T>() where T : Resource
+	public T LoadResource<T>() where T : IBlowoutEngineAsset
 	{
-		return LoadResource( typeof( T ) ) as T;
+		var result = LoadResource( typeof( T ) );
+		if ( result is T target )
+			return target;
+
+		return default;
 	}
 
 	/// <summary>
 	/// Try to load this asset as a <see cref="Resource"/> of given type.
 	/// </summary>
 	/// <returns>The loaded <see cref="Resource"/> instance of given type, or null on failure.</returns>
-	public Resource LoadResource( Type resourceType )
+	public IBlowoutEngineAsset LoadResource( Type resourceType )
 	{
+		if ( resourceType.IsAssignableFrom( typeof( BlowoutAssetInstancePackable ) ) )
+		{
+			if ( TryLoadBlowoutAssetPackable( resourceType, out var o ) )
+				return o;
+
+			return null;
+		}
+
 		if ( resourceType.IsAssignableTo( typeof( GameResource ) ) )
 		{
 			if ( TryLoadGameResource( resourceType, out var o ) )
@@ -358,7 +373,7 @@ public abstract partial class Asset
 	/// <typeparam name="T">The type of resource to try to load.</typeparam>
 	/// <param name="obj">Output resource on success, null on failure.</param>
 	/// <returns>true if <paramref name="obj"/> was successfully set.</returns>
-	public bool TryLoadResource<T>( out T obj ) where T : Resource
+	public bool TryLoadResource<T>( out T obj ) where T : IBlowoutEngineAsset
 	{
 		obj = LoadResource<T>();
 		return obj != null;
@@ -375,6 +390,72 @@ public abstract partial class Asset
 
 		obj = (T)resource;
 		return obj is not null;
+	}
+
+	private bool TryLoadBlowoutAssetPackable<T>( out T obj ) where T : BlowoutAssetInstancePackable
+	{
+		obj = null;
+
+		if ( TryLoadBlowoutAssetPackable( typeof( T ), out BlowoutAssetInstancePackable resource ) == false )
+		{
+			return false;
+		}
+
+		obj = (T)resource;
+		return obj is not null;
+	}
+
+	internal virtual bool TryLoadBlowoutAssetPackable( Type t, out BlowoutAssetInstancePackable obj, bool allowCreate = false )
+	{
+		obj = null;
+
+		if ( !Game.Resources.TryGetType( AssetType.FileExtension, out var attribute ) )
+			return false;
+
+		if ( !attribute.TargetType.IsAssignableTo( t ) || attribute.TargetType.IsAbstract )
+			return false;
+
+		// Make sure we have an up to date compiled version
+		if ( CanRecompile )
+		{
+			Compile( false );
+		}
+
+		obj = BlowoutEngine.CreateAsset( attribute.TargetType, Path ) as BlowoutAssetInstancePackable;
+		if ( obj != null )
+			return true;
+
+		// get compiled path
+		var compiledFilePath = GetCompiledFile( true );
+
+		if ( string.IsNullOrEmpty( compiledFilePath ) )
+		{
+			if ( allowCreate ) return true;
+
+			Log.Warning( $"Tried to load {this} but couldn't get compiled file" );
+			return false;
+		}
+
+		if ( !System.IO.File.Exists( compiledFilePath ) )
+		{
+			Log.Warning( $"Tried to load {this} but compiled file doesn't exist ({compiledFilePath})" );
+			return false;
+		}
+
+		var data = System.IO.File.ReadAllBytes( compiledFilePath );
+		if ( data == null )
+		{
+			Log.Warning( $"Tried to load {this} but couldn't read file" );
+			return false;
+		}
+
+		if ( !BlowoutEngine.CurrentKernel.TryLoadIntoAssetPackable(obj, data))
+		{
+			Log.Warning( $"Tried to load {this} but couldn't load from data" );
+			return false;
+		}
+
+		return true;
 	}
 
 	internal virtual bool TryLoadGameResource( Type t, out GameResource obj, bool allowCreate = false )

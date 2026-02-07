@@ -1,4 +1,5 @@
-﻿using Sandbox.Internal;
+﻿using BlowoutTeamSoft.Engine.Interfaces.Assets;
+using Sandbox.Internal;
 using Sandbox.Utility;
 using System.Collections.Concurrent;
 using System.Text.Json.Nodes;
@@ -39,7 +40,7 @@ public abstract class ResourceGenerator
 	/// <summary>
 	/// Create a ResourceGenerator by name
 	/// </summary>
-	public static ResourceGenerator<T> Create<T>( string generatorName ) where T : Resource
+	public static ResourceGenerator<T> Create<T>( string generatorName ) where T : class, IBlowoutEngineAsset
 	{
 		var typeLibrary = TypeLibrary.Editor ?? Game.TypeLibrary;
 		if ( typeLibrary is null ) return default;
@@ -53,7 +54,7 @@ public abstract class ResourceGenerator
 	/// <summary>
 	/// Create a ResourceGenerator by name and deserialize it
 	/// </summary>
-	public static ResourceGenerator<T> Create<T>( EmbeddedResource serialized ) where T : Resource
+	public static ResourceGenerator<T> Create<T>( EmbeddedResource serialized ) where T : class, IBlowoutEngineAsset
 	{
 		// find the generator name
 		if ( string.IsNullOrEmpty( serialized.ResourceGenerator ) ) return default;
@@ -68,7 +69,7 @@ public abstract class ResourceGenerator
 		return generator;
 	}
 
-	public static T CreateResource<T>( EmbeddedResource obj, Options options ) where T : Resource
+	public static T CreateResource<T>( EmbeddedResource obj, Options options ) where T : class, IBlowoutEngineAsset
 	{
 		// create the generator type
 		var generator = Create<T>( obj );
@@ -85,7 +86,7 @@ public abstract class ResourceGenerator
 	/// <param name="options"></param>
 	/// <param name="type"></param>
 	/// <returns></returns>
-	public static Resource CreateResource( EmbeddedResource obj, Options options, Type type )
+	public static IBlowoutEngineAsset CreateResource( EmbeddedResource obj, Options options, Type type )
 	{
 		var typeLibrary = TypeLibrary.Editor ?? Game.TypeLibrary;
 		if ( typeLibrary is null ) return default;
@@ -99,7 +100,7 @@ public abstract class ResourceGenerator
 		generator.Deserialize( obj.Data );
 
 		// create the resource
-		return generator.FindOrCreateObject( options ) as Resource;
+		return generator.FindOrCreateObject( options );
 	}
 
 	/// <summary>
@@ -127,20 +128,20 @@ public abstract class ResourceGenerator
 	/// If we generated this before, then find the current cache'd value.
 	/// If not, then generate a new one.
 	/// </summary>
-	public abstract ValueTask<Resource> FindOrCreateObjectAsync( Options options, CancellationToken token );
+	public abstract ValueTask<IBlowoutEngineAsset> FindOrCreateObjectAsync( Options options, CancellationToken token );
 
 	/// <summary>
 	/// Find or create the resource (blocking) 
 	/// </summary>
 	/// <param name="options"></param>
 	/// <returns></returns>
-	public abstract Resource FindOrCreateObject( Options options );
+	public abstract IBlowoutEngineAsset FindOrCreateObject( Options options );
 }
 
 /// <summary>
 /// A resource generator targetting a specific type
 /// </summary>
-public abstract class ResourceGenerator<T> : ResourceGenerator where T : Resource
+public abstract class ResourceGenerator<T> : ResourceGenerator where T : class, IBlowoutEngineAsset
 {
 	static WeakDictionary<ulong, T> cache = new();
 
@@ -194,10 +195,10 @@ public abstract class ResourceGenerator<T> : ResourceGenerator where T : Resourc
 		return x;
 	}
 
-	public override async ValueTask<Resource> FindOrCreateObjectAsync( Options options, CancellationToken token )
+	public override async ValueTask<IBlowoutEngineAsset> FindOrCreateObjectAsync( Options options, CancellationToken token )
 		=> await FindOrCreateAsync( options, token );
 
-	public override Resource FindOrCreateObject( Options options ) => FindOrCreate( options );
+	public override IBlowoutEngineAsset FindOrCreateObject( Options options ) => FindOrCreate( options );
 
 	/// <summary>
 	/// If we generated this before, then find the current cache'd value.

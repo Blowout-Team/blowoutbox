@@ -57,7 +57,9 @@ public abstract partial class Resource : BlowoutEngineObject, IValid, IJsonConve
 	public override Guid Id { get => new Guid( ResourceId, 0, 0, new byte[8] ); protected set => ResourceId = value.ToByteArray()[0]; }
 
 	[Hide, JsonIgnore]
-	public string AssetPath => ResourcePath; 
+	public string AssetPath => ResourcePath;
+
+	public bool IsAlive => this.IsValid;
 
 	/// <summary>
 	/// True if this resource has been changed but the changes aren't written to disk

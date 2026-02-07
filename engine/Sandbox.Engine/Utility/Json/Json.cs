@@ -1,8 +1,10 @@
-﻿using Facepunch.ActionGraphs;
+﻿using BlowoutTeamSoft.Engine.Attributes;
+using Facepunch.ActionGraphs;
 using Sandbox.ActionGraphs;
 using Sandbox.Engine;
 using Sandbox.MovieMaker;
 using System.Reflection;
+using System.Runtime.Serialization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
@@ -181,8 +183,9 @@ public static partial class Json
 		var propertyDict = type.GetProperties( BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic )
 			.Where( x => x.CanWrite )
 			.Where( x =>
-				x.SetMethod!.IsPublic && !x.HasAttribute( typeof( JsonIgnoreAttribute ) ) ||
+				x.SetMethod!.IsPublic && !x.HasAttribute( typeof( JsonIgnoreAttribute ) ) && !x.HasAttribute( typeof( IgnoreDataMemberAttribute ) ) ||
 				x.HasAttribute( typeof( JsonIncludeAttribute ) ) ||
+				x.HasAttribute( typeof( BlowoutExposeField ) ) ||
 				x.HasAttribute( typeof( PropertyAttribute ) ) )
 			.Select( x => (Name: x.GetCustomAttribute<JsonPropertyNameAttribute>() is { } jpna ? jpna.Name : x.Name, Property: x) )
 			.DistinctBy( x => x.Name, StringComparer.OrdinalIgnoreCase )

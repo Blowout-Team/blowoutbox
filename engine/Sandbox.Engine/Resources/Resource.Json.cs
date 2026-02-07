@@ -1,4 +1,7 @@
-﻿using Sandbox.Resources;
+﻿using BlowoutTeamSoft.Engine;
+using BlowoutTeamSoft.Engine.Assets;
+using BlowoutTeamSoft.Engine.Interfaces.Assets;
+using Sandbox.Resources;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -66,7 +69,7 @@ public partial class Resource
 	/// Load a resource reference from JSON data.
 	/// Handles both string paths and embedded resource objects for all resource types.
 	/// </summary>
-	internal static Resource LoadJsonReference( Type targetType, ref Utf8JsonReader reader )
+	internal static IBlowoutEngineAsset LoadJsonReference( Type targetType, ref Utf8JsonReader reader )
 	{
 		// Just a path?
 		if ( reader.TokenType == JsonTokenType.String )
@@ -130,6 +133,30 @@ public partial class Resource
 					resource.EmbeddedResource = serializedResource;
 
 					return resource;
+				}
+			}
+
+			if ( targetType.IsAssignableTo( typeof( BlowoutAssetInstancePackable ) ) && serializedResource.ResourceCompiler == "embed" )
+			{
+				// 
+				// Inherited resource
+				//
+				if ( !string.IsNullOrEmpty( serializedResource.TypeName ) )
+				{
+					var type = Game.TypeLibrary.GetType( serializedResource.TypeName );
+					if ( type is not null )
+					{
+						targetType = type.TargetType;
+					}
+				}
+
+				var assetInstance = System.Activator.CreateInstance( targetType ) as BlowoutAssetInstancePackable;
+				if ( assetInstance is not null )
+				{
+					BlowoutEngine.CurrentKernel.LoadIntoAssetPackable( assetInstance, serializedResource.Data );
+					assetInstance.SetPackage( serializedResource );
+
+					return assetInstance;
 				}
 			}
 

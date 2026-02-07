@@ -155,7 +155,8 @@ static class AssetThumbnail
 		//
 		{
 			var resource = asset.LoadResource();
-			var bitmap = resource?.RenderThumbnail( new() { Width = 256, Height = 256 } );
+			//var bitmap = resource?.RenderThumbnail( new() { Width = 256, Height = 256 } );
+			var bitmap = resource?.RenderThumbnail(256, 256) as Bitmap;
 			if ( bitmap != null )
 			{
 				return Pixmap.FromBitmap( bitmap );

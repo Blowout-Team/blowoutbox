@@ -1,4 +1,6 @@
-﻿namespace Editor;
+﻿using BlowoutTeamSoft.Engine.Interfaces.Assets;
+using BlowoutTeamSoft.Engine.Assets;
+namespace Editor;
 
 [CustomEditor( ForInterface = true )]
 public class InterfaceControlWidget : ControlWidget
@@ -82,7 +84,7 @@ public class InterfaceControlWidget : ControlWidget
 		if ( asset is null )
 			return;
 
-		Resource resource;
+		IBlowoutEngineAsset resource;
 
 		if ( SerializedProperty.PropertyType.IsInterface )
 		{
@@ -193,6 +195,30 @@ public class InterfaceControlWidget : ControlWidget
 
 			Paint.SetPen( Theme.Green );
 			Paint.DrawText( rect, $"{resource.ToString()}", TextFlag.LeftCenter );
+
+			//
+			// Little icon at the bottom right of the icon to show it's an interface
+			// 
+			{
+				var interfaceIconRect = new Rect( iconRect.Center - new Vector2( 2, 2 ), new Vector2( 14, 14 ) );
+
+				Paint.SetPen( Theme.ControlBackground );
+				Paint.DrawCircle( interfaceIconRect );
+
+				Paint.SetPen( Theme.Green );
+				Paint.DrawIcon( interfaceIconRect, "data_object", 10, TextFlag.Center );
+			}
+		}
+		else if ( obj is BlowoutAssetInstancePackable instancePackable )
+		{
+			rect.Left += 22;
+
+			var bitmap = instancePackable.GetAssetIcon( iconRect.Width.CeilToInt(), iconRect.Height.CeilToInt() ) as Sandbox.Bitmap;
+
+			Paint.Draw( iconRect, Pixmap.FromBitmap( bitmap ) );
+
+			Paint.SetPen( Theme.Green );
+			Paint.DrawText( rect, $"{instancePackable.ToString()}", TextFlag.LeftCenter );
 
 			//
 			// Little icon at the bottom right of the icon to show it's an interface
