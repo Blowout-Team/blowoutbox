@@ -92,6 +92,8 @@ public sealed partial class Project
 			{
 				project.References.Add( "Sandbox.Tools.dll" );
 				project.References.Add( "Sandbox.Compiling.dll" );
+				project.References.Add( "BlowoutTeamSoft.Editor.dll" );
+				project.References.Add( "BlowoutTeamSoft.Editor.Drawers.dll" );
 				project.References.Add( "Microsoft.CodeAnalysis.dll" );
 				project.References.Add( "Microsoft.CodeAnalysis.CSharp.dll" );
 				project.References.Add( "Sandbox.Bind.dll" );

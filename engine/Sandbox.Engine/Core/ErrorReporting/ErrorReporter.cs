@@ -169,7 +169,7 @@ internal static class ErrorReporter
 		string[] assemblies = assm.Select( x => x.GetName().Name ).ToArray();
 
 		if ( assemblies.Any( x => x.StartsWith( menuAssembly ) ) ) source = "menu";
-		if ( assemblies.Any( x => x.Contains( "Sandbox.Tools" ) || x.StartsWith( toolsAssembly ) ) ) source = "tools";
+		if ( assemblies.Any( x => x.Contains( "Sandbox.Tools" ) || x.Contains( "BlowoutTeamSoft.Editor" ) || x.StartsWith( toolsAssembly ) ) ) source = "tools";
 
 		//
 		// No game loaded?

@@ -220,6 +220,8 @@ public partial class CompilerTest
 				var compilerSettings = new Compiler.Configuration();
 				var compiler = group.CreateCompiler( $"test.editor{++editorFolderId}", editorFolders[0], compilerSettings );
 				compiler.AddReference( "Sandbox.Tools" );
+				compiler.AddReference( "BlowoutTeamSoft.Editor" );
+				compiler.AddReference( "BlowoutTeamSoft.Editor.Drawers" );
 				compiler.AddReference( "package.test" );
 
 				for ( int i = 0; i < editorFolders.Length; i++ )
