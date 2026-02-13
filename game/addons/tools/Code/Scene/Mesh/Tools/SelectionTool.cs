@@ -78,11 +78,51 @@ public abstract class SelectionTool : EditorTool
 		Scale( origin, basis, scale );
 	}
 
+	public virtual void Shear( Vector3 origin, Rotation basis, Vector3 shearAxis, Vector3 constraintAxis, float amount )
+	{
+	}
+
 	public virtual void Nudge( Vector2 delta )
 	{
 	}
 
 	public override Widget CreateShortcutsWidget() => new SelectionToolShortcutsWidget( this );
+
+	/// <summary>
+	/// Stores the previous selection for each tool type so that re-entering the tool restores it.
+	/// </summary>
+	[SkipHotload]
+	protected static readonly Dictionary<Type, SelectionSystem> PreviousSelections = [];
+
+	public static IEnumerable<T> GetAllSelected<T>()
+	{
+		return PreviousSelections.Values
+			.SelectMany( s => s )
+			.OfType<T>()
+			.Distinct();
+	}
+
+	protected void SaveCurrentSelection<T>() where T : IValid
+	{
+		var stored = PreviousSelections.GetOrCreate( GetType() );
+		stored.Clear();
+
+		foreach ( var element in Selection.OfType<T>().Where( x => x.IsValid() ) )
+		{
+			stored.Add( element );
+		}
+	}
+
+	protected void RestorePreviousSelection<T>() where T : IValid
+	{
+		if ( !PreviousSelections.TryGetValue( GetType(), out var previousSelection ) )
+			return;
+
+		foreach ( var element in previousSelection.OfType<T>().Where( x => x.IsValid() ) )
+		{
+			Selection.Add( element );
+		}
+	}
 }
 
 file class SelectionToolShortcutsWidget( SelectionTool tool ) : Widget
@@ -103,11 +143,6 @@ file class SelectionToolShortcutsWidget( SelectionTool tool ) : Widget
 public abstract class SelectionTool<T>( MeshTool tool ) : SelectionTool where T : IMeshElement
 {
 	protected MeshTool Tool { get; private init; } = tool;
-
-	/// <summary>
-	/// Stores the previous selection for each tool type so that re-entering the tool restores it.
-	/// </summary>
-	private static readonly Dictionary<Type, SelectionSystem> _previousSelections = [];
 
 	readonly HashSet<MeshVertex> _vertexSelection = [];
 	readonly Dictionary<MeshVertex, Vector3> _transformVertices = [];
@@ -171,6 +206,21 @@ public abstract class SelectionTool<T>( MeshTool tool ) : SelectionTool where T 
 		}
 	}
 
+	public override void Shear( Vector3 origin, Rotation basis, Vector3 shearAxis, Vector3 constraintAxis, float amount )
+	{
+		foreach ( var entry in _transformVertices )
+		{
+			var position = (entry.Value - origin) * basis.Inverse;
+			var constraintPosition = Vector3.Dot( position, constraintAxis );
+
+			position += shearAxis * (constraintPosition * amount);
+			position = position * basis + origin;
+
+			var transform = entry.Key.Transform;
+			entry.Key.Component.Mesh.SetVertexPosition( entry.Key.Handle, transform.PointToLocal( position ) );
+		}
+	}
+
 	public override BBox CalculateLocalBounds()
 	{
 		return BBox.FromPoints( _vertexSelection
@@ -185,7 +235,7 @@ public abstract class SelectionTool<T>( MeshTool tool ) : SelectionTool where T 
 		SceneEditorSession.Active.UndoSystem.OnUndo += ( _ ) => OnMeshSelectionChanged();
 		SceneEditorSession.Active.UndoSystem.OnRedo += ( _ ) => OnMeshSelectionChanged();
 
-		RestorePreviousSelection();
+		RestorePreviousSelection<T>();
 		SelectElements();
 		CalculateSelectionVertices();
 		OnMeshSelectionChanged();
@@ -193,35 +243,7 @@ public abstract class SelectionTool<T>( MeshTool tool ) : SelectionTool where T 
 
 	public override void OnDisabled()
 	{
-		SaveCurrentSelection();
-	}
-
-	/// <summary>
-	/// Saves the current selection so it can be restored when re-entering this tool.
-	/// </summary>
-	private void SaveCurrentSelection()
-	{
-		var stored = _previousSelections.GetOrCreate( GetType() );
-		stored.Clear();
-
-		foreach ( var element in Selection.OfType<T>().Where( x => x.IsValid() ) )
-		{
-			stored.Add( element );
-		}
-	}
-
-	/// <summary>
-	/// Restores the previous selection if available.
-	/// </summary>
-	private void RestorePreviousSelection()
-	{
-		if ( !_previousSelections.TryGetValue( GetType(), out var previousSelection ) )
-			return;
-
-		foreach ( var element in previousSelection.OfType<T>().Where( x => x.IsValid() ) )
-		{
-			Selection.Add( element );
-		}
+		SaveCurrentSelection<T>();
 	}
 
 	public bool IsAllowedToSelect => Tool?.MoveMode?.AllowSceneSelection ?? true;
@@ -263,8 +285,44 @@ public abstract class SelectionTool<T>( MeshTool tool ) : SelectionTool where T 
 			OnMeshSelectionChanged();
 		}
 
+		HandleGlobalMaterialOperations();
+
 		if ( IsAllowedToSelect )
 			DrawSelection();
+	}
+
+	/// <summary>
+	/// Handle Shift+RMB (pick material) and Ctrl+RMB (paint material) globally across all mesh tools.
+	/// </summary>
+	private void HandleGlobalMaterialOperations()
+	{
+		if ( Gizmo.WasRightMousePressed && Application.KeyboardModifiers.HasFlag( KeyboardModifiers.Shift ) )
+		{
+			var face = TraceFace();
+			if ( face.IsValid() )
+			{
+				Tool.ActiveMaterial = face.Material;
+			}
+		}
+
+		if ( Gizmo.IsRightMouseDown && Application.KeyboardModifiers.HasFlag( KeyboardModifiers.Ctrl ) )
+		{
+			var face = TraceFace();
+			if ( face.IsValid() )
+			{
+				var mesh = face.Component.Mesh;
+				var currentMaterial = mesh.GetFaceMaterial( face.Handle );
+				if ( currentMaterial != Tool.ActiveMaterial )
+				{
+					using ( SceneEditorSession.Active.UndoScope( "Paint Material" )
+						.WithComponentChanges( face.Component )
+						.Push() )
+					{
+						mesh.SetFaceMaterial( face.Handle, Tool.ActiveMaterial );
+					}
+				}
+			}
+		}
 	}
 
 	void UpdateMoveMode()
