@@ -15,6 +15,8 @@
     <Project Path="BlowoutTeamSoft/BlowoutTeamSoft.OdinSerializer/BlowoutTeamSoft.OdinSerializer.csproj" />
     <Project Path="BlowoutTeamSoft/BlueRaja/BlowoutTeamSoft.BlueRaja.csproj" />
     <Project Path="BlowoutTeamSoft/CodeGenerator/BlowoutTeamSoft.CodeGenerator.csproj" />
+    <Project Path="BlowoutTeamSoft/Compilation.Core/BlowoutTeamSoft.Compilation.Core.csproj" />
+    <Project Path="BlowoutTeamSoft/Compilation.Module/BlowoutTeamSoft.Compilation.Module.csproj" />
     <Project Path="BlowoutTeamSoft/Compilation/BlowoutTeamSoft.Compilation.csproj" />
     <Project Path="BlowoutTeamSoft/Configuration.Ini/BlowoutTeamSoft.Configuration.Ini.csproj" />
     <Project Path="BlowoutTeamSoft/Configuration.Serializer/BlowoutTeamSoft.Configuration.Serializer.csproj" />
@@ -28,6 +30,8 @@
     <Project Path="BlowoutTeamSoft/Engine/BlowoutTeamSoft.Engine.csproj" />
     <Project Path="BlowoutTeamSoft/Physics/BlowoutTeamSoft.Physics.csproj" />
     <Project Path="BlowoutTeamSoft/Procedural/BlowoutTeamSoft.Procedural.csproj" />
+    <Project Path="BlowoutTeamSoft/Reflection.Compilers/BlowoutTeamSoft.Reflection.Compilers.csproj" />
+    <Project Path="BlowoutTeamSoft/Reflection.Generators/BlowoutTeamSoft.Reflection.Generators.csproj" />
     <Project Path="BlowoutTeamSoft/Reflection/BlowoutTeamSoft.Reflection.csproj" />
     <Project Path="BlowoutTeamSoft/Sdk/BlowoutTeamSoft.Sdk.csproj" />
     <Project Path="BlowoutTeamSoft/Shaders/BlowoutTeamSoft.Shaders.csproj" />

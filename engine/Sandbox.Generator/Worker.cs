@@ -1,4 +1,6 @@
-﻿using Microsoft.CodeAnalysis;
+﻿using BlowoutTeamSoft.CodeGenerator;
+using BlowoutTeamSoft.CodeGenerator.MicrosoftCSharpDeclarations;
+using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Sandbox.Utility;
@@ -293,6 +295,8 @@ namespace Sandbox.Generator
 
 				Description.VisitClass( ref node, symbol, this );
 				node = ClassFileLocation.VisitNode( node, _node, symbol, this, TreeInput ) as ClassDeclarationSyntax;
+
+				BlowoutMicrosoftCSharpClassDeclare declare = new( symbol, node );
 
 				//
 				// Create new Syntax Trees for the additions

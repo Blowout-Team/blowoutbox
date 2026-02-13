@@ -23,6 +23,7 @@ public static partial class Game
 		TypeLibrary.ShouldExposePrivateMember = m => m.HasAttribute( typeof( RpcAttribute ) );
 		TypeLibrary.AddIntrinsicTypes();
 		TypeLibrary.AddAssembly( typeof( Vector3 ).Assembly, false );
+		TypeLibrary.AddAssembly( typeof( BlowoutTeamSoft.Engine.BlowoutEngine ).Assembly, false );
 		TypeLibrary.AddAssembly( Game.GameAssembly, false );
 		TypeLibrary.AddAssembly( typeof( EngineLoop ).Assembly, false );
 		TypeLibrary.AddAssembly( typeof( Facepunch.ActionGraphs.ActionGraph ).Assembly, false );
