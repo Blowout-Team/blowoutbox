@@ -1,4 +1,5 @@
 ﻿using BlowoutTeamSoft.Engine.Attributes;
+using BlowoutTeamSoft.Reflection;
 using Facepunch.ActionGraphs;
 using Sandbox.ActionGraphs;
 using Sandbox.Engine;
@@ -177,22 +178,41 @@ public static partial class Json
 		if ( target is null )
 			return;
 
-		var type = target.GetType();
+		var type = BlowoutReflection.GetReflectionFor(target).ToSystemType();
 
 		// TODO: we can probably cache this
-		var propertyDict = type.GetProperties( BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic )
+		var propertyDict = type
+			.GetProperties( BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic )
 			.Where( x => x.CanWrite )
 			.Where( x =>
 				x.SetMethod!.IsPublic && !x.HasAttribute( typeof( JsonIgnoreAttribute ) ) && !x.HasAttribute( typeof( IgnoreDataMemberAttribute ) ) ||
 				x.HasAttribute( typeof( JsonIncludeAttribute ) ) ||
 				x.HasAttribute( typeof( BlowoutExposeField ) ) ||
-				x.HasAttribute( typeof( PropertyAttribute ) ) )
-			.Select( x => (Name: x.GetCustomAttribute<JsonPropertyNameAttribute>() is { } jpna ? jpna.Name : x.Name, Property: x) )
+				x.HasAttribute( typeof( PropertyAttribute ) ))
+			.Select( x => (Name: x.GetCustomAttribute<JsonPropertyNameAttribute>() is { } jpna ? jpna.Name : x.GetCustomAttribute<DataMemberAttribute>() is { } dataMember  ? dataMember.Name : x.Name, Property: x) )
 			.DistinctBy( x => x.Name, StringComparer.OrdinalIgnoreCase )
 			.ToDictionary( x => x.Name, x => x.Property, StringComparer.OrdinalIgnoreCase );
 
+		var fieldsDict = type
+			.GetFields( BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic )
+			.Where( x =>
+				!x.HasAttribute( typeof( JsonIgnoreAttribute ) ) && !x.HasAttribute( typeof( IgnoreDataMemberAttribute ) ) ||
+				x.HasAttribute( typeof( JsonIncludeAttribute ) ) ||
+				x.HasAttribute( typeof( BlowoutExposeField ) ) ||
+				x.HasAttribute( typeof( PropertyAttribute ) ) )
+			.Select( x => (Name: x.GetCustomAttribute<JsonPropertyNameAttribute>() is { } jpna ? jpna.Name : x.GetCustomAttribute<DataMemberAttribute>() is { } dataMember ? dataMember.Name : x.Name, Field: x) )
+			.DistinctBy( x => x.Name, StringComparer.OrdinalIgnoreCase )
+			.ToDictionary( x => x.Name, x => x.Field, StringComparer.OrdinalIgnoreCase );
+
 		foreach ( var property in root )
 		{
+			if(fieldsDict.TryGetValue(property.Key, out FieldInfo field ) )
+			{
+				var parsedField = property.Value.Deserialize( field.FieldType, options );
+				field.SetValue( target, parsedField);
+				continue;
+			}
+
 			if ( !propertyDict.TryGetValue( property.Key, out var prop ) )
 			{
 				//Log.Warning( $"Missing/unknown property {property.Name}" );
@@ -249,16 +269,19 @@ public static partial class Json
 	/// </summary>
 	internal static JsonObject SerializeAsObject( object target )
 	{
-		var type = target.GetType();
+		var type = BlowoutReflection.GetReflectionFor(target).ToSystemType();
 		var doc = new JsonObject();
 		var properties = type.GetProperties( BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic );
+		var fields = type.GetFields( BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic );
 
 		foreach ( var property in properties )
 		{
 			if ( !property.CanRead ) continue;
 			if ( property.GetMethod!.GetParameters().Length > 0 ) continue;
+			if ( property.HasAttribute( typeof( IgnoreDataMemberAttribute ) ) ) continue;
 			if ( property.HasAttribute( typeof( JsonIgnoreAttribute ) ) ) continue;
-			if ( !property.GetMethod.IsPublic && !property.HasAttribute( typeof( JsonIncludeAttribute ) ) && !property.HasAttribute( typeof( PropertyAttribute ) ) ) continue;
+			if ( property.HasAttribute( typeof( System.NonSerializedAttribute) ) ) continue;
+			if ( !property.GetMethod.IsPublic && !property.HasAttribute( typeof( JsonIncludeAttribute ) ) && !property.HasAttribute( typeof( PropertyAttribute ) ) && !property.HasAttribute( typeof( BlowoutExposeField ) ) ) continue;
 
 			var value = property.GetValue( target );
 
@@ -267,6 +290,24 @@ public static partial class Json
 
 			var propName = property.Name;
 			if ( property.GetCustomAttribute<JsonPropertyNameAttribute>() is { } jpna ) propName = jpna.Name;
+			doc.Add( propName, node );
+		}
+
+		foreach ( var field in fields )
+		{
+			if ( field.HasAttribute( typeof( IgnoreDataMemberAttribute ) ) ) continue;
+			if ( field.HasAttribute( typeof( JsonIgnoreAttribute ) ) ) continue;
+			if ( field.HasAttribute( typeof( System.NonSerializedAttribute ) ) ) continue;
+			if ( !field.HasAttribute( typeof( JsonIncludeAttribute ) ) && !field.HasAttribute( typeof( PropertyAttribute ) ) && !field.HasAttribute(typeof(BlowoutExposeField)) ) continue;
+
+			var value = field.GetValue( target );
+
+			// BinaryBlob types are handled automatically by BinaryBlobJsonConverter
+			var node = JsonSerializer.SerializeToNode( value, field.FieldType, options );
+
+			var propName = field.Name;
+			if ( field.GetCustomAttribute<DataMemberAttribute>() is { } dataMember ) propName = dataMember.Name;
+			if ( field.GetCustomAttribute<JsonPropertyNameAttribute>() is { } jpna ) propName = jpna.Name;
 			doc.Add( propName, node );
 		}
 

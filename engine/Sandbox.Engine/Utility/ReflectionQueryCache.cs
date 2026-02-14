@@ -1,5 +1,7 @@
-﻿using System.Collections.Immutable;
+﻿using BlowoutTeamSoft.Engine.Attributes;
+using System.Collections.Immutable;
 using System.Reflection;
+using System.Runtime.Serialization;
 using System.Text.Json.Serialization;
 
 namespace Sandbox;
@@ -60,7 +62,7 @@ internal static class ReflectionQueryCache
 	{
 		if ( memberDesc is not PropertyDescription && memberDesc is not FieldDescription ) return false;
 
-		return memberDesc.HasAttribute<PropertyAttribute>() && !memberDesc.HasAttribute<JsonIgnoreAttribute>();
+		return (memberDesc.HasAttribute<PropertyAttribute>() || memberDesc.HasAttribute<BlowoutExposeField>()) && !memberDesc.HasAttribute<JsonIgnoreAttribute>() && !memberDesc.HasAttribute<System.NonSerializedAttribute>() && !memberDesc.HasAttribute<IgnoreDataMemberAttribute>();
 	}
 
 	/// <summary>
@@ -231,14 +233,14 @@ internal static class ReflectionQueryCache
 
 	private static bool ShouldSkipPropertyTypeCheck( PropertyInfo prop )
 	{
-		var alwaysCheck = prop.HasAttribute( typeof( JsonIncludeAttribute ) ) || prop.HasAttribute( typeof( PropertyAttribute ) );
+		var alwaysCheck = prop.HasAttribute( typeof( JsonIncludeAttribute ) ) || prop.HasAttribute( typeof( PropertyAttribute ) ) || prop.HasAttribute(typeof(DataMemberAttribute)) || prop.HasAttribute(typeof(BlowoutExposeField));
 		var ignoredByDefault = prop.HasAttribute( typeof( JsonIgnoreAttribute ) ) || !prop.CanWrite || prop.SetMethod is null || prop.SetMethod.IsPrivate || prop.SetMethod.IsVirtual || (prop.GetMethod is not null && (prop.GetMethod.IsStatic || prop.GetMethod.IsVirtual));
 		return !alwaysCheck && ignoredByDefault;
 	}
 
 	private static bool ShouldSkipFieldTypeCheck( FieldInfo field )
 	{
-		var alwaysCheck = field.HasAttribute( typeof( JsonIncludeAttribute ) ) || field.HasAttribute( typeof( PropertyAttribute ) );
+		var alwaysCheck = field.HasAttribute( typeof( JsonIncludeAttribute ) ) || field.HasAttribute( typeof( PropertyAttribute ) ) || field.HasAttribute( typeof( DataMemberAttribute ) ) || field.HasAttribute( typeof( BlowoutExposeField ) );
 		var ignoredByDefault = field.HasAttribute( typeof( JsonIgnoreAttribute ) ) || field.IsPrivate || field.IsStatic;
 		return !alwaysCheck && ignoredByDefault;
 	}

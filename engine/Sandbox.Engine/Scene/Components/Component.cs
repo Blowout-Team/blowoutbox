@@ -1,5 +1,6 @@
 ﻿using BlowoutTeamSoft.Configuration.Serializer.Interfaces;
 using BlowoutTeamSoft.Engine;
+using BlowoutTeamSoft.Engine.Attributes;
 using BlowoutTeamSoft.Engine.Core;
 using BlowoutTeamSoft.Engine.Enums;
 using BlowoutTeamSoft.Engine.Interfaces;
@@ -397,6 +398,18 @@ public abstract partial class Component : IJsonConvert, IComponentLister, IValid
 		}
 
 		foreach ( var prop in t.Properties.Where( x => x.HasAttribute<PropertyAttribute>() ) )
+		{
+			var serialized = so.GetProperty( prop.Name );
+			serialized.SetValue( serialized.GetDefault() );
+		}
+
+		foreach ( var field in t.Fields.Where( x => x.HasAttribute<BlowoutExposeField>() ) )
+		{
+			var serialized = so.GetProperty( field.Name );
+			serialized.SetValue( serialized.GetDefault() );
+		}
+
+		foreach ( var prop in t.Properties.Where( x => x.HasAttribute<BlowoutExposeField>() ) )
 		{
 			var serialized = so.GetProperty( prop.Name );
 			serialized.SetValue( serialized.GetDefault() );

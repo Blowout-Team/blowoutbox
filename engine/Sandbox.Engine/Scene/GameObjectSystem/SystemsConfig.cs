@@ -84,6 +84,50 @@ public class SystemsConfig : ConfigData
 		}
 	}
 
+	public bool TryGetFieldValue( TypeDescription systemType, FieldDescription field, out object value )
+	{
+		value = null;
+
+		var typeName = GetTypeName( systemType );
+
+		if ( !Systems.TryGetValue( typeName, out var properties ) )
+			return false;
+
+		if ( !properties.TryGetValue( field.Name, out var rawValue ) )
+			return false;
+
+		try
+		{
+			if ( rawValue is JsonElement je )
+			{
+				value = je.Deserialize( field.FieldType, Json.options );
+				return true;
+			}
+
+			if ( rawValue?.GetType().IsAssignableTo( field.FieldType ) == true )
+			{
+				value = rawValue;
+				return true;
+			}
+
+			if ( rawValue is IConvertible && field.FieldType.IsAssignableTo( typeof( IConvertible ) ) )
+			{
+				value = Convert.ChangeType( rawValue, field.FieldType );
+				return true;
+			}
+
+			// Fall back to JSON serialization for complex types
+			var json = JsonSerializer.Serialize( rawValue, Json.options );
+			value = JsonSerializer.Deserialize( json, field.FieldType, Json.options );
+			return true;
+		}
+		catch ( Exception ex )
+		{
+			Log.Warning( $"Failed to deserialize {typeName}.{field.Name}: {ex.Message}" );
+			return false;
+		}
+	}
+
 	/// <summary>
 	/// Set property value for a specific system type
 	/// </summary>

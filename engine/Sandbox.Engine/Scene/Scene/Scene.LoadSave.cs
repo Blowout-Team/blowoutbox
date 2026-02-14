@@ -1,4 +1,5 @@
-﻿using Facepunch.ActionGraphs;
+﻿using BlowoutTeamSoft.Engine.Attributes;
+using Facepunch.ActionGraphs;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
@@ -241,7 +242,19 @@ public partial class Scene : GameObject
 
 		foreach ( var prop in Game.TypeLibrary.GetType<Scene>()
 			.Properties
-			.Where( x => x.HasAttribute<PropertyAttribute>() )
+			.Where( x => x.HasAttribute<PropertyAttribute>() || x.HasAttribute<BlowoutExposeField>() )
+			.OrderBy( x => x.Name ) )
+		{
+			if ( prop.Name == "Enabled" ) continue;
+			if ( prop.Name == "Name" ) continue;
+			if ( prop.Name == "Lerp" ) continue;
+
+			jso.Add( prop.Name, JsonValue.Create( prop.GetValue( this ) ) );
+		}
+
+		foreach ( var prop in Game.TypeLibrary.GetType<Scene>()
+			.Fields
+			.Where( x => x.HasAttribute<BlowoutExposeField>() )
 			.OrderBy( x => x.Name ) )
 		{
 			if ( prop.Name == "Enabled" ) continue;
@@ -278,13 +291,13 @@ public partial class Scene : GameObject
 			var systemTypeName = systemType.FullName;
 			Dictionary<string, object> propertiesToSerialize = null;
 
-			foreach ( var property in systemType.Properties.Where( x => x.HasAttribute<PropertyAttribute>() ) )
+			foreach ( var property in systemType.Properties.Where( x => x.HasAttribute<PropertyAttribute>() || x.HasAttribute<BlowoutExposeField>() ) )
 			{
 				if ( !property.CanWrite ) continue;
 
 				var currentValue = property.GetValue( system );
 				var hasGlobalValue = ProjectSettings.Systems.TryGetPropertyValue( systemType, property, out var globalValue );
-				var compareValue = hasGlobalValue ? globalValue : property.GetCustomAttribute<DefaultValueAttribute>()?.Value;
+				var compareValue = hasGlobalValue ? globalValue : property.GetCustomAttribute<DefaultValueAttribute>()?.Value ?? property.GetCustomAttribute<System.ComponentModel.DefaultValueAttribute>()?.Value;
 
 				var currentJson = JsonSerializer.SerializeToNode( currentValue, Json.options );
 				var compareJson = JsonSerializer.SerializeToNode( compareValue, Json.options );
@@ -294,6 +307,23 @@ public partial class Scene : GameObject
 				{
 					propertiesToSerialize ??= new Dictionary<string, object>();
 					propertiesToSerialize[property.Name] = currentValue;
+				}
+			}
+
+			foreach ( var field in systemType.Fields.Where( x => x.HasAttribute<PropertyAttribute>() || x.HasAttribute<BlowoutExposeField>() ) )
+			{
+				var currentValue = field.GetValue( system );
+				var hasGlobalValue = ProjectSettings.Systems.TryGetFieldValue( systemType, field, out var globalValue );
+				var compareValue = hasGlobalValue ? globalValue : field.GetCustomAttribute<DefaultValueAttribute>()?.Value ?? field.GetCustomAttribute<System.ComponentModel.DefaultValueAttribute>()?.Value;
+
+				var currentJson = JsonSerializer.SerializeToNode( currentValue, Json.options );
+				var compareJson = JsonSerializer.SerializeToNode( compareValue, Json.options );
+
+				// Is this slow?
+				if ( !JsonNode.DeepEquals( currentJson, compareJson ) )
+				{
+					propertiesToSerialize ??= new Dictionary<string, object>();
+					propertiesToSerialize[field.Name] = currentValue;
 				}
 			}
 
