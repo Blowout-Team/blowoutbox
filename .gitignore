@@ -19,6 +19,8 @@
 !*.cs
 !*.razor
 
+# BCompiler stuff
+blowout_precompile.json
 
 # Sandbox source files
 !*.scene
