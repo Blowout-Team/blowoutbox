@@ -12,6 +12,35 @@ public partial class GameObject
 	//public override T AddGameSystem<T>() =>
 	//	Components.CreateFromAlias<T>(true);
 
+	public override IBlowoutGameSystem AddGameSystem( Type type ) =>
+		Components.Create( type );
+
+	public override IEnumerable<IBlowoutGameSystem> GetChildGameSystems( Type type, bool isStrict )
+	{
+		var f = FindMode.InChildren;
+		if ( !isStrict ) f |= FindMode.Enabled;
+
+		return Components.GetAll( type, f );
+	}
+
+	public override IBlowoutGameSystem GetGameSystem( Type type )
+	{
+		return Components.Get( type, FindMode.InSelf | FindMode.EverythingInSelf );
+	}
+
+	public override IEnumerable<IBlowoutGameSystem> GetParentGameSystems( Type type, bool isStrict )
+	{
+		var f = FindMode.InParent;
+		if ( !isStrict ) f |= FindMode.Enabled;
+
+		return Components.GetAll( type, f );
+	}
+
+	public override IEnumerable<IBlowoutGameSystem> GetGameSystems( Type type )
+	{
+		return Components.GetAll( type, FindMode.InSelf | FindMode.EverythingInSelf );
+	}
+
 	public override T GetGameSystem<T>() =>
 		Components.Get<T>(true);
 
