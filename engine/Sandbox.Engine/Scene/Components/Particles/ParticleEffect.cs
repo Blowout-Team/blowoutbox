@@ -1,4 +1,5 @@
-﻿using System.Collections.Concurrent;
+﻿using BlowoutTeamSoft.Engine.Interfaces;
+using System.Collections.Concurrent;
 using System.Text.Json.Serialization;
 using System.Threading;
 
@@ -12,7 +13,7 @@ namespace Sandbox;
 [Category( "Particles" )]
 [Icon( "shower" )]
 [EditorHandle( "materials/gizmo/particles.png" )]
-public sealed partial class ParticleEffect : Component, Component.ExecuteInEditor, Component.ITemporaryEffect, Component.ITintable
+public sealed partial class ParticleEffect : Component, Component.ExecuteInEditor, Component.ITemporaryEffect, Component.ITintable, IBlowoutParticle
 {
 	/// <summary>
 	/// The maximum number of particles that can exist in this effect at once.
@@ -422,6 +423,8 @@ public sealed partial class ParticleEffect : Component, Component.ExecuteInEdito
 	/// This is useful for determining the spatial extent of the particle effect.
 	/// </summary>
 	public BBox ParticleBounds { get; internal set; }
+
+	internal bool IsRequiredStop { get; set; }
 
 	/// <summary>
 	/// The size of the largest particle in the effect.
@@ -938,6 +941,22 @@ public sealed partial class ParticleEffect : Component, Component.ExecuteInEdito
 		{
 			p.DisableListenersForComponent( c );
 		}
+	}
+
+	public void Play()
+	{
+		Paused = false;
+	}
+
+	public void Pause()
+	{
+		Paused = true;
+	}
+
+	public void Stop()
+	{
+		IsRequiredStop = true;
+		Paused = true;
 	}
 
 	/// <summary>

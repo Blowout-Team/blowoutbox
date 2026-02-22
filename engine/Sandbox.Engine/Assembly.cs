@@ -30,6 +30,7 @@ using System.Runtime.CompilerServices;
 
 [assembly: InternalsVisibleTo("BlowoutTeamSoft.Engine")]
 [assembly: InternalsVisibleTo( "BlowoutTeamSoft.Engine.Systems" )]
+[assembly: InternalsVisibleTo("BlowoutTeamSoft.Source2.Core")]
 
 [assembly: TasksPersistOnContextReset]
 

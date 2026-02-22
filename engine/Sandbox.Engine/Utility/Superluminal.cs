@@ -1,8 +1,9 @@
-﻿using System.Runtime.InteropServices;
+﻿using BlowoutTeamSoft.Engine.Interfaces.GPU;
+using System.Runtime.InteropServices;
 
 namespace Sandbox.Utility;
 
-class Superluminal : IDisposable
+class Superluminal : IBlowoutProfiler, IDisposable
 {
 	IntPtr _text;
 	uint _color;
@@ -29,4 +30,10 @@ class Superluminal : IDisposable
 	{
 		NativeEngine.PerformanceTrace.EndEvent();
 	}
+
+	public void Begin() =>
+		Start();
+
+	public void End() =>
+		Dispose();
 }

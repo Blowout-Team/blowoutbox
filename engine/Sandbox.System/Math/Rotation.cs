@@ -81,6 +81,11 @@ public struct Rotation : System.IEquatable<Rotation>, IParsable<Rotation>, IInte
 		_quat = new System.Numerics.Quaternion( v.x, v.y, v.z, w );
 	}
 
+	internal Rotation( System.Numerics.Quaternion input )
+	{
+		_quat = input;
+	}
+
 	/// <summary>
 	/// The forwards direction of this rotation.
 	/// </summary>
@@ -214,7 +219,7 @@ public struct Rotation : System.IEquatable<Rotation>, IParsable<Rotation>, IInte
 	/// Create a Rotation (System.Numerics.Quaternion) from a forward and up vector
 	/// </summary>
 	[ActionGraphNode( "rotation.lookat" ), Pure, Group( "Math/Geometry/Rotation" ), Icon( "visibility" )]
-	public static Rotation LookAt( Vector3 forward, Vector3 up )
+	public static Rotation LookAt( Sandbox.Vector3 forward, Sandbox.Vector3 up )
 	{
 		forward = forward.Normal;
 		up = up.Normal;

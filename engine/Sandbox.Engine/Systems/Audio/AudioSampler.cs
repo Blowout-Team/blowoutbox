@@ -43,6 +43,8 @@ internal class AudioSampler : IDisposable
 
 	public bool ShouldContinueMixing => _native.ShouldContinueMixing();
 
+	public int SampleCount => _native.GetSampleCount();
+
 	public int SamplePosition
 	{
 		get => _native.GetSamplePosition();

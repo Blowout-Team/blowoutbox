@@ -1,12 +1,16 @@
-﻿using Sandbox;
+﻿using BlowoutTeamSoft.Engine.Interfaces.Geometry;
+using BlowoutTeamSoft.Engine.Math;
+using BlowoutTeamSoft.Engine.Query;
+using Sandbox;
 using System.Runtime.InteropServices;
+using System.Runtime.Serialization;
 using System.Text.Json.Serialization;
 
 /// <summary>
 /// An <a href="https://en.wikipedia.org/wiki/Minimum_bounding_box">Axis Aligned Bounding Box</a>.
 /// </summary>
 [StructLayout( LayoutKind.Sequential )]
-public struct BBox : System.IEquatable<BBox>
+public struct BBox : System.IEquatable<BBox>, IBlowoutBounds
 {
 	/// <summary>
 	/// The minimum corner extents of the AABB. Values on each axis should be mathematically smaller than values on the same axis of <see cref="Maxs"/>. See <see cref="Vector3.Sort"/>
@@ -81,6 +85,46 @@ public struct BBox : System.IEquatable<BBox>
 	[JsonIgnore]
 	public readonly Vector3 Extents => Size * 0.5f;
 
+	[JsonIgnore, IgnoreDataMember]
+	System.Numerics.Vector3 IBlowoutBounds.Center
+	{
+		get => Center; set
+		{
+			Sandbox.Vector3 extents = Extents;
+			Sandbox.Vector3 input = new Vector3( value.X, value.Y, value.Z );
+			Mins = input - Extents;
+			Maxs = input + Extents;
+		}
+	}
+	[JsonIgnore, IgnoreDataMember]
+	System.Numerics.Vector3 IBlowoutBounds.Size
+	{
+		get => Size; set
+		{
+			Vector3 half = value * 0.5f;
+			Vector3 center = Center;
+
+			Mins = center - half;
+			Maxs = center + half;
+		}
+	}
+
+	[JsonIgnore, IgnoreDataMember]
+	System.Numerics.Vector3 IBlowoutBounds.Extents
+	{
+		get => Extents; set
+		{
+			var input = new Sandbox.Vector3( value.X, value.Y, value.Z );
+			var center = Center;
+
+			Mins = center - input;
+			Maxs = center + input;
+		}
+	}
+	[JsonIgnore, IgnoreDataMember]
+	public System.Numerics.Vector3 Max { get => Maxs; set => Maxs = value; }
+	[JsonIgnore, IgnoreDataMember]
+	public System.Numerics.Vector3 Min { get => Mins; set => Mins = value; }
 
 	/// <summary>
 	/// Move this box by this amount and return
@@ -461,12 +505,120 @@ public struct BBox : System.IEquatable<BBox>
 		return startsolid || (t1 < t2 && t1 >= 0.0f);
 	}
 
+	public void SetMinMax( System.Numerics.Vector3 min, System.Numerics.Vector3 max )
+	{
+		Mins = min;
+		Maxs = max;
+	}
+
+	public void Encapsulate( System.Numerics.Vector3 point )
+	{
+		Mins = Vector3.Min( Mins, point );
+		Maxs = Vector3.Max( Maxs, point );
+	}
+
+	public void Encapsulate( IBlowoutBounds bounds )
+	{
+		Encapsulate( bounds.Min );
+		Encapsulate( bounds.Max );
+	}
+
+	public float SqrDistance( System.Numerics.Vector3 point )
+	{
+		float dx = MathF.Max( Min.X - point.X, 0f );
+		dx = MathF.Max( dx, point.X - Max.X );
+
+		float dy = MathF.Max( Min.Y - point.Y, 0f );
+		dy = MathF.Max( dy, point.Y - Max.Y );
+
+		float dz = MathF.Max( Min.Z - point.Z, 0f );
+		dz = MathF.Max( dz, point.Z - Max.Z );
+
+		return dx * dx + dy * dy + dz * dz;
+	}
+
+	public bool Contains( System.Numerics.Vector3 point ) =>
+		point.X >= Min.X && point.X <= Max.X &&
+		point.Y >= Min.Y && point.Y <= Max.Y &&
+		point.Z >= Min.Z && point.Z <= Max.Z;
+
+	/// dehs: aabb method (slab method).
+	public bool IsIntersectRay( BlowoutRay ray, out float distance )
+	{
+		distance = 0f;
+
+		Vector3 invDir = new Vector3(
+			1f / ray.Direction.X,
+			1f / ray.Direction.Y,
+			1f / ray.Direction.Z
+		);
+
+		float t1 = (Min.X - ray.Origin.X) * invDir.x;
+		float t2 = (Max.X - ray.Origin.X) * invDir.x;
+		float t3 = (Min.Y - ray.Origin.Y) * invDir.y;
+		float t4 = (Max.Y - ray.Origin.Y) * invDir.y;
+		float t5 = (Min.Z - ray.Origin.Z) * invDir.z;
+		float t6 = (Max.Z - ray.Origin.Z) * invDir.z;
+
+		float tmin = MathF.Max(
+			MathF.Max( MathF.Min( t1, t2 ), MathF.Min( t3, t4 ) ),
+			MathF.Min( t5, t6 )
+		);
+
+		float tmax = MathF.Min(
+			MathF.Min( MathF.Max( t1, t2 ), MathF.Max( t3, t4 ) ),
+			MathF.Max( t5, t6 )
+		);
+
+		if ( tmax < 0 || tmin > tmax )
+			return false;
+
+		distance = tmin >= 0 ? tmin : tmax;
+		return true;
+	}
+
+	public bool IsIntersectRay( BlowoutRay ray ) =>
+		IsIntersectRay( ray, out _ );
+
+	public bool Intersects( IBlowoutBounds bounds ) => Mins.x < bounds.Max.X && bounds.Min.X < Maxs.x &&
+					Mins.y < bounds.Max.Y && bounds.Min.Y < Maxs.y &&
+					Mins.z < bounds.Max.Z && bounds.Min.Z < Maxs.z;
+
+	public void Expand( float amount )
+	{
+		// maybe add half?
+		Mins -= amount;
+		Maxs += amount;
+	}
+
+	public void Expand( System.Numerics.Vector3 amount )
+	{
+		Min -=  amount;
+		Max += amount;
+	}
+
 	/// <summary>
 	/// Formats this AABB into a string "mins x,y,z, maxs x,y,z"
 	/// </summary>
 	public override readonly string ToString()
 	{
 		return $"mins {Mins:0.###}, maxs {Maxs:0.###}";
+	}
+
+	public bool Equals( IBlowoutBounds other )
+	{
+		if ( other is BBox otherBox )
+			return Equals( other );
+
+		return Min == other.Min && Max == other.Max;
+	}
+
+	public readonly string ToString( string format, IFormatProvider formatProvider )
+	{
+		if ( formatProvider == null )
+			return string.Format( format, Mins, Maxs );
+
+		return string.Format( formatProvider, format, Mins, Maxs );
 	}
 
 	/// <summary>

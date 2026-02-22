@@ -1,4 +1,5 @@
-﻿using NativeEngine;
+﻿using BlowoutTeamSoft.Engine.Attributes.Render;
+using NativeEngine;
 using System.Collections.Concurrent;
 using System.ComponentModel;
 using System.Reflection;
@@ -20,6 +21,9 @@ public static class VertexLayout
 
 	internal static NativeEngine.VertexLayout Get( Type t )
 	{
+		if ( t == typeof( Vector3 ) )
+			t = typeof( Vertex );
+
 		return entries.GetOrAdd( t, Create );
 	}
 
@@ -33,7 +37,9 @@ public static class VertexLayout
 		foreach ( var f in t.GetFields( System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic ) )
 		{
 			var attr = f.GetCustomAttribute<BaseAttribute>();
-			if ( attr == null )
+			var blowoutAttr = f.GetCustomAttribute<BlowoutVertexStructLayoutAttribute>();
+
+			if ( attr == null && blowoutAttr == null )
 			{
 				throw new System.NotImplementedException( $"Vertex struct '{t.FullName}' is missing layout attributes on '{f.Name}'" );
 			}
@@ -44,9 +50,13 @@ public static class VertexLayout
 			{
 				Type x when x == typeof( float ) => ColorFormat.COLOR_FORMAT_R32_FLOAT,
 				Type x when x == typeof( Vector2 ) => ColorFormat.COLOR_FORMAT_R32G32_FLOAT,
+				Type x when x == typeof( System.Numerics.Vector2 ) => ColorFormat.COLOR_FORMAT_R32G32_FLOAT,
 				Type x when x == typeof( Vector3 ) => ColorFormat.COLOR_FORMAT_R32G32B32_FLOAT,
+				Type x when x == typeof( System.Numerics.Vector3 ) => ColorFormat.COLOR_FORMAT_R32G32B32_FLOAT,
 				Type x when x == typeof( Vector4 ) => ColorFormat.COLOR_FORMAT_R32G32B32A32_FLOAT,
+				Type x when x == typeof( System.Numerics.Vector4 ) => ColorFormat.COLOR_FORMAT_R32G32B32A32_FLOAT,
 				Type x when x == typeof( global::Color ) => ColorFormat.COLOR_FORMAT_R32G32B32A32_FLOAT,
+				Type x when x == typeof( BlowoutTeamSoft.Engine.Render.BlowoutColor) => ColorFormat.COLOR_FORMAT_R32G32B32A32_FLOAT,
 				Type x when x == typeof( uint ) => ColorFormat.COLOR_FORMAT_R32_SINT,
 				Type x when x == typeof( int ) => ColorFormat.COLOR_FORMAT_R32_UINT,
 				Type x when x == typeof( char ) => ColorFormat.COLOR_FORMAT_R8_SINT,
@@ -67,7 +77,7 @@ public static class VertexLayout
 			{
 				for ( int i = 0; i < 32; i++ )
 				{
-					var name = $"{attr.Semantic}{i}";
+					var name = attr == null ? $"{blowoutAttr.Semantic}{i}" : $"{attr.Semantic}{i}";
 					if ( !slots.Contains( name ) )
 					{
 						index = i;
@@ -76,14 +86,14 @@ public static class VertexLayout
 				}
 			}
 
-			var str = $"{attr.Semantic}{index}";
+			var str = attr == null ? $"{blowoutAttr.Semantic}{index}" : $"{attr.Semantic}{index}";
 
 			if ( slots.Contains( str ) )
 				throw new NotImplementedException( $"Vertex struct '{t.FullName}' contains '{str}' multiple times" );
 
 			//Log.Info( $"{t.FullName} {attr.Semantic} {index}" );
 
-			layout.Add( attr.Semantic, index, (uint)format, offset );
+			layout.Add( attr == null ? blowoutAttr.Semantic : attr.Semantic, index, (uint)format, offset );
 
 			slots.Add( str );
 			offset += size;

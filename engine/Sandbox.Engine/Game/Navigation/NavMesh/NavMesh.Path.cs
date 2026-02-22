@@ -1,4 +1,5 @@
-﻿using DotRecast.Detour;
+﻿using BlowoutTeamSoft.Engine.Interfaces.AI;
+using DotRecast.Detour;
 using System.Buffers;
 
 namespace Sandbox.Navigation;
@@ -53,7 +54,7 @@ public sealed partial class NavMesh
 
 		// In navspace
 		var searchRadius = request.Agent != null ? new Vector3( request.Agent.Radius * 2.01f, request.Agent.Height * 1.51f, request.Agent.Radius * 2.01f ) : crowd._agentPlacementHalfExtents;
-		var filter = request.Agent != null ? request.Agent.agentInternal.option.filter : crowd.GetDefaultFilter();
+		var filter = request.Agent != null && request.Agent is NavMeshAgent nativeAgent ? nativeAgent.agentInternal.option.filter : crowd.GetDefaultFilter();
 
 		var startFound = query.FindNearestPoly( ToNav( request.Start ), searchRadius, filter, out var startPoly, out var startLocation, out _ );
 		if ( !startFound.Succeeded() )
@@ -142,7 +143,7 @@ public struct CalculatePathRequest
 	/// <summary>
 	/// Optional agent whose configuration is used for path calculation.
 	/// </summary>
-	public NavMeshAgent Agent;
+	public IBlowoutAiNavigationAgent Agent;
 }
 
 /// <summary>

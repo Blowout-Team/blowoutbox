@@ -1,3 +1,5 @@
+using BlowoutTeamSoft.Engine.Interfaces.Shaders;
+using BlowoutTeamSoft.Engine.Render;
 using NativeEngine;
 
 namespace Sandbox;
@@ -6,11 +8,13 @@ namespace Sandbox;
 /// A <a href="https://en.wikipedia.org/wiki/Shader">shader</a> is a specialized and complex computer program that use
 /// world geometry, materials and textures to render graphics.
 /// </summary>
-public partial class Shader : Resource
+public partial class Shader : Resource, IBlowoutShader
 {
 	internal CVfx native;
 
 	public override bool IsValid => native.IsValid;
+
+	public BlowoutShaderNativeHandle Handle => new BlowoutShaderNativeHandle(AssetId);
 
 	private Shader( CVfx native, string name )
 	{

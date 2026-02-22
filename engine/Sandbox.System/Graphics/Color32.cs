@@ -1,4 +1,5 @@
-﻿using Sandbox;
+﻿using BlowoutTeamSoft.Engine.Render;
+using Sandbox;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text.Json.Serialization;
@@ -155,6 +156,7 @@ public struct Color32 : IEquatable<Color32>
 	}
 
 	public static implicit operator Color32( Color value ) => value.ToColor32();
+	public static implicit operator Color32( BlowoutColor32 value ) => new Color32(value.R, value.G, value.B, value.A);
 
 	/// <summary>
 	/// Returns a new color with each component being the minimum of the 2 given colors.
@@ -233,7 +235,9 @@ public struct Color32 : IEquatable<Color32>
 		writer.Write( r );
 		writer.Write( g );
 		writer.Write( b );
-		writer.Write( b );
+		//writer.Write( b );
+		// dehs: it was 'a'?
+		writer.Write( a );
 	}
 
 	/// <summary>

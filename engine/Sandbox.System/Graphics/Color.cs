@@ -543,7 +543,7 @@ public partial struct Color : IEquatable<Color>
 		return c;
 	}
 
-	/// <summary>
+	/// <summary>e
 	/// Saturates the color by given amount.
 	/// </summary>
 	/// <param name="fraction">How much to saturate the color by, in range of 0 (not at all) to 1 (double the saturation). Negative values will desaturate the color.</param>
@@ -1243,6 +1243,7 @@ public partial struct Color : IEquatable<Color>
 	public static implicit operator Color( in Vector3 value ) => new Color( value.x, value.y, value.z );
 	public static implicit operator Color( in Color32 color ) => color.ToColor();
 	public static implicit operator Color( string value ) => Parse( value ) ?? new Color( 1, 0, 1, 1 );
+	public static implicit operator Color( BlowoutColor value) => new Color(value.R, value.G, value.B, value.A);
 
 	/// <summary>
 	/// Get color components by numerical index.

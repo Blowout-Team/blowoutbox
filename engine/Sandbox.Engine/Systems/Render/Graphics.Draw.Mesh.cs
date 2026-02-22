@@ -1,4 +1,6 @@
+using BlowoutTeamSoft.Engine.Math;
 using NativeEngine;
+using NoAlloq;
 
 namespace Sandbox;
 
@@ -45,6 +47,33 @@ public static partial class Graphics
 		{
 			RenderTools.DrawModel( Context, SceneLayer, model.native, (IntPtr)pTransforms, transforms.Length, attributes.Get() );
 		}
+	}
+
+	public static unsafe void DrawModelInstanced( Model model, Span<System.Numerics.Matrix4x4> batch, int batchSize, RenderAttributes attributes = null )
+	{
+		Span<Transform> transforms = stackalloc Transform[batchSize];
+		batch[..batchSize].Select( x =>
+		{
+			System.Numerics.Matrix4x4.Decompose(x, out var scale, out var rotation, out var position);
+			return new Transform( position, rotation, scale );
+		} ).TakeInto( transforms );
+
+		DrawModelInstanced( model, transforms, attributes);
+	}
+
+	public static unsafe void DrawModelInstanced( Model model, Material material, Span<System.Numerics.Matrix4x4> batch, int batchSize, RenderAttributes attributes = null )
+	{
+		Span<Transform> transforms = stackalloc Transform[batchSize];
+		batch[..batchSize].Select( x =>
+		{
+			System.Numerics.Matrix4x4.Decompose( x, out var scale, out var rotation, out var position );
+			return new Transform( position, rotation, scale );
+		} ).TakeInto( transforms );
+
+		if ( !SetRenderState( material, attributes ) )
+			return;
+
+		DrawModelInstanced( model, transforms, attributes );
 	}
 
 	/// <summary>

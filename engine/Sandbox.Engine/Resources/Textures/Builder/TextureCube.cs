@@ -1,3 +1,4 @@
+using BlowoutTeamSoft.Engine.Enums.Rendering;
 using NativeEngine;
 
 namespace Sandbox;
@@ -80,6 +81,12 @@ public struct TextureCubeBuilder
 	public TextureCubeBuilder WithFormat( ImageFormat format )
 	{
 		builder.WithFormat( format );
+		return this;
+	}
+
+	public TextureCubeBuilder WithFormat( BlowoutGraphicsFormat format )
+	{
+		builder.WithFormat( format.ToSourceFormat() );
 		return this;
 	}
 

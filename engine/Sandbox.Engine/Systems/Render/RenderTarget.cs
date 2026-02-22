@@ -1,11 +1,12 @@
-﻿using NativeEngine;
+﻿using BlowoutTeamSoft.Engine.Interfaces.Rendering;
+using NativeEngine;
 
 namespace Sandbox;
 
 /// <summary>
 /// Essentially wraps a couple of textures that we're going to render to. The color texture and the depth texture.
 /// </summary>
-public sealed partial class RenderTarget : IDisposable
+public sealed partial class RenderTarget : IBlowoutGraphicsRenderTarget, IDisposable
 {
 	/// <summary>
 	/// Is this currently loaned out (Active)
@@ -37,10 +38,14 @@ public sealed partial class RenderTarget : IDisposable
 	/// </summary>
 	public Texture ColorTarget { get; internal set; }
 
+	public IBlowoutTexture Color => ColorTarget;
+
 	/// <summary>
 	/// The target depth texture
 	/// </summary>
 	public Texture DepthTarget { get; internal set; }
+
+	public IBlowoutTexture Depth => DepthTarget;
 
 	// Private - Only way to get a valid render target should be with RenderTarget.From
 	private RenderTarget()

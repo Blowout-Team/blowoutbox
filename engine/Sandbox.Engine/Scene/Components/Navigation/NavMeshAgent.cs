@@ -1,3 +1,4 @@
+using BlowoutTeamSoft.Engine.Interfaces.AI;
 using DotRecast.Detour;
 using DotRecast.Detour.Crowd;
 using Sandbox.Engine.Resources;
@@ -15,7 +16,7 @@ namespace Sandbox;
 [Icon( "smart_toy" )]
 [EditorHandle( "materials/gizmo/navmeshagent.png" )]
 [Alias( "NavAgent" )]
-public sealed class NavMeshAgent : Component
+public sealed class NavMeshAgent : Component, IBlowoutAiNavigationAgent
 {
 	[Group( "Physical Properties" )]
 	[Property, MakeDirty]
@@ -273,6 +274,16 @@ public sealed class NavMeshAgent : Component
 		return result;
 	}
 
+	public void Move( System.Numerics.Vector3 velocity )
+	{
+		Velocity = velocity;
+	}
+
+	public void Warp( System.Numerics.Vector3 position )
+	{
+		SetAgentPosition( position );
+	}
+
 	/// <summary>
 	/// Stop moving, or whatever we're doing
 	/// </summary>
@@ -385,6 +396,14 @@ public sealed class NavMeshAgent : Component
 	/// Returns true if the agent is currently traversing a link.
 	/// </summary>
 	public bool IsTraversingLink => CurrentLinkTraversal != null;
+
+	public float AngularSpeed => throw new NotImplementedException();
+
+	System.Numerics.Vector3 IBlowoutAiNavigationAgent.Velocity => Velocity;
+
+	public float Speed { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+
+	System.Numerics.Vector3 IBlowoutAiNavigationAgent.WorldPosition => WorldPosition;
 
 	/// <summary>
 	/// Holds information about the current link the agent is traversing.
