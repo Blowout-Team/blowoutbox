@@ -266,8 +266,14 @@ public static partial class CodeEditor
 		if ( path == null || path.Length < 5 )
 			throw new Exception( $"Couldn't find solution file from path \"{path}\"" );
 
-		var addonFile = System.IO.Path.Combine( path, ".sbproj" );
+		var addonFile = System.IO.Path.Combine( path, ".bxproj" );
 		if ( System.IO.File.Exists( addonFile ) )
+		{
+			return AddonSolutionPath();
+		}
+
+		var legacyAddonFile = System.IO.Path.Combine( path, ".sbproj" );
+		if ( System.IO.File.Exists( legacyAddonFile ) )
 		{
 			return AddonSolutionPath();
 		}

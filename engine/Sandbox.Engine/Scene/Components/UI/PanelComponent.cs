@@ -1,10 +1,12 @@
+using BlowoutTeamSoft.Engine.Interfaces.UI;
+using BlowoutTeamSoft.Engine.Render;
 using Microsoft.AspNetCore.Components.Rendering;
 using Sandbox.UI;
 namespace Sandbox;
 
 [Category( "UI Panels" )]
 [Icon( "widgets" )]
-public abstract partial class PanelComponent : Component, IPanelComponent
+public abstract partial class PanelComponent : Component, IPanelComponent, IBlowoutUIGraphic
 {
 	Panel panel;
 
@@ -12,6 +14,8 @@ public abstract partial class PanelComponent : Component, IPanelComponent
 	/// The panel. Can be null if the panel doesn't exist yet.
 	/// </summary>
 	public Panel Panel => panel;
+
+	public BlowoutColor Color { get => Panel.Style.BackgroundColor.Value.ToBlowoutColor(); set => Panel.Style.BackgroundColor = value; }
 
 	string loadedStyleSheet;
 

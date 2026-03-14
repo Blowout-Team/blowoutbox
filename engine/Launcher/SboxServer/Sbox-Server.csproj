@@ -29,6 +29,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+		<ProjectReference Include="..\..\BlowoutTeamSoft\Engine\BlowoutTeamSoft.Engine.csproj" />
 		<ProjectReference Include="..\..\Sandbox.AppSystem\Sandbox.AppSystem.csproj" Private="false" />
 		<ProjectReference Include="..\..\Sandbox.Engine\Sandbox.Engine.csproj" Private="false" />
 		<ProjectReference Include="..\..\Sandbox.GameInstance\Sandbox.GameInstance.csproj" Private="false" />

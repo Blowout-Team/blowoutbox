@@ -111,7 +111,7 @@ public class EditorMainWindow : DockWindow
 		Current = this;
 		Visible = false;
 		Enabled = false;
-		WindowTitle = "s&box editor";
+		WindowTitle = "b&box editor";
 		DeleteOnClose = true;
 		FullScreenManager = new();
 		DockManager.OnLayoutLoaded += OnDockLayoutLoaded;

@@ -30,6 +30,8 @@ public sealed class GameObjectDirectory
 
 	internal IEnumerable<GameObject> AllGameObjects => objectsById.Values;
 	internal IEnumerable<Component> AllComponents => componentsById.Values;
+	internal IEnumerable<GameObjectSystem> AllGameObjectSystems => systemsById.Values;
+	internal IEnumerable<IBlowoutGameSystem> AllIsolatedGameSystems => blowoutSystemById.Values;
 
 	internal Action<GameObject> OnGameObjectAdded;
 

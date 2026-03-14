@@ -184,6 +184,11 @@ public static partial class SandboxSystemExtensions
 		return new Vector3( self.Float( box.Mins.x, box.Maxs.x ), self.Float( box.Mins.y, box.Maxs.y ), self.Float( box.Mins.z, box.Maxs.z ) );
 	}
 
+	public static Vector3Int VectorInCube( this Random self, in BBoxInt box )
+	{
+		return new Vector3Int( self.Int( box.Mins.x, box.Maxs.x ), self.Int( box.Mins.y, box.Maxs.y ), self.Int( box.Mins.z, box.Maxs.z ) );
+	}
+
 	internal static Vector2 VectorOnCircle( this Random self, float radius = 1f )
 	{
 		var angle = self.Float( -MathF.PI, MathF.PI );

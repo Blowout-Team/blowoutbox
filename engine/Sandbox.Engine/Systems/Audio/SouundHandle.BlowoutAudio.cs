@@ -34,7 +34,7 @@ unsafe partial class SoundHandle : IAudioSegment
 		}
 	}
 
-	public int Samples => throw new NotImplementedException();
+	public int Samples => SampleRate;
 
 	public int Channels => sampler.GetLastReadSamples().ChannelCount;
 

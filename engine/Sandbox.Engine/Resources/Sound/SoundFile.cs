@@ -1,4 +1,8 @@
+using BlowoutTeamSoft.Engine.Exceptions;
+using BlowoutTeamSoft.Engine.Interfaces.Audio;
 using NativeEngine;
+using Sandbox.Rendering;
+using static Sandbox.Services.BenchmarkSystem;
 
 namespace Sandbox;
 
@@ -13,7 +17,7 @@ public enum SoundFormat : byte
 /// <summary>
 /// A sound resource.
 /// </summary>
-public partial class SoundFile : Resource, IValid
+public partial class SoundFile : Resource, IValid, IAudioSegment
 {
 	internal CSfxTable native;
 	internal VSound_t sound;
@@ -69,6 +73,40 @@ public partial class SoundFile : Resource, IValid
 
 	// Can be played
 	public bool IsValidForPlayback => IsValid && native.IsValidForPlayback();
+
+	public unsafe float[] Segments
+	{
+		get
+		{
+			int sampleCount = native.GetSampleCount();
+			if ( sampleCount == 0 )
+			{
+				return null;
+			}
+
+			var samples = new short[sampleCount];
+
+			fixed ( short* memory = &samples[0] )
+			{
+				if ( !native.GetSamples( (IntPtr)memory, (uint)sampleCount ) )
+					return null;
+			}
+
+			return samples.Select( x => (float)x ).ToArray();
+		}
+	}
+
+	public int Samples => Rate;
+
+	public int Frequency => Rate;
+
+	public float Length
+	{
+		get => sound.Duration();
+		set => throw new BlowoutTeamSoft.Engine.Exceptions.BlowoutEngineException( "Can not edit length of sound" );
+	}
+
+	public TimeSpan Time => TimeSpan.FromSeconds( Duration );
 
 	private SoundFile( CSfxTable native )
 	{
@@ -320,4 +358,7 @@ public partial class SoundFile : Resource, IValid
 
 		return samples;
 	}
+
+	public void SetSegments( float[] segments, int offset ) =>
+		throw new BlowoutEngineException( "Source 2 Can not set segments into cached sound handle. Use creating of sound insted SetSegments in this Backend Framework." );
 }

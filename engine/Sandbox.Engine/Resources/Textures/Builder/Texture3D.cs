@@ -77,7 +77,6 @@ namespace Sandbox
 			return this;
 		}
 
-		/// <inheritdoc cref="TextureBuilder.WithFormat"/>
 		public Texture3DBuilder WithFormat( ImageFormat format )
 		{
 			config.WithFormat( format );

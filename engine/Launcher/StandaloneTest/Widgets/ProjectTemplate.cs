@@ -45,6 +45,7 @@ internal class ProjectTemplate
 		var title = config.Title;
 
 		var fullPath = Path.Combine( sourceDir, "$ident.sbproj" );
+		var bxprojPath = Path.Combine( sourceDir, "$ident.bxproj" );
 
 		if ( File.Exists( fullPath ) )
 		{
@@ -57,6 +58,8 @@ internal class ProjectTemplate
 
 			// Clear out ProjectTemplate from our new addon. It's not needed for end users.
 			config.SetMeta( "ProjectTemplate", null );
+
+			File.Move( fullPath, bxprojPath );
 
 			//Log.Info( $"OK" );
 		}

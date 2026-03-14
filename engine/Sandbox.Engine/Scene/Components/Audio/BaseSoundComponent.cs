@@ -1,10 +1,17 @@
+using BlowoutTeamSoft.Engine;
+using BlowoutTeamSoft.Engine.Core;
+using BlowoutTeamSoft.Engine.Exceptions.LowLevel;
+using BlowoutTeamSoft.Engine.Interfaces.Audio;
+using BlowoutTeamSoft.Engine.Interfaces.Audio.Async;
 using Sandbox.Audio;
+using System.Runtime.Serialization;
+using System.Text.Json.Serialization;
 
 namespace Sandbox;
 
 [Expose]
 [Tint( EditorTint.Green )]
-public abstract class BaseSoundComponent : Component
+public abstract class BaseSoundComponent : Component, IBlowoutAudioSystem, IBlowoutAudioSource
 {
 	/// <summary>
 	/// The mixer we want this sound to play through
@@ -40,6 +47,34 @@ public abstract class BaseSoundComponent : Component
 	protected SoundHandle SoundHandle;
 
 	internal SoundHandle SoundHandleInternal => SoundHandle;
+
+	[IgnoreDataMember, JsonIgnore]
+	public string ChannelName => SoundHandle.TargetMixer?.Name ?? "Global Channel";
+
+	[IgnoreDataMember, JsonIgnore]
+	public bool IsPlaying => SoundHandle.IsPlaying;
+
+	public bool IsLoop { get => SoundHandle.Loopback; set => SoundHandle.Loopback = value; }
+
+	[IgnoreDataMember, JsonIgnore]
+	public TimeSpan CurrentTime { get => TimeSpan.FromSeconds(SoundHandle.Time); set => SoundHandle.Time = (float)value.TotalSeconds; }
+	
+	[IgnoreDataMember, JsonIgnore]
+	public string Name => SoundHandle.Name;
+
+	bool IBlowoutAudioSystem.IsPlaying { get => IsPlaying; set 
+		{
+			if ( value )
+				StartSound();
+			else
+				Stop();
+		}
+	
+	}
+	public IAudioSegment Sound { get => SoundHandle; set => SetAudio(value); }
+
+	public IBlowoutAudioMixer Mixer { get => GetMixer(); set => SetAudioMixer(value); }
+	public TimeSpan Time { get => CurrentTime; set => CurrentTime = value; }
 
 	public virtual void StartSound() { }
 	public virtual void StopSound() { }
@@ -88,5 +123,127 @@ public abstract class BaseSoundComponent : Component
 		StartSound();
 	}
 
+	public void Rewind( TimeSpan time )
+	{
+		CurrentTime = time;
+	}
+
+	public void SetAudio( IAudioSegment audio )
+	{
+		if(audio is Sandbox.SoundHandle handle )
+		{
+			SoundHandle = handle;
+			return;
+		}
+
+		if(audio is SoundFile file )
+		{
+			SoundHandle = new SoundHandle(file.native);
+			return;
+		}
+
+		throw new BlowoutUnsupportedException( "Unsupported type of audio mixer for audio segment. Is supports only handles and sound files. Get sound segment type: " + audio.GetType().FullName );
+	}
+
+	public void PlayAudio()
+	{
+		StartSound();
+	}
+
+	public void SetAudioMixer( IBlowoutAudioMixer mixer )
+	{
+		if(mixer is Mixer mix )
+		{
+			TargetMixer = mix;
+			SoundHandle.TargetMixer = mix;
+			return;
+		}
+
+		throw new BlowoutUnsupportedException("Unsupported type of audio mixer for audio game system: " + mixer.GetType().FullName);
+	}
+
+	public void SetAudioChannel( IAudioChannel channel )
+	{
+		SetAudioMixer( channel.GetMixer() );
+	}
+
+	public void ChangeVolume( float value )
+	{
+		Volume = value;
+		SoundHandle?.Volume = value;
+	}
+
+	public void ChangePitch( float value )
+	{
+		Pitch = value;
+		SoundHandle?.Pitch = value;
+	}
+
+	public void PlayDirectFlow( IAudioSegment segment, float volume = 1 )
+	{
+		BlowoutEngine.Current.Audio.PlaySound( segment, WorldPosition );
+	}
+
+	public void PlayAudio( IAudioSegment audio )
+	{
+		StopAudio();
+		SetAudio( audio );
+		StartSound();
+	}
+
+	//TODO: Dehs: Make it work. I really dont need it for now :P.
+	public void PlayAudio<T>( IAudioSegment audio, IAudioEffect<T> effect ) where T : IAudioChannel
+	{
+		throw new NotImplementedException();
+	}
+
+	public void PlayAudioAsyncEffect( IAudioSegment audio )
+	{
+		throw new NotImplementedException();
+	}
+
+	public void PlayAudioAsyncEffect<T>( IAudioSegment audio, IAudioEffectAsync<T> asyncEffect = null ) where T : IAudioChannel
+	{
+		throw new NotImplementedException();
+	}
+
+	public void StopAudio()
+	{
+		StopSound();
+	}
+
+	public BlowoutEngineGameObject GetSourceObject() =>
+		GameObject;
+
+	public IBlowoutAudioMixer GetMixer() =>
+		SoundHandle.TargetMixer;
+
+	public void Dispose()
+	{
+		SoundHandle?.Dispose();
+	}
+
+	public void Play()
+	{
+		PlayAudio();
+	}
+
+	public void PlayFlow( IAudioSegment segment )
+	{
+		BlowoutEngine.Current.Audio.PlaySound( segment, WorldPosition );
+	}
+
+	public void PlayFlow( IAudioSegment segment, float volume )
+	{
+		if ( segment is SoundHandle handle )
+			handle.Volume = volume;
+
+		BlowoutEngine.Current.Audio.PlaySound( segment, WorldPosition );
+	}
+
+	public void Stop()
+	{
+		StopAudio();
+	}
 }
 

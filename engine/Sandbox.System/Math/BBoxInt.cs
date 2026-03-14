@@ -1,4 +1,5 @@
-﻿using BlowoutTeamSoft.Engine.Interfaces.Geometry;
+﻿using BlowoutTeamSoft.Engine;
+using BlowoutTeamSoft.Engine.Interfaces.Geometry;
 using BlowoutTeamSoft.Engine.Math;
 using BlowoutTeamSoft.Engine.Query;
 using Sandbox;
@@ -10,73 +11,58 @@ using System.Text.Json.Serialization;
 /// An <a href="https://en.wikipedia.org/wiki/Minimum_bounding_box">Axis Aligned Bounding Box</a>.
 /// </summary>
 [StructLayout( LayoutKind.Sequential )]
-public struct  BBox : System.IEquatable<BBox>, IBlowoutBounds
+public struct BBoxInt : System.IEquatable<BBoxInt>, IBlowoutBoundsInt
 {
 	/// <summary>
 	/// The minimum corner extents of the AABB. Values on each axis should be mathematically smaller than values on the same axis of <see cref="Maxs"/>. See <see cref="Vector3.Sort"/>
 	/// </summary>
 	[JsonInclude]
-	public Vector3 Mins;
+	public Vector3Int Mins;
 
 	/// <summary>
 	/// The maximum corner extents of the AABB. Values on each axis should be mathematically larger than values on the same axis of <see cref="Mins"/>. See <see cref="Vector3.Sort"/>
 	/// </summary>
 	[JsonInclude]
-	public Vector3 Maxs;
+	public Vector3Int Maxs;
 
 	/// <summary>
 	/// Initialize an AABB with given mins and maxs corners. See <see cref="Vector3.Sort"/>.
 	/// </summary>
-	public BBox( Vector3 mins, Vector3 maxs )
+	public BBoxInt( Vector3Int mins, Vector3Int maxs )
 	{
-		Mins = Vector3.Min( mins, maxs );
-		Maxs = Vector3.Max( mins, maxs );
-	}
-
-	/// <summary>
-	/// Initializes a zero sized BBox with given center. This is useful if you intend to use AddPoint to expand the box later.
-	/// </summary>
-	[System.Obsolete( "Use BBox.FromPositionAndSize" )]
-	public BBox( Vector3 center, float size = 0 )
-	{
-		size = MathF.Abs( size );
-
-		Mins = center - size * 0.5f;
-		Maxs = center + size * 0.5f;
+		Mins = Vector3Int.Min( mins, maxs );
+		Maxs = Vector3Int.Max( mins, maxs );
 	}
 
 	/// <summary>
 	/// An enumerable that contains all corners of this AABB.
 	/// </summary>
 	[JsonIgnore]
-	public readonly IEnumerable<Vector3> Corners
+	public readonly IEnumerable<Vector3Int> Corners
 	{
 		get
 		{
-			yield return new Vector3( Mins.x, Mins.y, Mins.z );
-			yield return new Vector3( Maxs.x, Mins.y, Mins.z );
+			yield return new Vector3Int( Mins.x, Mins.y, Mins.z );
+			yield return new Vector3Int( Maxs.x, Mins.y, Mins.z );
 
-			yield return new Vector3( Maxs.x, Maxs.y, Mins.z );
-			yield return new Vector3( Mins.x, Maxs.y, Mins.z );
-			yield return new Vector3( Mins.x, Mins.y, Maxs.z );
+			yield return new Vector3Int( Maxs.x, Maxs.y, Mins.z );
+			yield return new Vector3Int( Mins.x, Maxs.y, Mins.z );
+			yield return new Vector3Int( Mins.x, Mins.y, Maxs.z );
 
-			yield return new Vector3( Maxs.x, Mins.y, Maxs.z );
-			yield return new Vector3( Maxs.x, Maxs.y, Maxs.z );
-			yield return new Vector3( Mins.x, Maxs.y, Maxs.z );
+			yield return new Vector3Int( Maxs.x, Mins.y, Maxs.z );
+			yield return new Vector3Int( Maxs.x, Maxs.y, Maxs.z );
+			yield return new Vector3Int( Mins.x, Maxs.y, Maxs.z );
 		}
 	}
 
-	/// <summary>
-	/// Calculated center of the AABB.
-	/// </summary>
 	[JsonIgnore]
-	public readonly Vector3 Center => System.Numerics.Vector3.FusedMultiplyAdd( Size, new Vector3( 0.5f ), Mins );
+	public readonly Vector3Int Center => System.Numerics.Vector3.FusedMultiplyAdd( Size.ToSystemNumerics(), new Vector3( 0.5f ), new Vector3( Mins.x, Mins.y, Mins.z ) ).ToVectorInt();
 
 	/// <summary>
 	/// Calculated size of the AABB on each axis.
 	/// </summary>
 	[JsonIgnore]
-	public readonly Vector3 Size => (Maxs - Mins);
+	public readonly Vector3Int Size => (Maxs - Mins);
 
 
 	/// <summary>
@@ -86,50 +72,14 @@ public struct  BBox : System.IEquatable<BBox>, IBlowoutBounds
 	public readonly Vector3 Extents => Size * 0.5f;
 
 	[JsonIgnore, IgnoreDataMember]
-	System.Numerics.Vector3 IBlowoutBounds.Center
-	{
-		get => Center; set
-		{
-			Sandbox.Vector3 extents = Extents;
-			Sandbox.Vector3 input = new Vector3( value.X, value.Y, value.Z );
-			Mins = input - Extents;
-			Maxs = input + Extents;
-		}
-	}
+	public Vector3Int Max { get => Maxs; set => Maxs = value; }
 	[JsonIgnore, IgnoreDataMember]
-	System.Numerics.Vector3 IBlowoutBounds.Size
-	{
-		get => Size; set
-		{
-			Vector3 half = value * 0.5f;
-			Vector3 center = Center;
-
-			Mins = center - half;
-			Maxs = center + half;
-		}
-	}
-
-	[JsonIgnore, IgnoreDataMember]
-	System.Numerics.Vector3 IBlowoutBounds.Extents
-	{
-		get => Extents; set
-		{
-			var input = new Sandbox.Vector3( value.X, value.Y, value.Z );
-			var center = Center;
-
-			Mins = center - input;
-			Maxs = center + input;
-		}
-	}
-	[JsonIgnore, IgnoreDataMember]
-	public System.Numerics.Vector3 Max { get => Maxs; set => Maxs = value; }
-	[JsonIgnore, IgnoreDataMember]
-	public System.Numerics.Vector3 Min { get => Mins; set => Mins = value; }
+	public Vector3Int Min { get => Mins; set => Mins = value; }
 
 	/// <summary>
 	/// Move this box by this amount and return
 	/// </summary>
-	public readonly BBox Translate( in Vector3 point )
+	public readonly BBoxInt Translate( in Vector3Int point )
 	{
 		var b = this;
 
@@ -142,7 +92,7 @@ public struct  BBox : System.IEquatable<BBox>, IBlowoutBounds
 	/// <summary>
 	/// Rotate this box by this amount and return
 	/// </summary>
-	public readonly BBox Rotate( in Rotation rotation )
+	public readonly BBoxInt Rotate( in Rotation rotation )
 	{
 		var b = this;
 
@@ -158,8 +108,8 @@ public struct  BBox : System.IEquatable<BBox>, IBlowoutBounds
 			MathF.Abs( localExtents.x * yAxis.x ) + MathF.Abs( localExtents.y * yAxis.y ) + MathF.Abs( localExtents.z * yAxis.z ),
 			MathF.Abs( localExtents.x * zAxis.x ) + MathF.Abs( localExtents.y * zAxis.y ) + MathF.Abs( localExtents.z * zAxis.z ) );
 
-		b.Mins = center - extents;
-		b.Maxs = center + extents;
+		b.Mins = (center - extents).ToSystemNumerics().ToVectorInt();
+		b.Maxs = (center + extents).ToSystemNumerics().ToVectorInt();
 
 		return b;
 	}
@@ -167,7 +117,7 @@ public struct  BBox : System.IEquatable<BBox>, IBlowoutBounds
 	/// <summary>
 	/// Transform this box by this amount and return
 	/// </summary>
-	public readonly BBox Transform( in Transform transform )
+	public readonly BBoxInt Transform( in Transform transform )
 	{
 		// Inspired by https://gist.github.com/cmf028/81e8d3907035640ee0e3fdd69ada543f (Solution3)
 		Vector3 center = Center;
@@ -193,26 +143,20 @@ public struct  BBox : System.IEquatable<BBox>, IBlowoutBounds
 			absX.z * extents.x + absY.z * extents.y + absZ.z * extents.z
 		);
 
-		return new BBox(
-			transformedCenter - transformedExtents,
-			transformedCenter + transformedExtents
+		return new BBoxInt(
+			(transformedCenter - transformedExtents).ToSystemNumerics().ToVectorInt(),
+			(transformedCenter + transformedExtents).ToSystemNumerics().ToVectorInt()
 		);
 	}
 
-	/// <summary>
-	/// Scale this box by this amount and return
-	/// </summary>
-	internal readonly BBox Scale( in Vector3 scale )
+	internal readonly BBoxInt Scale( in Vector3 scale )
 	{
-		return new BBox(
-			mins: System.Numerics.Vector3.FusedMultiplyAdd( -scale, Extents, Center ),
-			maxs: System.Numerics.Vector3.FusedMultiplyAdd( scale, Extents, Center )
+		return new BBoxInt(
+			mins: System.Numerics.Vector3.FusedMultiplyAdd( -scale, Extents, Center.ToSystemNumerics() ).ToVectorInt(),
+			maxs: System.Numerics.Vector3.FusedMultiplyAdd( scale, Extents, Center.ToSystemNumerics() ).ToVectorInt()
 		);
 	}
 
-	/// <summary>
-	/// Returns a random point within this AABB.
-	/// </summary>
 	[JsonIgnore]
 	public readonly Vector3 RandomPointInside
 	{
@@ -233,9 +177,9 @@ public struct  BBox : System.IEquatable<BBox>, IBlowoutBounds
 			var originalSize = Size;
 
 			var size = originalSize;
-			size.x *= SandboxSystem.Random.Float( 0.0f, 1.0f );
-			size.y *= SandboxSystem.Random.Float( 0.0f, 1.0f );
-			size.z *= SandboxSystem.Random.Float( 0.0f, 1.0f );
+			size.x *= SandboxSystem.Random.Int( 0, 1 );
+			size.y *= SandboxSystem.Random.Int( 0, 1 );
+			size.z *= SandboxSystem.Random.Int( 0, 1 );
 
 			var face = Random.Shared.Int( 0, 5 );
 			if ( face == 0 ) size.x = 0;
@@ -259,6 +203,32 @@ public struct  BBox : System.IEquatable<BBox>, IBlowoutBounds
 		{
 			var size = Size.Abs();
 			return size.x * size.y * size.z;
+		}
+	}
+
+	public BlowoutTeamSoft.Engine.Numerics.Vector3Int Position { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+
+	BlowoutTeamSoft.Engine.Numerics.Vector3Int IBlowoutBoundsInt.Center => Center;
+
+	BlowoutTeamSoft.Engine.Numerics.Vector3Int IBlowoutBoundsInt.Size { get => Size; set 
+		{
+			Sandbox.Vector3 extents = Extents;
+			Sandbox.Vector3 input = new Vector3( value.X, value.Y, value.Z );
+			Mins = (input - Extents).ToSystemNumerics().ToVectorInt();
+			Maxs = (input + Extents).ToSystemNumerics().ToVectorInt();
+		}
+	}
+	BlowoutTeamSoft.Engine.Numerics.Vector3Int IBlowoutBoundsInt.Max { get => Max; set => Max = value; }
+	BlowoutTeamSoft.Engine.Numerics.Vector3Int IBlowoutBoundsInt.Min { get => Min; set => Min = value; }
+
+	public IEnumerable<System.Numerics.Vector3> AllPositionsWithin
+	{
+		get
+		{
+			foreach(var corner in Corners )
+			{
+				yield return corner.ToSystemNumerics();
+			}
 		}
 	}
 
@@ -292,15 +262,12 @@ public struct  BBox : System.IEquatable<BBox>, IBlowoutBounds
 				Mins.z < b.Maxs.z && b.Mins.z < Maxs.z;
 	}
 
-	/// <summary>
-	/// Returns this bbox but stretched to include given point
-	/// </summary>
-	public readonly BBox AddPoint( in Vector3 point )
+	public readonly BBoxInt AddPoint( in Vector3Int point )
 	{
 		var b = this;
 
-		b.Mins = Vector3.Min( Mins, point );
-		b.Maxs = Vector3.Max( Maxs, point );
+		b.Mins = Vector3Int.Min( Mins, point );
+		b.Maxs = Vector3Int.Max( Maxs, point );
 
 		return b;
 	}
@@ -308,20 +275,17 @@ public struct  BBox : System.IEquatable<BBox>, IBlowoutBounds
 	/// <summary>
 	/// Returns this bbox but stretched to include given bbox
 	/// </summary>
-	public readonly BBox AddBBox( in BBox point )
+	public readonly BBoxInt AddBBox( in BBoxInt point )
 	{
 		var b = this;
 
-		b.Mins = Vector3.Min( Mins, point.Mins );
-		b.Maxs = Vector3.Max( Maxs, point.Maxs );
+		b.Mins = Vector3Int.Min( Mins, point.Mins );
+		b.Maxs = Vector3Int.Max( Maxs, point.Maxs );
 
 		return b;
 	}
 
-	/// <summary>
-	/// Return a slightly bigger box
-	/// </summary>
-	public readonly BBox Grow( in float skin )
+	public readonly BBoxInt Grow( in int skin )
 	{
 		var b = this;
 
@@ -350,52 +314,49 @@ public struct  BBox : System.IEquatable<BBox>, IBlowoutBounds
 	/// <summary>
 	/// Creates an AABB at given position <paramref name="center"/> and given <paramref name="size"/> which acts as a <b>diameter</b> of a sphere contained within the AABB.
 	/// </summary>
-	public static BBox FromPositionAndSize( in Vector3 center, float size = 0.0f )
+	public static BBoxInt FromPositionAndSize( in Vector3Int center, int size = 0 )
 	{
-		var o = new BBox();
-		o.Mins = center - size * 0.5f;
-		o.Maxs = center + size * 0.5f;
+		var o = new BBoxInt();
+		o.Mins = (center - size * 0.5f).ToSystemNumerics().ToVectorInt();
+		o.Maxs = (center + size * 0.5f).ToSystemNumerics().ToVectorInt();
 		return o;
 	}
 
 	/// <summary>
 	/// Creates an AABB at given position <paramref name="center"/> and given <paramref name="size"/> a.k.a. "extents".
 	/// </summary>
-	public static BBox FromPositionAndSize( Vector3 center, Vector3 size )
+	public static BBoxInt FromPositionAndSize( Vector3 center, Vector3 size )
 	{
-		var o = new BBox();
+		var o = new BBoxInt();
 
-		o.Mins = System.Numerics.Vector3.FusedMultiplyAdd( -size, new Vector3( 0.5f ), center );
-		o.Maxs = System.Numerics.Vector3.FusedMultiplyAdd( size, new Vector3( 0.5f ), center );
+		o.Mins = System.Numerics.Vector3.FusedMultiplyAdd( -size, new Vector3( 0.5f ), center ).ToVectorInt();
+		o.Maxs = System.Numerics.Vector3.FusedMultiplyAdd( size, new Vector3( 0.5f ), center ).ToVectorInt();
 
 		return o;
 	}
 
-	public static BBox operator *( BBox c1, float c2 )
+	public static BBoxInt operator *( BBoxInt c1, int c2 )
 	{
 		c1.Mins *= c2;
 		c1.Maxs *= c2;
 		return c1;
 	}
 
-	public static BBox operator +( BBox c1, Vector3 c2 )
+	public static BBoxInt operator +( BBoxInt c1, Vector3Int c2 )
 	{
 		c1.Mins += c2;
 		c1.Maxs += c2;
 		return c1;
 	}
 
-	/// <summary>
-	/// Create a bounding box from an arbituary number of other boxes
-	/// </summary>
-	public static BBox FromBoxes( IEnumerable<BBox> boxes )
+	public static BBoxInt FromBoxes( IEnumerable<BBoxInt> boxes )
 	{
 		using var e = boxes.GetEnumerator();
 
 		if ( !e.MoveNext() )
 			return default;
 
-		BBox bbox = e.Current;
+		BBoxInt bbox = e.Current;
 
 		while ( e.MoveNext() )
 		{
@@ -408,18 +369,18 @@ public struct  BBox : System.IEquatable<BBox>, IBlowoutBounds
 	/// <summary>
 	/// Create a bounding box from an arbituary number of points
 	/// </summary>
-	public static BBox FromPoints( IEnumerable<Vector3> points, float size = 0.0f )
+	public static BBoxInt FromPoints( IEnumerable<Vector3Int> points, float size = 0.0f )
 	{
 		using var e = points.GetEnumerator();
 
 		if ( !e.MoveNext() )
 			return default;
 
-		BBox bbox = BBox.FromPositionAndSize( e.Current, size );
+		BBoxInt bbox = BBoxInt.FromPositionAndSize( e.Current, size );
 
 		while ( e.MoveNext() )
 		{
-			bbox = bbox.AddBBox( BBox.FromPositionAndSize( e.Current, size ) );
+			bbox = bbox.AddBBox( BBoxInt.FromPositionAndSize( e.Current, size ) );
 		}
 
 		return bbox;
@@ -505,42 +466,42 @@ public struct  BBox : System.IEquatable<BBox>, IBlowoutBounds
 		return startsolid || (t1 < t2 && t1 >= 0.0f);
 	}
 
-	public void SetMinMax( System.Numerics.Vector3 min, System.Numerics.Vector3 max )
+	public void SetMinMax( Vector3Int min, Vector3Int max )
 	{
 		Mins = min;
 		Maxs = max;
 	}
 
-	public void Encapsulate( System.Numerics.Vector3 point )
+	public void Encapsulate( Vector3Int point )
 	{
-		Mins = Vector3.Min( Mins, point );
-		Maxs = Vector3.Max( Maxs, point );
+		Mins = Vector3Int.Min( Mins, point );
+		Maxs = Vector3Int.Max( Maxs, point );
 	}
 
-	public void Encapsulate( IBlowoutBounds bounds )
+	public void Encapsulate( IBlowoutBoundsInt bounds )
 	{
 		Encapsulate( bounds.Min );
 		Encapsulate( bounds.Max );
 	}
 
-	public float SqrDistance( System.Numerics.Vector3 point )
+	public float SqrDistance( BlowoutTeamSoft.Engine.Numerics.Vector3Int point )
 	{
-		float dx = MathF.Max( Min.X - point.X, 0f );
-		dx = MathF.Max( dx, point.X - Max.X );
+		float dx = MathF.Max( Min.x - point.X, 0f );
+		dx = MathF.Max( dx, point.X - Max.x );
 
-		float dy = MathF.Max( Min.Y - point.Y, 0f );
-		dy = MathF.Max( dy, point.Y - Max.Y );
+		float dy = MathF.Max( Min.y - point.Y, 0f );
+		dy = MathF.Max( dy, point.Y - Max.y );
 
-		float dz = MathF.Max( Min.Z - point.Z, 0f );
-		dz = MathF.Max( dz, point.Z - Max.Z );
+		float dz = MathF.Max( Min.z - point.Z, 0f );
+		dz = MathF.Max( dz, point.Z - Max.z );
 
 		return dx * dx + dy * dy + dz * dz;
 	}
 
-	public bool Contains( System.Numerics.Vector3 point ) =>
-		point.X >= Min.X && point.X <= Max.X &&
-		point.Y >= Min.Y && point.Y <= Max.Y &&
-		point.Z >= Min.Z && point.Z <= Max.Z;
+	public bool Contains( BlowoutTeamSoft.Engine.Numerics.Vector3Int point ) =>
+		point.X >= Min.x && point.X <= Max.x &&
+		point.Y >= Min.y && point.Y <= Max.y &&
+		point.Z >= Min.z && point.Z <= Max.z;
 
 	/// dehs: aabb method (slab method).
 	public bool IsIntersectRay( BlowoutRay ray, out float distance )
@@ -553,12 +514,12 @@ public struct  BBox : System.IEquatable<BBox>, IBlowoutBounds
 			1f / ray.Direction.Z
 		);
 
-		float t1 = (Min.X - ray.Origin.X) * invDir.x;
-		float t2 = (Max.X - ray.Origin.X) * invDir.x;
-		float t3 = (Min.Y - ray.Origin.Y) * invDir.y;
-		float t4 = (Max.Y - ray.Origin.Y) * invDir.y;
-		float t5 = (Min.Z - ray.Origin.Z) * invDir.z;
-		float t6 = (Max.Z - ray.Origin.Z) * invDir.z;
+		float t1 = (Min.x - ray.Origin.X) * invDir.x;
+		float t2 = (Max.x - ray.Origin.X) * invDir.x;
+		float t3 = (Min.y - ray.Origin.Y) * invDir.y;
+		float t4 = (Max.y - ray.Origin.Y) * invDir.y;
+		float t5 = (Min.z - ray.Origin.Z) * invDir.z;
+		float t6 = (Max.z - ray.Origin.Z) * invDir.z;
 
 		float tmin = MathF.Max(
 			MathF.Max( MathF.Min( t1, t2 ), MathF.Min( t3, t4 ) ),
@@ -584,16 +545,16 @@ public struct  BBox : System.IEquatable<BBox>, IBlowoutBounds
 					Mins.y < bounds.Max.Y && bounds.Min.Y < Maxs.y &&
 					Mins.z < bounds.Max.Z && bounds.Min.Z < Maxs.z;
 
-	public void Expand( float amount )
+	public void Expand( int amount )
 	{
 		// maybe add half?
 		Mins -= amount;
 		Maxs += amount;
 	}
 
-	public void Expand( System.Numerics.Vector3 amount )
+	public void Expand( BlowoutTeamSoft.Engine.Numerics.Vector3Int amount )
 	{
-		Min -=  amount;
+		Min -= amount;
 		Max += amount;
 	}
 
@@ -605,9 +566,9 @@ public struct  BBox : System.IEquatable<BBox>, IBlowoutBounds
 		return $"mins {Mins:0.###}, maxs {Maxs:0.###}";
 	}
 
-	public bool Equals( IBlowoutBounds other )
+	public bool Equals( IBlowoutBoundsInt other )
 	{
-		if ( other is BBox otherBox )
+		if ( other is BBoxInt otherBox )
 			return Equals( other );
 
 		return Min == other.Min && Max == other.Max;
@@ -633,7 +594,7 @@ public struct  BBox : System.IEquatable<BBox>, IBlowoutBounds
 	/// <summary>
 	/// Snap this AABB to a grid
 	/// </summary>
-	public readonly BBox Snap( float distance )
+	public readonly BBox Snap( int distance )
 	{
 		return new BBox( Mins.SnapToGrid( distance ), Maxs.SnapToGrid( distance ) );
 	}
@@ -652,11 +613,9 @@ public struct  BBox : System.IEquatable<BBox>, IBlowoutBounds
 		);
 	}
 
-	#region equality
-	public static bool operator ==( BBox left, BBox right ) => left.Equals( right );
-	public static bool operator !=( BBox left, BBox right ) => !(left == right);
-	public readonly override bool Equals( object obj ) => obj is BBox o && Equals( o );
-	public readonly bool Equals( BBox o ) => (Mins, Maxs) == (o.Mins, o.Maxs);
+	public static bool operator ==( BBoxInt left, BBoxInt right ) => left.Equals( right );
+	public static bool operator !=( BBoxInt left, BBoxInt right ) => !(left == right);
+	public readonly override bool Equals( object obj ) => obj is BBoxInt o && Equals( o );
+	public readonly bool Equals( BBoxInt o ) => (Mins, Maxs) == (o.Mins, o.Maxs);
 	public override readonly int GetHashCode() => HashCode.Combine( Mins, Maxs );
-	#endregion
 }

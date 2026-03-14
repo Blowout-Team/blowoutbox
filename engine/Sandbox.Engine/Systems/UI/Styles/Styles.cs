@@ -1,4 +1,8 @@
-﻿using Sandbox.Engine;
+﻿using BlowoutTeamSoft.Engine.GraphicalUserInterface;
+using BlowoutTeamSoft.Engine.GraphicalUserInterface.Styles;
+using BlowoutTeamSoft.Engine.NativeHandles;
+using BlowoutTeamSoft.UI.Interfaces.Styling;
+using Sandbox.Engine;
 
 namespace Sandbox.UI;
 
@@ -6,7 +10,7 @@ namespace Sandbox.UI;
 /// Represents all supported CSS properties and their currently assigned values.
 /// </summary>
 [SkipHotload]
-public partial class Styles : BaseStyles
+public partial class Styles : BaseStyles, IBlowoutUIControlStyle
 {
 	internal Dictionary<string, IStyleBlock.StyleProperty> RawValues = new Dictionary<string, IStyleBlock.StyleProperty>( StringComparer.OrdinalIgnoreCase );
 	internal GradientInfo TextGradient;
@@ -95,6 +99,60 @@ public partial class Styles : BaseStyles
 		}
 	}
 
+	public BlowoutUIElementStyleHandle ElementHandle => new BlowoutUIElementStyleHandle();
+
+	public bool IsAutoFit { get => Display == DisplayMode.Flex; set => Display = value ? DisplayMode.Flex : DisplayMode.Contents; }
+	public BlowoutUserGraphicalStyle Window
+	{
+		get => new BlowoutUserGraphicalStyle()
+			{
+				Border = new BlowoutUserGraphicalBorder()
+				{
+					Bottom = (int)BorderBottomWidth.Value.Value,
+					Left = (int)BorderLeftWidth.Value.Value,
+					Right = (int)BorderRightWidth.Value.Value,
+					Top = (int)BorderTopWidth.Value.Value
+				}
+			};
+		set
+		{
+			BorderBottomWidth = Length.Pixels( value.Border.Bottom );
+			BorderLeftWidth = Length.Pixels( value.Border.Left );
+			BorderRightWidth = Length.Pixels( value.Border.Right );
+			BorderTopWidth = Length.Pixels( value.Border.Top );
+		}
+	}
+
+	public BlowoutUserGraphicalTextScope Text 
+	{
+		get => new BlowoutUserGraphicalTextScope()
+		{
+			Color = FontColor.Value.ToBlowoutColor(),
+			FontName = FontFamily,
+			FontSize = FontSize.Value.Value,
+			FontWeight = FontWeight.Value,
+			IsFontBold = FontStyle == UI.FontStyle.Oblique,
+			IsFontItalic = FontStyle == UI.FontStyle.Italic
+		};
+		set
+		{
+			FontColor = value.Color;
+			FontFamily = value.FontName;
+			FontSize = value.FontSize;
+			FontWeight = value.FontWeight;
+			if ( value.IsFontBold )
+				FontStyle |= UI.FontStyle.Oblique;
+			else
+				FontStyle ^= UI.FontStyle.Oblique;
+
+			if ( value.IsFontItalic )
+				FontStyle |= UI.FontStyle.Italic;
+			else
+				FontStyle ^= UI.FontStyle.Italic;
+		}
+	}
+
+	public BlowoutUserGraphicalStyleHandle Handle => new BlowoutUserGraphicalStyleHandle() { Handle = this };
 
 	public Margin GetInset( Vector2 size )
 	{
@@ -292,6 +350,11 @@ public partial class Styles : BaseStyles
 			if ( a.FilterDropShadow != b.FilterDropShadow )
 				FilterDropShadow.SetFromLerp( a.FilterDropShadow, b.FilterDropShadow, delta );
 		}
+	}
+
+	public virtual void RefreshLayout()
+	{
+
 	}
 }
 

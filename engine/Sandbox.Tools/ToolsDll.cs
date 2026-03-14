@@ -82,7 +82,7 @@ internal class ToolsDll : IToolsDll
 	/// </summary>
 	public async Task Initialize()
 	{
-		// Associate .sbproj with the editor
+		// Associate .bxproj with the editor
 		FileAssociations.Create();
 
 		Log.Info( "Compiling base projects" );

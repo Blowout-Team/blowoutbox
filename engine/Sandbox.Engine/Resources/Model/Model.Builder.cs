@@ -354,6 +354,15 @@ namespace Sandbox
 			return this;
 		}
 
+		// dehs: unstable.
+		public ModelBuilder AddModel(Model model )
+		{
+			var mesh = new Sandbox.Mesh( model.Materials.First() );
+			mesh.CreateBuffers( new VertexBuffer( model.GetVertices().ToList() ) );
+			AddMesh(mesh);
+			return this;
+		}
+
 		/// <summary>
 		/// Add a bunch of meshes.
 		/// </summary>
@@ -573,7 +582,7 @@ namespace Sandbox
 			boxes.Add( new()
 			{
 				extents = bounds.Extents,
-				transform = new Transform( bounds.Center ?? Vector3.Zero, rotation ?? Rotation.Identity )
+				transform = new Transform( bounds.Center, Rotation.Identity )
 			} );
 
 		}

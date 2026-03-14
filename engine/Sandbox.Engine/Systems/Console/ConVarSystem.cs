@@ -1,4 +1,6 @@
-﻿using Sandbox.Network;
+﻿using BlowoutTeamSoft.Debugger.Console.Results;
+using BlowoutTeamSoft.Engine.Enums;
+using Sandbox.Network;
 using System.Reflection;
 
 namespace Sandbox;
@@ -251,14 +253,14 @@ internal static partial class ConVarSystem
 	/// <summary>
 	/// Run a single command. [command] [args]
 	/// </summary>
-	internal static void RunSingle( string v )
+	internal static CommandExecutionResult RunSingle( string v )
 	{
 		var parts = v.Split( ' ', 2, StringSplitOptions.RemoveEmptyEntries );
 
 		if ( !Members.TryGetValue( parts[0], out var command ) )
 		{
 			Log.Warning( $"Unknown Command '{parts[0]}'" );
-			return;
+			return new CommandExecutionResult(($"Unknown Command '{parts[0]}'", BlowoutLogLevel.Error) ) { Success = false };
 		}
 
 		var hasArguments = parts.Length > 1;
@@ -266,13 +268,13 @@ internal static partial class ConVarSystem
 		if ( !hasArguments && command.IsVariable )
 		{
 			Log.Info( $"{command.Name} - {command.BuildDescription()}" );
-			return;
+			return new CommandExecutionResult( ($"{command.Name} - {command.BuildDescription()}", BlowoutLogLevel.Error) ) { Success = false };
 		}
 
 		if ( command.IsCheat && !Game.CheatsEnabled )
 		{
 			Log.Info( "Cheats are not enabled on the server." );
-			return;
+			return new CommandExecutionResult( ("Cheats are not enabled on the server.", BlowoutLogLevel.Error)) { Success = false };
 		}
 
 		var args = string.Join( " ", parts.Skip( 1 ) );
@@ -280,34 +282,38 @@ internal static partial class ConVarSystem
 		if ( command.IsVariable )
 		{
 			command.Value = args.SplitQuotesStrings()[0];
-			return;
+			return new CommandExecutionResult() { Success = true };
 		}
 
 		if ( Networking.IsActive && !Networking.IsHost && (command.IsServer || command.IsAdmin) )
 		{
 			var msg = new ServerCommand { Command = command.Name, Args = args };
 			Connection.Host?.SendMessage( msg, NetFlags.Reliable );
-			return;
+			return new CommandExecutionResult() { Success = true };
 		}
 
 		command.Run( args );
+		return new CommandExecutionResult() { Success = true };
 	}
 
 	/// <summary>
 	/// Run a potential string of commands, seperated by newlines or ;
 	/// </summary>
-	internal static void Run( string v )
+	internal static CommandExecutionResult Run( string v )
 	{
 		ThreadSafe.AssertIsMainThread();
 
-		if ( string.IsNullOrWhiteSpace( v ) ) return;
+		if ( string.IsNullOrWhiteSpace( v ) ) return new CommandExecutionResult() { Success = false };
 
+		CommandExecutionResult result = new CommandExecutionResult() { Success = false };
 		foreach ( var part in v.Split( ';', '\n' ) )
 		{
 			if ( string.IsNullOrWhiteSpace( part ) ) continue;
 
-			RunSingle( part );
+			result = RunSingle( part );
 		}
+
+		return result;
 	}
 
 	/// <summary>

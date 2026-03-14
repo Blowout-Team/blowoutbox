@@ -1,4 +1,5 @@
 using BlowoutTeamSoft.Engine;
+using BlowoutTeamSoft.Engine.Geometry.Mesh;
 using BlowoutTeamSoft.Engine.Interfaces.Geometry;
 using BlowoutTeamSoft.Engine.Interfaces.Mesh;
 using BlowoutTeamSoft.Engine.Render;
@@ -29,7 +30,7 @@ namespace Sandbox
 	///
 	/// <para>A set of meshes can be used to create a <see cref="Model"/> via the <see cref="ModelBuilder"/> class.</para>
 	/// </summary>
-	public partial class Mesh : IBlowoutMesh, IValid
+	public partial class Mesh : IBlowoutMesh, IValid, IBlowoutDynamicMesh
 	{
 		internal IMesh native;
 		internal long instanceId;
@@ -318,5 +319,16 @@ namespace Sandbox
 			MainThread.Queue( () => n.DestroyStrongHandle() );
 			GC.SuppressFinalize( this );
 		}
+
+		public void Perform( BlowoutDynamicMeshBuilder builder )
+		{
+			var vertices = builder.Vertices.Zip( builder.Colors, builder.Normals.Zip( builder.Tangents, builder.UV ) )
+				.Select( x => new Vertex( x.First) { Normal = x.Third.First, TexCoord0 = new Vector4(x.Third.Third.X, x.Third.Third.Y), Color = x.Second.ToColor32(), Tangent = x.Third.Second } ).ToList();
+			
+			CreateBuffers( new VertexBuffer( vertices ) );
+		}
+
+		public void SetBounds( IBlowoutBounds bounds ) =>
+			Bounds = new BBox(bounds.Min, bounds.Max);
 	}
 }

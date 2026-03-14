@@ -9,7 +9,7 @@ REM For the time being, we will leave an indication only of the 'BlowoutTeamSoft
 
 dotnet run --project .\engine\Tools\SboxBuild\SboxBuild.csproj -- build --config Developer
 
-.\engine\BlowoutTeamSoft\Compilation.Module\bin\BCompiler.exe post_compilation --compile-filter "BlowoutTeamSoft.*" --root-directory "game/bin/managed" --compile-method "target-dir" --compilation-mode Force
+.\engine\BlowoutTeamSoft\Compilation.Module\bin\BCompiler.exe post_compilation --compile-filter "BlowoutTeamSoft.*" --root-directory "game/bin/managed" --compile-method "target-dir" --compilation-mode Force --expose-errors
 
 dotnet run --project .\engine\Tools\SboxBuild\SboxBuild.csproj -- build-shaders
 dotnet run --project .\engine\Tools\SboxBuild\SboxBuild.csproj -- build-content

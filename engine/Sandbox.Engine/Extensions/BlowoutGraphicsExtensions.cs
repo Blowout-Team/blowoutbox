@@ -7,6 +7,33 @@ namespace Sandbox;
 
 public static class BlowoutGraphicsExtensions
 {
+	extension( BlowoutTextureFormat format )
+	{
+		public ImageFormat ToSourceFormat()
+		{
+			switch ( format )
+			{
+				case BlowoutTextureFormat.Unknown:
+					return ImageFormat.None;
+
+				case BlowoutTextureFormat.R8:
+					return ImageFormat.I8;
+
+				case BlowoutTextureFormat.RG8:
+					return ImageFormat.IA88;
+
+				case BlowoutTextureFormat.RGBA8:
+					return ImageFormat.RGB888;
+
+				case BlowoutTextureFormat.RGB111110Float:
+					return ImageFormat.RG11_EAC;
+
+				default:
+					return ImageFormat.None;
+			}
+		}
+	}
+
 	extension( BlowoutGraphicsFormat format )
 	{
 		public ImageFormat ToSourceFormat()

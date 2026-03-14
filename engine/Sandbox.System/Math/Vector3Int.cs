@@ -157,11 +157,35 @@ public struct Vector3Int : IEquatable<Vector3Int>, IParsable<Vector3Int>
 	/// </summary>
 	public readonly Vector3 Inverse => new( 1.0f / x, 1.0f / y, 1.0f / z );
 
+	public readonly System.Numerics.Vector3 ToSystemNumerics() =>
+		new System.Numerics.Vector3( x, y, z );
+
 	// Vector3Int x Number Operators
 	public static Vector3Int operator +( Vector3Int c1, int c2 )
 	{
 		return new Vector3Int( c1.x + c2, c1.y + c2, c1.z + c2 );
 	}
+
+	public static Vector3Int operator +( Vector3Int c1, BlowoutTeamSoft.Engine.Numerics.Vector3Int c2 )
+	{
+		return new Vector3Int( c1.x + c2.X, c1.y + c2.Y, c1.z + c2.Z );
+	}
+
+	public static Vector3Int operator -( Vector3Int c1, BlowoutTeamSoft.Engine.Numerics.Vector3Int c2 )
+	{
+		return new Vector3Int( c1.x - c2.X, c1.y - c2.Y, c1.z - c2.Z );
+	}
+
+	public static bool operator ==( Vector3Int c1, BlowoutTeamSoft.Engine.Numerics.Vector3Int c2 )
+	{
+		return c1.x == c2.X && c1.y == c2.Y && c1.z == c2.Z;
+	}
+
+	public static bool operator !=( Vector3Int c1, BlowoutTeamSoft.Engine.Numerics.Vector3Int c2 )
+	{
+		return !(c1 == c2);
+	}
+
 	public static Vector3 operator +( Vector3Int c1, float c2 )
 	{
 		return new Vector3( c1.x + c2, c1.y + c2, c1.z + c2 );
@@ -296,9 +320,19 @@ public struct Vector3Int : IEquatable<Vector3Int>, IParsable<Vector3Int>
 	{
 		return new Vector3Int( value, value, value );
 	}
+
+	static public implicit operator BlowoutTeamSoft.Engine.Numerics.Vector3Int( Vector3Int value )
+	{
+		return new BlowoutTeamSoft.Engine.Numerics.Vector3Int( value.x, value.y, value.z );
+	}
+
 	static public implicit operator Vector3( Vector3Int value )
 	{
 		return new Vector3( value.x, value.y, value.z );
+	}
+	static public implicit operator Vector3Int( BlowoutTeamSoft.Engine.Numerics.Vector3Int value )
+	{
+		return new Vector3Int( value.X, value.Y, value.Z );
 	}
 
 	static public implicit operator Vector3Int( Vector2Int value )

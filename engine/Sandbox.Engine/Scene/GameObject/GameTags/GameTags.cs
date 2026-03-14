@@ -86,6 +86,53 @@ public class GameTags : ITagSet
 		return tagList.Any( Has );
 	}
 
+	bool InsertSingle( string tag, int index = 0 )
+	{
+		if ( string.IsNullOrWhiteSpace( tag ) ) return false;
+		if ( Has( tag ) ) return false;
+
+		tag = tag.ToLowerInvariant();
+
+		if ( !tag.IsValidTag() )
+		{
+			Log.Warning( $"Ignoring tag '{tag}' - invalid" );
+			return false;
+		}
+
+		var newTokens = new HashSet<uint>();
+		var tags = new HashSet<string>();
+
+		newTokens.Add( StringToken.FindOrCreate( tag ) );
+
+		foreach(var token in _tokens)
+		{
+			newTokens.Add( token );
+		}
+
+		tags.Add( tag );
+
+		foreach(var oldTag in _tags )
+		{
+			tags.Add( oldTag );
+		}
+
+		_tokens = newTokens;
+		_tags = tags;
+
+		return true;
+	}
+
+	/// <summary>
+	/// Try to add the tag to this object.
+	/// </summary>
+	public void ReplaceRoot( string tag )
+	{
+		if ( InsertSingle( tag, 0 ) )
+		{
+			MarkDirty();
+		}
+	}
+
 	bool AddSingle( string tag )
 	{
 		if ( string.IsNullOrWhiteSpace( tag ) ) return false;

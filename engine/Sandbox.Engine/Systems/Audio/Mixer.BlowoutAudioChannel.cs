@@ -92,6 +92,19 @@ public partial class Mixer : IAudioChannel, IBlowoutAudioMixer
 				return;
 			_currentHandle = sound;
 		}
+
+		if ( audio is SoundFile soundFile )
+		{
+			g_pSoundSystem.PreloadSound( soundFile.native );
+
+			SoundHandle handle = new SoundHandle( soundFile.native );
+			handle.Name = "FlowAudio";
+			handle.Volume = 1f;
+			handle.Pitch = 1f;
+
+			handle.TargetMixer = this;
+			_currentHandle = handle;
+		}
 	}
 
 	public void PlayAudio<T>( IAudioSegment audio, IAudioEffect<T> effect ) where T : IAudioChannel

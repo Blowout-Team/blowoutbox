@@ -254,8 +254,13 @@ public partial class Project
 	internal static Project AddFromFile( string path, bool active = true )
 	{
 		// Need an project file
-		if ( !path.EndsWith( ".sbproj" ) )
-			path = System.IO.Path.Combine( path, ".sbproj" );
+		if(!path.EndsWith(".sbproj") && !path.EndsWith( ".bxproj" ) )
+		{
+			var oldpath = path;
+			path = System.IO.Path.Combine( path, ".bxproj" );
+			if(!File.Exists(path))
+				path = System.IO.Path.Combine( oldpath, ".sbproj" );
+		}
 
 		var cleanPath = System.IO.Path.GetFullPath( path );
 

@@ -1,3 +1,5 @@
+using BlowoutTeamSoft.Engine.Interfaces.UI;
+using BlowoutTeamSoft.Engine.Render;
 using Sandbox.UI;
 namespace Sandbox;
 
@@ -25,6 +27,7 @@ public sealed class WorldPanel : Renderer, IRootPanelComponent
 	/// How far can we interact with this world panel?
 	/// </summary>
 	[Property, MakeDirty] public float InteractionRange { get; set; } = 1000.0f;
+	public BlowoutColor Color { get => worldPanel.Style.BackgroundColor.Value.ToBlowoutColor(); set => worldPanel.Style.BackgroundColor = value; }
 
 	public enum HAlignment
 	{
@@ -88,7 +91,9 @@ public sealed class WorldPanel : Renderer, IRootPanelComponent
 			Gizmo.Draw.Line( r.TopRight, r.BottomRight );
 			Gizmo.Draw.Line( r.BottomLeft, r.BottomRight );
 
-			Gizmo.Draw.Color = Color.Cyan.WithAlpha( 0.2f );
+			Gizmo.Draw.Color = BlowoutColor.Cyan;
+			Gizmo.Draw.Color = Gizmo.Draw.Color.WithAlpha( 0.2f );
+
 			Gizmo.Draw.SolidTriangle( new Triangle( r.TopLeft, r.TopRight, r.BottomRight ) );
 			Gizmo.Draw.SolidTriangle( new Triangle( r.BottomRight, r.BottomLeft, r.TopLeft ) );
 		}

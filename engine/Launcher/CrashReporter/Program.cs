@@ -182,7 +182,7 @@ class Program
 	}
 
 	/// <summary>
-	/// Attaches the most recent s&box log file (sbox.log or sbox-dev.log) if it exists and is under 10MB.
+	/// Attaches the most recent s&box log file (sbox.log or bsource-dev.log) if it exists and is under 10MB.
 	/// </summary>
 	static void AttachLatestLog( Envelope envelope )
 	{
@@ -202,7 +202,7 @@ class Program
 				return;
 			}
 
-			var candidates = new[] { "sbox.log", "sbox-dev.log" }
+			var candidates = new[] { "sbox.log", "bsource-dev.log" }
 				.Select( name => new FileInfo( Path.Combine( logsDir, name ) ) )
 				.Where( fi => fi.Exists )
 				.OrderByDescending( fi => fi.LastWriteTimeUtc )
@@ -265,7 +265,7 @@ class Program
 		var dir = Path.GetDirectoryName( startPath );
 		while ( !string.IsNullOrEmpty( dir ) )
 		{
-			var isRoot = File.Exists( Path.Combine( dir, "sbox.exe" ) ) || File.Exists( Path.Combine( dir, "sbox-dev.exe" ) );
+			var isRoot = File.Exists( Path.Combine( dir, "sbox.exe" ) ) || File.Exists( Path.Combine( dir, "bsource-dev.exe" ) );
 			var hasSubdir = requiredSubdirectory is null || Directory.Exists( Path.Combine( dir, requiredSubdirectory ) );
 
 			if ( isRoot && hasSubdir )

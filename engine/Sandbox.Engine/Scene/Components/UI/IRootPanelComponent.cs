@@ -1,6 +1,8 @@
-﻿namespace Sandbox;
+﻿using BlowoutTeamSoft.Engine.Interfaces.UI;
 
-interface IRootPanelComponent : IPanelComponent
+namespace Sandbox;
+
+interface IRootPanelComponent : IPanelComponent, IBlowoutUIGraphic
 {
 
 }

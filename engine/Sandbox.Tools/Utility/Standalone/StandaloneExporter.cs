@@ -303,12 +303,12 @@ public partial class StandaloneExporter
 		}
 
 		//
-		// Copy sbproj for base + addon - ideally we should store these in an embedded resource inside the exe
+		// Copy bxproj for base + addon - ideally we should store these in an embedded resource inside the exe
 		//
 		{
-			var sbprojPath = Path.Combine( baseDir, Standalone.GamePath, ".sbproj" );
-			QueueCopy( $"{_exportConfig.Project.ConfigFilePath}", sbprojPath, BuildStep.CopyMisc );
-			QueueCopy( $"{engineDir}/addons/base/.sbproj", $"{baseDir}/addons/base/.sbproj", BuildStep.CopyMisc );
+			var bxprojPath = Path.Combine( baseDir, Standalone.GamePath, ".bxproj" );
+			QueueCopy( $"{_exportConfig.Project.ConfigFilePath}", bxprojPath, BuildStep.CopyMisc );
+			QueueCopy( $"{engineDir}/addons/base/.bxproj", $"{baseDir}/addons/base/.bxproj", BuildStep.CopyMisc );
 		}
 
 		//

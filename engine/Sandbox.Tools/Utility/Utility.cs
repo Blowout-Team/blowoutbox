@@ -707,7 +707,7 @@ public static partial class EditorUtility
 	{
 		EditorWindow.Close();
 
-		ProcessStartInfo info = new ProcessStartInfo( "sbox-dev.exe", $"{Environment.CommandLine} -project \"{Project.Current.ConfigFilePath}\"" );
+		ProcessStartInfo info = new ProcessStartInfo( "bsource-dev.exe", $"{Environment.CommandLine} -project \"{Project.Current.ConfigFilePath}\"" );
 		info.UseShellExecute = true;
 		info.CreateNoWindow = true;
 		info.WorkingDirectory = System.Environment.CurrentDirectory;

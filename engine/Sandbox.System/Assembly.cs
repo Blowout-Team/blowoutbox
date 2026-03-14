@@ -23,4 +23,6 @@ using System.Runtime.CompilerServices;
 [assembly: InternalsVisibleTo( "Sandbox.AppSystem" )]
 [assembly: InternalsVisibleTo( "Sbox-Server" )]
 
+[assembly: InternalsVisibleTo("BlowoutTeamSoft.Source2.Core")]
+
 [assembly: TasksPersistOnContextReset]

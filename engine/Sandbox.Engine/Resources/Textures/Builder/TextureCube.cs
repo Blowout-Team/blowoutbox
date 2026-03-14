@@ -77,7 +77,6 @@ public struct TextureCubeBuilder
 		return this;
 	}
 
-	/// <inheritdoc cref="TextureBuilder.WithFormat"/>
 	public TextureCubeBuilder WithFormat( ImageFormat format )
 	{
 		builder.WithFormat( format );

@@ -1,3 +1,5 @@
+using BlowoutTeamSoft.Engine.Interfaces.UI;
+using BlowoutTeamSoft.Engine.Render;
 using Sandbox.UI;
 
 namespace Sandbox;
@@ -18,6 +20,7 @@ public sealed class ScreenPanel : Component, IRootPanelComponent
 	[Property, ShowIf( "AutoScreenScale", true )] public AutoScale ScaleStrategy { get; set; }
 	[Property] public int ZIndex { get; set; } = 100;
 	[Property] public CameraComponent TargetCamera { get; set; }
+	public BlowoutColor Color { get => rootPanel.Style.BackgroundColor.Value.ToBlowoutColor(); set => rootPanel.Style.BackgroundColor = value; }
 
 	private GameRootPanel rootPanel;
 

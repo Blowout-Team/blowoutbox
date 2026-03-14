@@ -18,7 +18,7 @@ public class CommandLineTest
 		Assert.AreEqual( "35455", CommandLine.GetSwitch( "-value", string.Empty ) );
 		Assert.AreEqual( @"""hello there im a string"" test", CommandLine.GetSwitch( "something", string.Empty ) );
 
-		CommandLine.CommandLineString = @"D:\Facepunch\sbox\game\sbox-dev.dll -project D:\Facepunch\sbox\game\addons\sbox-deathmatch\sbdm.sbproj";
+		CommandLine.CommandLineString = @"D:\Facepunch\sbox\game\bsource-dev.dll -project D:\Facepunch\sbox\game\addons\sbox-deathmatch\sbdm.sbproj";
 		CommandLine.Parse();
 
 		Assert.AreEqual( @"D:\Facepunch\sbox\game\addons\sbox-deathmatch\sbdm.sbproj", CommandLine.GetSwitch( "project", string.Empty ) );

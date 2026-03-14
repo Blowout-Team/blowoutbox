@@ -1,4 +1,18 @@
-﻿using Sandbox.Diagnostics;
+﻿using BlowoutTeamSoft.Audio;
+using BlowoutTeamSoft.DependencyInjection.Containers;
+using BlowoutTeamSoft.DependencyInjection.Injection;
+using BlowoutTeamSoft.Engine;
+using BlowoutTeamSoft.Engine.Core;
+using BlowoutTeamSoft.Engine.Features;
+using BlowoutTeamSoft.Engine.Interfaces;
+using BlowoutTeamSoft.Engine.Interfaces.Console;
+using BlowoutTeamSoft.Sdk;
+using BlowoutTeamSoft.Sdk.Lua;
+using BlowoutTeamSoft.Source2.Core;
+using BlowoutTeamSoft.Source2.Core.Assets;
+using BlowoutTeamSoft.Source2.Core.Audio;
+using BlowoutTeamSoft.Source2.Core.Input;
+using Sandbox.Diagnostics;
 using Sandbox.Engine;
 using Sandbox.Internal;
 using Sandbox.Network;
@@ -11,7 +25,7 @@ using System.Runtime.Intrinsics.X86;
 
 namespace Sandbox;
 
-public class AppSystem
+public class AppSystem : IBlowoutGameProcessor
 {
 	protected Logger log = new Logger( "AppSystem" );
 	internal CMaterialSystem2AppSystemDict _appSystem { get; set; }
@@ -102,8 +116,15 @@ public class AppSystem
 
 			Init();
 
-
 			NativeEngine.EngineGlobal.Plat_SetCurrentFrame( 0 );
+			try
+			{
+				BlowoutEngine.Current.Run();
+			}
+			catch ( Exception e)
+			{
+				MessageBox( IntPtr.Zero, $"An error occurred during running of the Blowout Engine: {e.Message} \n\n Stack: {e.StackTrace}", "Error while initialize Blowout Engine", 0x10 );
+			}
 
 			while ( RunFrame() )
 			{
@@ -153,6 +174,7 @@ public class AppSystem
 
 	public virtual void Shutdown()
 	{
+		BlowoutEngine.Current?.Stop();
 		// Make sure game instance is closed
 		IGameInstanceDll.Current?.CloseGame();
 
@@ -204,6 +226,7 @@ public class AppSystem
 		GC.Collect();
 		GC.WaitForPendingFinalizers();
 
+		MainThread.ShutdownAsyncOperations();
 		// Run the queue one more time, since some finalizers queue tasks
 		MainThread.RunQueues();
 
@@ -289,6 +312,30 @@ public class AppSystem
 			throw new System.Exception( "SourceEngineInit returned false" );
 		}
 
+#pragma warning disable CA2000
+		BlowoutInjectionContainer container = new BlowoutInjectionContainer();
+#pragma warning restore CA2000
+
+
+		log.Info("Initialize Blowout Engine...");
+		try
+		{
+			//todo: when in editor: Editor.ConsoleWidget, when in standalone game: custom console with hud painer.
+			BlowoutSource2Engine engine = BlowoutSource2Engine.Install( this,
+				BlowoutScriptEngineFactory.Default.CreateEngine( null, null, BlowoutTeamSoft.Sdk.Enums.BlowoutSdkScriptEngineType.Lua ),
+				new BlowoutSource2AssetsService(),
+				new Lazy<IDebugConsole>(() => this is StandaloneAppSystem ? null : Editor.ConsoleWidget.Instance),
+				new BlowoutSource2AudioMaster(),
+				new BlowoutSource2Input(),
+				BlowoutModuleFeaturesBuilder.Empty,
+				container );
+			log.Info( "Blowout Engine initialized!" );
+		}catch(Exception e )
+		{
+			MessageBox(IntPtr.Zero, $"An error occurred during initialization of the Blowout Engine: {e.Message} \n\n Stack: {e.StackTrace}", "Error while initialize Blowout Engine", 0x10 );
+			Environment.Exit( 1 );
+		}
+
 		Bootstrap.Init();
 	}
 
@@ -315,5 +362,18 @@ public class AppSystem
 		{
 			throw new System.Exception( "Couldn't load bin/win64/steam_api64.dll" );
 		}
+	}
+
+	void IBlowoutGameProcessor.SetWindowTitle( string title )
+	{
+		SetWindowTitle( title );
+	}
+
+	public void OnCreateGameBody( BlowoutEngineGameObject gameBody, BlowoutEngineGameObject system )
+	{
+	}
+
+	public void OnEngineReady( IBlowoutEngine engine )
+	{
 	}
 }

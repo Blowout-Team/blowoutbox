@@ -1,7 +1,9 @@
 ﻿using BlowoutTeamSoft.Engine.Attributes;
+using BlowoutTeamSoft.Engine.Maps;
 using Facepunch.ActionGraphs;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Threading;
 
 namespace Sandbox;
 
@@ -151,6 +153,177 @@ public partial class Scene : GameObject
 			// Now we can signal to GameObjectSystems that we have finished loading.
 			// We wrap this in an IsSystemScene check so that it's not called twice
 			// for every scene load.
+			Signal( GameObjectSystem.Stage.SceneLoaded );
+		}
+
+		return true;
+	}
+
+	public bool Load( BlowoutMap map, IProgress<float> progress, SceneLoadOptions options )
+	{
+		SceneFile sceneFile = options.GetSceneFile();
+		if ( sceneFile == null && !string.IsNullOrEmpty( map.AssetSource ) )
+		{
+			ResourceLibrary.TryGet( map.AssetSource, out sceneFile );
+		}
+
+		if ( sceneFile != null && !sceneFile.IsValid() )
+		{
+			Log.Error( "No valid Scene was found in SceneLoadOptions." );
+			return false;
+		}
+
+		if ( sceneFile != null && sceneFile.ResourceName != null )
+		{
+			Name = sceneFile.ResourceName.ToTitleCase();
+		}
+		else
+			Name = map.Name;
+
+		ProcessDeletes();
+
+		if ( !options.IsAdditive )
+		{
+			if ( options.DeleteEverything )
+			{
+				Clear( true );
+			}
+			else
+			{
+				// get all the gameobjects that should survive
+				var savedObjects = GetAllObjects( false ).Where( x => x.Flags.Contains( GameObjectFlags.DontDestroyOnLoad ) );
+
+				// move them to the scene root
+				foreach ( var saved in savedObjects )
+				{
+					saved.SetParent( this );
+				}
+
+				Clear( false );
+			}
+
+			ProcessDeletes();
+		}
+
+		if ( !IsEditor && options.ShowLoadingScreen )
+		{
+			StartLoading();
+			LoadingScreen.IsVisible = true;
+			LoadingScreen.Title = "Loading Scene";
+		}
+
+		RunEvent<ISceneLoadingEvents>( x => x.BeforeLoad( this, options ) );
+
+		if ( sceneFile == null && map.Id != Guid.Empty )
+		{
+			ForceChangeId( map.Id );
+			Directory.Add( this );
+		}
+		else if ( sceneFile.Id != Guid.Empty && sceneFile.Id != Id )
+		{
+			ForceChangeId( sceneFile.Id );
+			Directory.Add( this );
+		}
+
+		if ( !options.IsAdditive && sceneFile != null )
+		{
+			Source = sceneFile;
+		}
+
+		{
+			if ( sceneFile != null )
+			{
+				using var optionsScope = ActionGraph.PushSerializationOptions( sceneFile.SerializationOptions with { ForceUpdateCached = IsEditor } );
+				using var sceneScope = Push();
+
+				// Depending on if we load a scene from file or from memory, we need to account for that here
+				using var blobs = BlobDataSerializer.Load( sceneFile.BinaryData, sceneFile.ResourcePath );
+				using var batchGroup = CallbackBatch.Batch();
+
+				// Clear cached binary data now that we've loaded it
+				sceneFile.BinaryData = null;
+
+				if ( sceneFile.GameObjects is not null )
+				{
+					int i = 0;
+					foreach ( var json in sceneFile.GameObjects )
+					{
+
+						progress.Report( sceneFile.GameObjects.Length * i / 100 );
+						var go = CreateObject( false );
+						go.Deserialize( json );
+						i++;
+					}
+				}
+
+				if ( sceneFile.SceneProperties is not null )
+				{
+					DeserializeProperties( sceneFile.SceneProperties, options.IsSystemScene );
+				}
+			}
+			else
+			{
+				using var optionsScope = ActionGraph.PushSerializationOptions( new SerializationOptions() { ForceUpdateCached = IsEditor } );
+				using var sceneScope = Push();
+
+				using var batchGroup = CallbackBatch.Batch();
+
+				if ( map.GameObjects is not null )
+				{
+					int i = 0;
+					int count = map.GameObjects.Count();
+					foreach ( var descriptor in map.GameObjects )
+					{
+						progress.Report( count * i / 100 );
+						var go = CreateObject( false );
+						go.Transform.WorldPosition = descriptor.Transform.Position;
+						go.LocalPosition = descriptor.Transform.LocalPosition;
+
+						go.Transform.WorldRotation = descriptor.Transform.Rotation;
+						go.LocalRotation = descriptor.Transform.LocalRotatation;
+
+						go.WorldScale = descriptor.Transform.Scale;
+						go.Name = descriptor.Name;
+
+						if ( descriptor.GameSystems is not null )
+						{
+							foreach ( var gameSystem in descriptor.GameSystems )
+							{
+								var instance = go.AddGameSystem( gameSystem.ResolveSystemType() );
+							}
+						}
+						i++;
+					}
+				}
+			}
+
+			List<LoadingContext> sceneLoadingTasks = new();
+			RunEvent<ISceneLoadingEvents>( x =>
+			{
+				var context = new LoadingContext();
+				context.Task = x.OnLoad( this, options, context );
+
+				sceneLoadingTasks.Add( context );
+			} );
+
+			foreach ( var task in sceneLoadingTasks )
+			{
+				AddLoadingTask( task );
+			}
+
+			if ( !IsEditor )
+			{
+				NetworkSpawnRecursive( null );
+			}
+		}
+
+		if ( !IsEditor && !options.IsAdditive )
+		{
+			AddSystemScene();
+		}
+
+		if ( !options.IsSystemScene )
+		{
 			Signal( GameObjectSystem.Stage.SceneLoaded );
 		}
 

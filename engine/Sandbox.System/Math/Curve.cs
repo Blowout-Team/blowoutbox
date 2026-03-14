@@ -1,4 +1,6 @@
-﻿using System.Collections.Immutable;
+﻿using BlowoutTeamSoft.Engine.Animator;
+using BlowoutTeamSoft.Engine.Interfaces.Animator;
+using System.Collections.Immutable;
 using System.Drawing;
 using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
@@ -9,7 +11,7 @@ namespace Sandbox;
 /// Describes a curve, which can have multiple key frames.
 /// </summary>
 [JsonConverter( typeof( Curve.JsonConverter ) )]
-public unsafe struct Curve
+public unsafe struct Curve : IAnimationCurve
 {
 	/// <summary>
 	/// The range of this curve. This affects looping.
@@ -186,6 +188,14 @@ public unsafe struct Curve
 		{
 			return Time.CompareTo( other.Time );
 		}
+
+		public BlowoutAnimatorKeyframe ToBlowout() =>
+			new BlowoutAnimatorKeyframe( Time, Value, In, Out );
+
+		public static implicit operator Frame( BlowoutAnimatorKeyframe keyframe )
+		{
+			return new Frame( keyframe.Time, keyframe.Value, keyframe.InTangent.Value, keyframe.OutTangent.Value );
+		}
 	}
 
 	/// <summary>
@@ -245,6 +255,16 @@ public unsafe struct Curve
 		[MethodImpl( MethodImplOptions.AggressiveInlining )]
 		get => Frames.IsDefaultOrEmpty ? 0 : Frames.Length;
 	}
+	public IEnumerable<BlowoutAnimatorKeyframe> Keyframes
+	{
+		get => Frames.Select( x => x.ToBlowout() );
+		set
+		{
+			Frames = ImmutableArray.Create( value.Select( x => (Frame)x ).ToArray() );
+		}
+	}
+
+	float IAnimationCurve.Length => Length;
 
 	public Frame this[int index]
 	{
@@ -559,6 +579,20 @@ public unsafe struct Curve
 			Frames = Frames.Select( x => { var a = x; a.Time = RemapDelta( a.Time, oldRange, newRange ); return a; } ).ToImmutableArray();
 		}
 		TimeRange = newRange;
+	}
+
+	public float Eval( float tick ) =>
+		Evaluate( tick );
+
+	public void ResetTicks()
+	{
+	}
+
+	public BlowoutAnimatorKeyframe GetKeyframe( float tick ) =>
+		Frames.SkipWhile( x => tick > x.Time ).TakeWhile( x => tick <= x.Time ).FirstOrDefault().ToBlowout();
+
+	public void OnTick( float deltaTime )
+	{
 	}
 }
 

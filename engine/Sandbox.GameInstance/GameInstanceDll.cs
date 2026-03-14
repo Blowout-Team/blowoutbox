@@ -1,4 +1,6 @@
-﻿using Microsoft.CodeAnalysis.CSharp;
+﻿using BlowoutTeamSoft.Engine.Core;
+using BlowoutTeamSoft.Engine.Interfaces;
+using Microsoft.CodeAnalysis.CSharp;
 using Sandbox.ActionGraphs;
 using Sandbox.Audio;
 using Sandbox.Diagnostics;
@@ -799,7 +801,7 @@ internal partial class GameInstanceDll : Engine.IGameInstanceDll
 			return;
 
 		// We can load and run projects if we're a Dedicated Server.
-		if ( Application.IsDedicatedServer && gameIdent.ToLower().Contains( ".sbproj" ) )
+		if ( Application.IsDedicatedServer && (gameIdent.ToLower().Contains( ".bxproj" ) || gameIdent.ToLower().Contains( ".sbproj" )))
 		{
 			await Project.InitializeBuiltIn( false );
 
@@ -812,7 +814,7 @@ internal partial class GameInstanceDll : Engine.IGameInstanceDll
 			// We should iterate all available libraries and add their projects
 			foreach ( var folder in Directory.EnumerateDirectories( libraries ) )
 			{
-				var configs = Directory.EnumerateFiles( folder, "*.sbproj" ).ToArray();
+				var configs = Directory.EnumerateFiles( folder, "*.bxproj" ).Union(Directory.EnumerateFiles( folder, "*.sbproj" )).ToArray();
 				if ( configs.Length != 1 ) continue;
 				Project.AddFromFile( configs[0] );
 			}

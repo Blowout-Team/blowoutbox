@@ -1,7 +1,7 @@
 ﻿namespace Sandbox;
 
 /// <summary>
-/// Used for sbox-dev editor
+/// Used for blowoutbox-dev editor
 /// </summary>
 public class EditorAppSystem : AppSystem
 {

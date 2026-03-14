@@ -1,4 +1,6 @@
-﻿namespace Editor;
+﻿using BlowoutTeamSoft.Debugger.Console.Results;
+
+namespace Editor;
 
 [SkipHotload]
 public static partial class ConsoleSystem
@@ -26,9 +28,9 @@ public static partial class ConsoleSystem
 	/// <summary>
 	/// Run this command. This should be a single command.
 	/// </summary>
-	public static void Run( string command )
+	public static CommandExecutionResult Run( string command )
 	{
 		// Tools can do anything, let them run any command
-		ConVarSystem.Run( command );
+		return ConVarSystem.Run( command );
 	}
 }

@@ -1,7 +1,10 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.IO;
+using System.Runtime.Serialization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Xml;
+using System.Xml.Serialization;
 
 namespace Sandbox.DataModel;
 
@@ -9,12 +12,15 @@ namespace Sandbox.DataModel;
 /// Configuration of a <see cref="Project"/>.
 /// </summary>
 [Expose]
+[DataContract]
 public class ProjectConfig
 {
 	/// <summary>
 	/// The directory housing this addon (TODO)
 	/// </summary>
 	[JsonIgnore]
+	[IgnoreDataMember]
+	[XmlIgnore]
 	[Hide]
 	public DirectoryInfo Directory { get; set; }
 
@@ -22,6 +28,8 @@ public class ProjectConfig
 	/// The directory housing this addon (TODO)
 	/// </summary>
 	[JsonIgnore]
+	[IgnoreDataMember]
+	[XmlIgnore]
 	[Hide]
 	public DirectoryInfo AssetsDirectory { get; set; }
 
@@ -30,12 +38,14 @@ public class ProjectConfig
 	/// </summary>
 	[Display( GroupName = "Setup", Order = -100, Name = "Title", Description = "The human readable title, for example \"Sandbox\", \"Counter - Strike\"" )]
 	[MaxLength( 32 )]
+	[DataMember]
 	[MinLength( 3 )]
 	public string Title { get; set; }
 
 	/// <summary>
 	/// The type of addon. Current valid values are "game"
 	/// </summary>
+	[DataMember]
 	[Display( GroupName = "Setup", Order = -90, Name = "Addon Type", Description = "Don't change this for christ's sake" )]
 	public string Type { get; set; }
 
@@ -44,6 +54,7 @@ public class ProjectConfig
 	/// </summary>
 	[Display( GroupName = "Setup", Order = -100, Name = "Organization Ident", Description = "The ident of the org that owns this addon. Set to local if you don't have an org or are just testing." )]
 	[Editor( "organization" )]
+	[DataMember]
 	public string Org { get; set; }
 
 	/// <summary>
@@ -52,6 +63,7 @@ public class ProjectConfig
 	[Display( GroupName = "Setup", Order = -100, Name = "Package Ident", Description = "The ident of this addon. A short name with no special characters." )]
 	[MaxLength( 64 )]
 	[MinLength( 2 )]
+	[DataMember]
 	[RegularExpression( @"^[a-z0-9_\-]+$", ErrorMessage = "Lower case letters and underscores, no spaces or other special characters" )]
 	public string Ident { get; set; }
 
@@ -60,6 +72,7 @@ public class ProjectConfig
 	/// </summary>
 	[JsonIgnore]
 	[Obsolete( "Compare string Type instead" )]
+	[IgnoreDataMember]
 	public Package.Type PackageType => default;
 
 	/// <summary>
@@ -67,28 +80,33 @@ public class ProjectConfig
 	/// </summary>
 	[Hide]
 	[JsonIgnore]
+	[IgnoreDataMember]
 	public string FullIdent => $"{Org}.{Ident}";
 
 	/// <summary>
 	/// The version of the addon file. Allows us to upgrade internally.
 	/// </summary>
 	[Hide]
+	[DataMember]
 	public int Schema { get; set; }
 
 	/// <summary>
 	/// If true then we'll include all the source files
 	/// </summary>
 	[Hide]
+	[DataMember]
 	public bool IncludeSourceFiles { get; set; }
 
 	/// <summary>
 	/// A list of paths in which to look for extra assets to upload with the addon. Note that compiled asset files are automatically included.
 	/// </summary>
+	[DataMember]
 	public string Resources { get; set; }
 
 	/// <summary>
 	/// A list of packages that this package depends on. These should be installed alongside this package.
 	/// </summary>
+	[DataMember]
 	public List<string> PackageReferences { get; set; }
 
 	/// <summary>
@@ -96,18 +114,20 @@ public class ProjectConfig
 	/// a model package - but there is no need to download that model package because any usage will organically be included
 	/// in the manifest. However, when loading this item in the editor, it'd make sense to install these 'cloud' packages.
 	/// </summary>
+	[DataMember]
 	public List<string> EditorReferences { get; set; }
 
 	/// <summary>
 	/// A list of mounts that are required
 	/// </summary>
+	[DataMember]
 	public List<string> Mounts { get; set; }
 
 	/// <summary>
 	/// Contains unique elements from <see cref="PackageReferences"/>, along with any implicit package references.
 	/// An example implicit reference is the parent package of an addon.
 	/// </summary>
-	[JsonIgnore, Hide]
+	[JsonIgnore, Hide, IgnoreDataMember]
 	internal IReadOnlySet<string> DistinctPackageReferences
 	{
 		get
@@ -119,15 +139,26 @@ public class ProjectConfig
 		}
 	}
 
+	[MinLength( 2 )]
+	[DataMember]
+	public string SdkCoreDefinition { get; set; } = "bin/sdk/core.bsdef";
+
+	[DataMember]
+	public List<string> SdkLibraries { get; set; }
+
+	/// WARNING: Will be removed in future in bxproj.
+	/// bxproj only supports standalone games.
 	/// <summary>
 	/// Whether or not this project is standalone-only, and supports disabling the whitelist, compiling with /unsafe, etc.
 	/// </summary>
+	[DataMember]
 	public bool IsStandaloneOnly { get; set; }
 
 	/// <summary>
 	/// Custom key-value storage for this project.
 	/// </summary>
 	[Hide]
+	[DataMember]
 	public Dictionary<string, object> Metadata { get; set; } = new();
 
 	public override string ToString() => FullIdent;
@@ -174,6 +205,26 @@ public class ProjectConfig
 	public string ToJson()
 	{
 		return Json.SerializeAsObject( this ).ToJsonString( Json.options );
+	}
+
+	/// <summary>
+	/// Serialize the entire config to a XML string.
+	/// </summary>
+	public string ToXml()
+	{
+
+		DataContractSerializer serializer = new DataContractSerializer( typeof( ProjectConfig ) , new DataContractSerializerSettings()
+		{
+			PreserveObjectReferences = true
+		} );
+
+		using StringWriter writer = new StringWriter();
+		using ( var xmlWriter = new XmlTextWriter(writer) )
+		{
+			serializer.WriteObject( xmlWriter, this );
+			writer.Flush();
+			return writer.ToString();
+		}
 	}
 
 	/// <summary>

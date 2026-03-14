@@ -1,4 +1,5 @@
 ﻿
+using BlowoutTeamSoft.Engine.Enums.Rendering;
 using NativeEngine;
 using Sandbox;
 using System.Runtime.InteropServices;
@@ -208,6 +209,18 @@ namespace Sandbox
 		public TextureBuilder WithFormat( ImageFormat format )
 		{
 			_config.m_nImageFormat = format;
+			return this;
+		}
+
+		public TextureBuilder WithFormat( BlowoutGraphicsFormat format )
+		{
+			_config.m_nImageFormat = format.ToSourceFormat();
+			return this;
+		}
+
+		public TextureBuilder WithFormat( BlowoutTextureFormat format )
+		{
+			_config.m_nImageFormat = format.ToSourceFormat();
 			return this;
 		}
 

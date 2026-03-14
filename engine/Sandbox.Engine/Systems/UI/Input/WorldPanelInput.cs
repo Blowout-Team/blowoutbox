@@ -112,7 +112,8 @@ internal class WorldPanelInput : PanelInput
 		for ( int i = 0; i < listSize; i++ )
 			if ( DoubleClicks.TryDequeue( out var e ) )
 			{
-				Hovered?.CreateEvent( new MousePanelEvent( "ondoubleclick", Hovered, e ) );
+				if ( Hovered != null && Hovered.IsEnabled )
+					Hovered.CreateEvent( new MousePanelEvent( "ondoubleclick", Hovered, e ) );
 			}
 
 		if ( MouseMovement != 0 )
@@ -121,7 +122,8 @@ internal class WorldPanelInput : PanelInput
 			var moveRecv = Hovered;
 			if ( Active != null ) moveRecv = Active;
 
-			moveRecv?.CreateEvent( new MousePanelEvent( "onmousemove", moveRecv, "none" ) );
+			if ( moveRecv != null && moveRecv.IsEnabled )
+				moveRecv.CreateEvent( new MousePanelEvent( "onmousemove", moveRecv, "none" ) );
 			MouseMovement = 0;
 		}
 	}

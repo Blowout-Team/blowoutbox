@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 
 namespace Editor;
 
@@ -46,8 +47,13 @@ public class ProjectList
 	/// </summary>
 	public Project TryAddFromFile( string path )
 	{
-		if ( !path.EndsWith( ".sbproj" ) )
-			path = System.IO.Path.Combine( path, ".sbproj" );
+		if ( !path.EndsWith( ".bxproj" ) && ! path.EndsWith(".sbproj") )
+		{
+			var oldpath = path;
+			path = System.IO.Path.Combine( path, ".bxproj" );
+			if(!File.Exists(path))
+				path = System.IO.Path.Combine( oldpath, ".sbproj" );
+		}
 
 		var cleanPath = System.IO.Path.GetFullPath( path );
 

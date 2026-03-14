@@ -1,5 +1,6 @@
 using NativeEngine;
 using Sandbox.Mounting;
+using System.Threading;
 
 namespace Sandbox;
 
@@ -27,8 +28,9 @@ public partial class Material
 	/// Load a material from disk. Has internal cache.
 	/// </summary>
 	/// <param name="filename">The filepath to load the material from.</param>
+	/// <param name="token">Token to cancel operation.</param>
 	/// <returns>The loaded material, or null</returns>
-	public static async Task<Material> LoadAsync( string filename )
+	public static async Task<Material> LoadAsync( string filename, CancellationToken token = default )
 	{
 		ThreadSafe.AssertIsMainThread();
 
@@ -38,7 +40,7 @@ public partial class Material
 		using var manifest = AsyncResourceLoader.Load( filename );
 		if ( manifest is not null )
 		{
-			await manifest.WaitForLoad();
+			await manifest.WaitForLoad(token);
 		}
 
 		return FromNative( NativeGlue.Resources.GetMaterial( filename ) );

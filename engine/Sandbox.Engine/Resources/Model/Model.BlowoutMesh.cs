@@ -2,6 +2,7 @@
 using BlowoutTeamSoft.Engine.Interfaces.Geometry;
 using BlowoutTeamSoft.Engine.Interfaces.Mesh;
 using BlowoutTeamSoft.Engine.Render;
+using BlowoutTeamSoft.Engine.Validators;
 using NoAlloq;
 using System;
 using System.Collections.Generic;
@@ -17,13 +18,10 @@ public partial class Model : IBlowoutMesh, IBlowoutModel
 	{
 		get
 		{
-			//dehs: unsafe?
 			Span<Vertex> buffer = stackalloc Vertex[VertexCount];
 			var count = GetVerticesSpan( buffer );
-			foreach ( var position in buffer[..count].Select( x => x.Position ) )
-			{
-				yield return position;
-			}
+
+			return buffer[..count].Select( x => x.Position.ToSystemNumerics() ).ToArray();
 		}
 		set
 		{
@@ -36,10 +34,7 @@ public partial class Model : IBlowoutMesh, IBlowoutModel
 		{
 			Span<Vertex> buffer = stackalloc Vertex[VertexCount];
 			var count = GetVerticesSpan( buffer );
-			foreach ( var color in buffer[..count].Select( x => x.Color ) )
-			{
-				yield return color.ToColor().ToBlowoutColor();
-			}
+			return buffer[..count].Select( x => x.Color.ToColor().ToBlowoutColor() ).ToArray();
 		}
 		set
 		{
@@ -49,8 +44,11 @@ public partial class Model : IBlowoutMesh, IBlowoutModel
 
 	IBlowoutBounds IBlowoutModel.Bounds => Bounds;
 
-	void IDisposable.Dispose()
+	public BlowoutValidatorResult Validate()
 	{
-		Dispose();
+		if ( !IsValid )
+			return BlowoutValidatorResult.WithError("Native handle is nullptr");
+
+		return BlowoutValidatorResult.Success;
 	}
 }

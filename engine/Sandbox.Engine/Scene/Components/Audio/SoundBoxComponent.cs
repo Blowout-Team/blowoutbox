@@ -63,7 +63,7 @@ public sealed class SoundBoxComponent : BaseSoundComponent
 
 		if ( SoundHandle.IsValid() && SoundHandle.IsPlaying ) return;
 
-		SoundHandle = Sound.Play( SoundEvent );
+		SoundHandle = Sandbox.Sound.Play( SoundEvent );
 
 		if ( SoundHandle.IsValid() )
 		{
