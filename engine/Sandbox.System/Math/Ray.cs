@@ -1,5 +1,4 @@
-﻿using System.Numerics;
-using Sandbox;
+﻿using Sandbox;
 
 /// <summary>
 /// A struct describing an origin and direction

@@ -1,4 +1,6 @@
-﻿namespace Sandbox.Audio;
+﻿using BlowoutTeamSoft.Engine.Interfaces.Audio;
+
+namespace Sandbox.Audio;
 
 /// <summary>
 /// Holds up to 8 mix buffers, which usually represent output speakers.

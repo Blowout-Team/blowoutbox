@@ -1,6 +1,7 @@
 ﻿using Sandbox;
 using System.Numerics;
 using System.Runtime.InteropServices;
+using Sandbox;
 
 namespace Facepunch.XR;
 
@@ -183,7 +184,7 @@ internal struct TrackedDevicePose
 		var forward = -posz;
 		var left = -posx;
 
-		var pos = new Vector3( forward, left, up ) * 1f.MeterToInch();
+		var pos = new Sandbox.Vector3( forward, left, up ) * 1f.MeterToInch();
 
 		var rx = -rotz;
 		var ry = -rotx;

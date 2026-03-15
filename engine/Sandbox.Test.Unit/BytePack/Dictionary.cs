@@ -21,7 +21,7 @@ public partial class RoundTrip
 	{
 		DoRoundTrip( new Dictionary<string, int> { { "one", 1 }, { "two", 2 } } );
 		DoRoundTrip( new Dictionary<string, string> { { "one", "one" }, { "two", "one" } } );
-		DoRoundTrip( new Dictionary<string, Vector3> { { "one", global::Vector3.One }, { "two", global::Vector3.One * 2.0f } } );
+		DoRoundTrip( new Dictionary<string, Vector3> { { "one", global::Sandbox.Vector3.One }, { "two", global::Sandbox.Vector3.One * 2.0f } } );
 	}
 
 	[TestMethod]
@@ -38,10 +38,10 @@ public partial class RoundTrip
 	[TestMethod]
 	public void Dictionary_Values_Huge()
 	{
-		var dct = new Dictionary<int, global::Vector3>();
+		var dct = new Dictionary<int, global::Sandbox.Vector3>();
 
 		for ( int i = 0; i < 10_000; i++ )
-			dct.Add( i, global::Vector3.One );
+			dct.Add( i, global::Sandbox.Vector3.One );
 
 		DoRoundTrip( dct );
 	}
@@ -53,7 +53,7 @@ public partial class RoundTrip
 		DoRoundTrip( new Dictionary<object, object> { { 0, 1 }, { 2000.0, "the" }, { 4, 6.0f } } );
 		DoRoundTrip( new Dictionary<object, object> { { 0, 1 }, { 2000.0, "the" }, { 4, 6.0f }, { 99.95f, 89 }, { 55, 34 }, { "poops", null } } );
 
-		var objectArray = new object[] { 1, 2000.0, "the", 4, 6.0f, global::Vector3.One, null, null, 34, "poops" };
+		var objectArray = new object[] { 1, 2000.0, "the", 4, 6.0f, global::Sandbox.Vector3.One, null, null, 34, "poops" };
 		var valueArray = new int[] { 1, 2, 3, 4 };
 
 		DoRoundTrip( new Dictionary<object, object> { { 0, 1 }, { 2, objectArray }, { "the", valueArray } } );
@@ -71,7 +71,7 @@ public partial class RoundTrip
 		var dct = new Dictionary<object, object>();
 
 		for ( int i = 0; i < 10_000; i++ )
-			dct.Add( i, global::Vector3.Random );
+			dct.Add( i, global::Sandbox.Vector3.Random );
 
 		DoRoundTrip( dct );
 	}

@@ -1,4 +1,6 @@
-﻿using Sandbox.UI;
+﻿using BlowoutTeamSoft.Engine.GraphicalUserInterface;
+using BlowoutTeamSoft.Engine.Render;
+using Sandbox.UI;
 using System.Runtime.InteropServices;
 using System.Text.Json.Serialization;
 
@@ -459,6 +461,8 @@ public struct Rect : System.IEquatable<Rect>
 		// Repoisition
 		return Align( newSize, align );
 	}
+
+	public static implicit operator Rect( BlowoutRect value ) => new Rect(value.X, value.Y, value.Width, value.Height);
 
 	#region equality
 

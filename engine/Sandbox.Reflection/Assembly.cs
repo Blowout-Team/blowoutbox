@@ -15,4 +15,5 @@ using System.Runtime.CompilerServices;
 [assembly: InternalsVisibleTo( "Sandbox.GameInstance" )]
 [assembly: InternalsVisibleTo( "Benchmark" )]
 
+[assembly: InternalsVisibleTo("BlowoutTeamSoft.Engine.Systems")]
 

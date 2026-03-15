@@ -21,6 +21,13 @@ namespace Sandbox
 
 		public Vertex Default;
 
+		public VertexBuffer() { }
+
+		internal VertexBuffer(List<Vertex> vertices)
+		{
+			Vertex = vertices;
+		}
+
 		/// <summary>
 		/// Clear all vertices and indices, and resets <see cref="Default"/>.
 		/// </summary>

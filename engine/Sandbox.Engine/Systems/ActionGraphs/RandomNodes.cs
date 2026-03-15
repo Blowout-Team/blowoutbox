@@ -39,13 +39,13 @@ namespace Sandbox.ActionGraphs
 		[Obsolete, ActionGraphNode( "random.vector2" ), Pure, Title( "Random Vector2" ), Description( " Uniformly samples a 2D position from all points with distance at most 1 from the origin." ), Icon( "casino" ), Category( "Random" )]
 		public static Vector2 Vector2()
 		{
-			return global::Vector2.Random;
+			return global::Sandbox.Vector2.Random;
 		}
 
 		[Obsolete, ActionGraphNode( "random.vector3" ), Pure, Title( "Random Vector3" ), Description( " Uniformly samples a 3D position from all points with distance at most 1 from the origin." ), Icon( "casino" ), Category( "Random" )]
 		public static Vector3 Vector3()
 		{
-			return global::Vector3.Random;
+			return global::Sandbox.Vector3.Random;
 		}
 	}
 }

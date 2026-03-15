@@ -1,5 +1,12 @@
-﻿using System.Runtime.CompilerServices;
+﻿using BlowoutTeamSoft.Engine;
+using BlowoutTeamSoft.Engine.Core;
+using BlowoutTeamSoft.Engine.Exceptions;
+using BlowoutTeamSoft.Engine.Interfaces;
+using BlowoutTeamSoft.Engine.Query;
 using Sandbox.ActionGraphs;
+using System.Runtime.CompilerServices;
+using System.Runtime.Serialization;
+using System.Text.Json.Serialization;
 using System.Threading;
 
 namespace Sandbox;
@@ -10,7 +17,7 @@ namespace Sandbox;
 /// is still in the scene, but the components don't tick and are all disabled.
 /// </summary>
 [Expose, ActionGraphIgnore, ActionGraphExposeWhenCached]
-public partial class GameObject : IJsonConvert, IComponentLister, BytePack.ISerializer
+public partial class GameObject : BlowoutEngineGameObject, IJsonConvert, IComponentLister, BytePack.ISerializer
 {
 	/// <summary>
 	/// The scene that this GameObject is in.
@@ -23,7 +30,22 @@ public partial class GameObject : IJsonConvert, IComponentLister, BytePack.ISeri
 	/// <summary>
 	/// Our position relative to our parent, or the scene if we don't have any parent.
 	/// </summary>
-	public GameTransform Transform => _gameTransform;
+	public override GameTransform Transform => _gameTransform;
+
+	[JsonIgnore, Hide]
+	public override bool IsActive { get => Enabled; set => Enabled = value; }
+
+	[JsonIgnore, Hide]
+	public override BlowoutLayerMask Layer
+	{
+		get => new BlowoutLayerMask( Tags.TryGetAll().Skip( 1 ) );
+		set
+		{
+			Tags.Overwrite( value.ToStrings().Prepend( Tag ) );
+		}
+	}
+
+	public override bool IsStatic { get; set; }
 
 	/// <summary>
 	/// The GameObject's name is usually used for debugging, and for finding it in the scene.
@@ -39,12 +61,32 @@ public partial class GameObject : IJsonConvert, IComponentLister, BytePack.ISeri
 			UpdateHumanReadableId();
 		}
 	}
+
+	[Hide, JsonIgnore, IgnoreDataMember]
+	public override string ObjectName { get => Name; set => Name = value; }
+
 	private string _name = "Untitled Object";
 
 	/// <summary>
 	/// Returns true of this is a root object. Root objects are parented to the scene.
 	/// </summary>
 	public bool IsRoot => Parent is Scene;
+
+	public Index SiblidingIndex
+	{
+		get
+		{
+			return Parent?.Children.IndexOf( this ) ?? 0;
+		}
+		set
+		{
+			if ( Parent is null )
+				return;
+
+			Parent.RemoveChild( this );
+			Parent.Children.Insert( value.IsFromEnd ? Parent.Children.Count - value.Value : value.Value, this );
+		}
+	}
 
 	/// <summary>
 	/// Return the root GameObject. The root is the object that is parented to the scene - which could very much be this object.
@@ -124,7 +166,7 @@ public partial class GameObject : IJsonConvert, IComponentLister, BytePack.ISeri
 		Tags = new GameTags( this );
 		_enabled = enabled;
 
-		Id = Guid.NewGuid();
+		_SetIdCore( Guid.NewGuid() );
 		Name = name ?? "GameObject";
 		Parent = parent;
 
@@ -148,6 +190,19 @@ public partial class GameObject : IJsonConvert, IComponentLister, BytePack.ISeri
 	public override string ToString()
 	{
 		return $"GameObject:{Name}";
+	}
+
+	public override BlowoutEngineGameObject CreateInstance() =>
+		!IsPrefabInstance? this : Clone();
+
+	public override BlowoutEngineObject CreateClone() =>
+		Clone();
+
+	public override T CastTo<T>()
+	{
+		return this is T target
+			? target
+			: throw new BlowoutEngineException( string.Format( "Unable cast game object to type '{0}'", typeof( T ).FullName ) );
 	}
 
 	/// <summary>
@@ -316,7 +371,7 @@ public partial class GameObject : IJsonConvert, IComponentLister, BytePack.ISeri
 		//
 		// Tags could have changed
 		//
-		foreach ( var c in Components.GetAll( FindMode.EnabledInSelfAndDescendants ) )
+		foreach ( var c in Components.GetAll( FindMode.EnabledInSelfAndDescendants ).OfType<Component>() )
 		{
 			c.OnTagsUpdatedInternal();
 		}
@@ -329,7 +384,13 @@ public partial class GameObject : IJsonConvert, IComponentLister, BytePack.ISeri
 		//
 		// Let components react to this
 		//
-		Components.ForEach( "OnParentChanged", false, c => c.OnParentChangedInternal( oldParent, parent ) );
+		Components.ForEach( "OnParentChanged", false, c =>
+		{
+			if(c is Component comp )
+			{
+				comp.OnParentChangedInternal( oldParent, parent );
+			}
+		} );
 
 		// We should tell our children and they should tell their children, propogate it down
 		// as like a OnHeirachyChanged or something
@@ -425,7 +486,14 @@ public partial class GameObject : IJsonConvert, IComponentLister, BytePack.ISeri
 			CancelTaskSource();
 		}
 
-		Components.ForEach( "UpdateEnabledStatus", true, c => c.UpdateEnabledStatus() );
+		Components.ForEach( "UpdateEnabledStatus", true, c =>
+		{
+			if ( c is Component comp )
+			{
+				comp.UpdateEnabledStatus();
+			}
+		} );
+
 		ForEachChild( "UpdateEnabledStatus", true, c => c.UpdateEnabledStatus() );
 	}
 
@@ -433,7 +501,13 @@ public partial class GameObject : IJsonConvert, IComponentLister, BytePack.ISeri
 	{
 		using var batch = CallbackBatch.Batch();
 
-		Components.ForEach( "UpdateEnabledStatus", true, c => c.UpdateEnabledStatus() );
+		Components.ForEach( "UpdateEnabledStatus", true, c =>
+		{
+			if(c is Component comp )
+			{
+				comp.UpdateEnabledStatus();
+			}
+		} );
 		ForEachChild( "UpdateEnabledStatus", true, c => c.UpdateNetworkCulledState() );
 	}
 
@@ -733,6 +807,17 @@ public partial class GameObject : IJsonConvert, IComponentLister, BytePack.ISeri
 		}
 
 		Scene?.Directory?.Add( component );
+		ClearInternalCache();
+	}
+
+	internal void OnGameSystemAdded( IBlowoutGameSystem gameSystem )
+	{
+		if ( gameSystem is Component.INetworkVisible netVisible )
+		{
+			NetworkVisibility = netVisible;
+		}
+
+		Scene?.Directory?.Add( gameSystem );
 		ClearInternalCache();
 	}
 

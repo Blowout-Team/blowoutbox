@@ -13,7 +13,7 @@ internal class Test( string name ) : Step( name )
 			string engineDir = Path.Combine( rootDir, "engine" );
 			string gameDir = Path.Combine( rootDir, "game" );
 
-			var managedTestArgs = "test --logger \"console;verbosity=normal;consoleLoggerParameters=ErrorsOnly\" -c Release --property:OutputPath=bin/test";
+			var managedTestArgs = "test --logger \"console;verbosity=normal;consoleLoggerParameters=ErrorsOnly\" -c Blowout_Source2_Release --property:OutputPath=bin/test";
 			//if ( Utility.IsCi() )
 			//{
 			// Use cusotm loger for problem matching

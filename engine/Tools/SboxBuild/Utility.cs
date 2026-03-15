@@ -71,7 +71,7 @@ internal static class Utility
 				}
 				else
 				{
-					Log.Info( e.Data );
+					Log.Trace( e.Data );
 				}
 			}
 		};

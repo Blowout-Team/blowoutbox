@@ -6,6 +6,8 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text.Json.Serialization;
 
+namespace Sandbox;
+
 /// <summary>
 /// A 3-dimentional vector. Typically represents a position, size, or direction in 3D space.
 /// </summary>
@@ -267,6 +269,9 @@ public partial struct Vector3 : System.IEquatable<Vector3>, IParsable<Vector3>, 
 
 		return this;
 	}
+
+	public System.Numerics.Vector3 ToSystemNumerics() =>
+		new System.Numerics.Vector3( x, y, z );
 
 	/// <summary>
 	/// Returns a vector each axis of which is clamped to between the 2 given vectors. Basically clamps a point to an Axis Aligned Bounding Box (AABB).

@@ -148,6 +148,15 @@ public partial class Panel
 		return false;
 	}
 
+	public bool HasClass( ReadOnlySpan<char> classname )
+	{
+		if ( _class == null ) return false;
+		if ( classname.Length < 1 ) return false;
+
+		if ( _class.Contains( classname.ToString() ) ) return true;
+		return false;
+	}
+
 	/// <summary>
 	/// Whether if we have <b>all</b> of these CSS classes.
 	/// </summary>

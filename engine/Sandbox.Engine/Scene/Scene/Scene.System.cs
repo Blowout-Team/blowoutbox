@@ -1,4 +1,5 @@
-﻿using System.Text.Json.Nodes;
+﻿using BlowoutTeamSoft.Engine.Attributes;
+using System.Text.Json.Nodes;
 
 namespace Sandbox;
 
@@ -70,7 +71,7 @@ public partial class Scene
 
 		using ( Push() )
 		{
-			foreach ( var property in systemType.Properties.Where( x => x.HasAttribute<PropertyAttribute>() ) )
+			foreach ( var property in systemType.Properties.Where( x => x.HasAttribute<PropertyAttribute>() || x.HasAttribute<BlowoutExposeField>() ) )
 			{
 				if ( !property.CanWrite ) continue;
 
@@ -84,6 +85,22 @@ public partial class Scene
 					catch ( Exception ex )
 					{
 						Log.Warning( $"Failed to apply config value to {systemType.FullName}.{property.Name}: {ex.Message}" );
+					}
+				}
+			}
+
+			foreach ( var field in systemType.Fields.Where( x => x.HasAttribute<PropertyAttribute>() || x.HasAttribute<BlowoutExposeField>() ) )
+			{
+				// Apply project-wide value if it exists
+				if ( ProjectSettings.Systems.TryGetFieldValue( systemType, field, out var value ) )
+				{
+					try
+					{
+						field.SetValue( system, value );
+					}
+					catch ( Exception ex )
+					{
+						Log.Warning( $"Failed to apply config value to {systemType.FullName}.{field.Name}: {ex.Message}" );
 					}
 				}
 			}
@@ -122,7 +139,7 @@ public partial class Scene
 			if ( !overrides.TryGetValue( systemType.FullName, out var properties ) )
 				continue;
 
-			foreach ( var property in systemType.Properties.Where( x => x.HasAttribute<PropertyAttribute>() ) )
+			foreach ( var property in systemType.Properties.Where( x => x.HasAttribute<PropertyAttribute>() || x.HasAttribute<BlowoutExposeField>() ) )
 			{
 				if ( !property.CanWrite ) continue;
 
@@ -137,6 +154,22 @@ public partial class Scene
 					catch ( Exception ex )
 					{
 						Log.Warning( $"Failed to apply scene override to {systemType.FullName}.{property.Name}: {ex.Message}" );
+					}
+				}
+			}
+
+			foreach ( var field in systemType.Fields.Where( x => x.HasAttribute<PropertyAttribute>() || x.HasAttribute<BlowoutExposeField>() ) )
+			{
+				if ( properties.TryGetPropertyValue( field.Name, out var valueNode ) )
+				{
+					try
+					{
+						var value = Json.FromNode( valueNode, field.FieldType );
+						field.SetValue( system, value );
+					}
+					catch ( Exception ex )
+					{
+						Log.Warning( $"Failed to apply scene override to {systemType.FullName}.{field.Name}: {ex.Message}" );
 					}
 				}
 			}

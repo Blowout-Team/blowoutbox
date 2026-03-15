@@ -6,6 +6,7 @@
 		<LangVersion>14</LangVersion>
 		<EnforceExtendedAnalyzerRules>false</EnforceExtendedAnalyzerRules>
 		<AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+		<Configurations>Debug;Release;Blowout_Source2_Debug;Blowout_Source2_Release</Configurations>
 	</PropertyGroup>
 
 	<ItemGroup>

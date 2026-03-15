@@ -17,8 +17,8 @@ namespace Editor
 			Singleton = this;
 			DeleteOnClose = true;
 
-			WindowTitle = "Opening s&box Editor";
-			SetWindowIcon( Pixmap.FromFile( "window_icon.png" ) );
+			WindowTitle = "Opening b&box Editor [BlowoutTeamSoft]";
+			SetWindowIcon( Pixmap.FromFile("blow_window_icon.png") );
 			BackgroundImage = LoadSplashImage();
 
 			// load any saved geometry
@@ -62,7 +62,7 @@ namespace Editor
 			if ( !string.IsNullOrEmpty( projectPath ) )
 			{
 				var projectDir = Path.GetDirectoryName( Path.GetFullPath( projectPath ) );
-				var customSplash = Path.Combine( projectDir, "splash_screen.png" );
+				var customSplash = Path.Combine( projectDir, "blow_splash_screen.png");
 
 				if ( File.Exists( customSplash ) )
 				{
@@ -72,7 +72,7 @@ namespace Editor
 				}
 			}
 
-			return Pixmap.FromFile( "splash_screen.png" );
+			return Pixmap.FromFile("blow_splash_screen.png");
 		}
 
 		public override void OnDestroyed()
@@ -163,8 +163,8 @@ namespace Editor
 
 			var projectTitle = Project.Current?.Config?.Title;
 			var title = string.IsNullOrEmpty( projectTitle )
-				? "s&box Editor"
-				: $"s&box Editor - {projectTitle}";
+				? "bsource Editor"
+				: $"bsource Editor [{projectTitle}]";
 
 			Paint.SetPen( Color.White );
 			Paint.SetDefaultFont( 10, 600 );

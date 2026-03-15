@@ -1,6 +1,9 @@
-﻿using Facepunch.ActionGraphs;
+﻿using BlowoutTeamSoft.Engine.Attributes;
+using BlowoutTeamSoft.Engine.Maps;
+using Facepunch.ActionGraphs;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Threading;
 
 namespace Sandbox;
 
@@ -156,6 +159,177 @@ public partial class Scene : GameObject
 		return true;
 	}
 
+	public bool Load( BlowoutMap map, IProgress<float> progress, SceneLoadOptions options )
+	{
+		SceneFile sceneFile = options.GetSceneFile();
+		if ( sceneFile == null && !string.IsNullOrEmpty( map.AssetSource ) )
+		{
+			ResourceLibrary.TryGet( map.AssetSource, out sceneFile );
+		}
+
+		if ( sceneFile != null && !sceneFile.IsValid() )
+		{
+			Log.Error( "No valid Scene was found in SceneLoadOptions." );
+			return false;
+		}
+
+		if ( sceneFile != null && sceneFile.ResourceName != null )
+		{
+			Name = sceneFile.ResourceName.ToTitleCase();
+		}
+		else
+			Name = map.Name;
+
+		ProcessDeletes();
+
+		if ( !options.IsAdditive )
+		{
+			if ( options.DeleteEverything )
+			{
+				Clear( true );
+			}
+			else
+			{
+				// get all the gameobjects that should survive
+				var savedObjects = GetAllObjects( false ).Where( x => x.Flags.Contains( GameObjectFlags.DontDestroyOnLoad ) );
+
+				// move them to the scene root
+				foreach ( var saved in savedObjects )
+				{
+					saved.SetParent( this );
+				}
+
+				Clear( false );
+			}
+
+			ProcessDeletes();
+		}
+
+		if ( !IsEditor && options.ShowLoadingScreen )
+		{
+			StartLoading();
+			LoadingScreen.IsVisible = true;
+			LoadingScreen.Title = "Loading Scene";
+		}
+
+		RunEvent<ISceneLoadingEvents>( x => x.BeforeLoad( this, options ) );
+
+		if ( sceneFile == null && map.Id != Guid.Empty )
+		{
+			ForceChangeId( map.Id );
+			Directory.Add( this );
+		}
+		else if ( sceneFile.Id != Guid.Empty && sceneFile.Id != Id )
+		{
+			ForceChangeId( sceneFile.Id );
+			Directory.Add( this );
+		}
+
+		if ( !options.IsAdditive && sceneFile != null )
+		{
+			Source = sceneFile;
+		}
+
+		{
+			if ( sceneFile != null )
+			{
+				using var optionsScope = ActionGraph.PushSerializationOptions( sceneFile.SerializationOptions with { ForceUpdateCached = IsEditor } );
+				using var sceneScope = Push();
+
+				// Depending on if we load a scene from file or from memory, we need to account for that here
+				using var blobs = BlobDataSerializer.Load( sceneFile.BinaryData, sceneFile.ResourcePath );
+				using var batchGroup = CallbackBatch.Batch();
+
+				// Clear cached binary data now that we've loaded it
+				sceneFile.BinaryData = null;
+
+				if ( sceneFile.GameObjects is not null )
+				{
+					int i = 0;
+					foreach ( var json in sceneFile.GameObjects )
+					{
+
+						progress.Report( sceneFile.GameObjects.Length * i / 100 );
+						var go = CreateObject( false );
+						go.Deserialize( json );
+						i++;
+					}
+				}
+
+				if ( sceneFile.SceneProperties is not null )
+				{
+					DeserializeProperties( sceneFile.SceneProperties, options.IsSystemScene );
+				}
+			}
+			else
+			{
+				using var optionsScope = ActionGraph.PushSerializationOptions( new SerializationOptions() { ForceUpdateCached = IsEditor } );
+				using var sceneScope = Push();
+
+				using var batchGroup = CallbackBatch.Batch();
+
+				if ( map.GameObjects is not null )
+				{
+					int i = 0;
+					int count = map.GameObjects.Count();
+					foreach ( var descriptor in map.GameObjects )
+					{
+						progress.Report( count * i / 100 );
+						var go = CreateObject( false );
+						go.Transform.WorldPosition = descriptor.Transform.Position;
+						go.LocalPosition = descriptor.Transform.LocalPosition;
+
+						go.Transform.WorldRotation = descriptor.Transform.Rotation;
+						go.LocalRotation = descriptor.Transform.LocalRotatation;
+
+						go.WorldScale = descriptor.Transform.Scale;
+						go.Name = descriptor.Name;
+
+						if ( descriptor.GameSystems is not null )
+						{
+							foreach ( var gameSystem in descriptor.GameSystems )
+							{
+								var instance = go.AddGameSystem( gameSystem.ResolveSystemType() );
+							}
+						}
+						i++;
+					}
+				}
+			}
+
+			List<LoadingContext> sceneLoadingTasks = new();
+			RunEvent<ISceneLoadingEvents>( x =>
+			{
+				var context = new LoadingContext();
+				context.Task = x.OnLoad( this, options, context );
+
+				sceneLoadingTasks.Add( context );
+			} );
+
+			foreach ( var task in sceneLoadingTasks )
+			{
+				AddLoadingTask( task );
+			}
+
+			if ( !IsEditor )
+			{
+				NetworkSpawnRecursive( null );
+			}
+		}
+
+		if ( !IsEditor && !options.IsAdditive )
+		{
+			AddSystemScene();
+		}
+
+		if ( !options.IsSystemScene )
+		{
+			Signal( GameObjectSystem.Stage.SceneLoaded );
+		}
+
+		return true;
+	}
+
 	/// <summary>
 	/// Load from the provided file name. This will not load the scene for other clients in a
 	/// multiplayer session, you should instead use <see cref="Game.ChangeScene"/>
@@ -241,7 +415,19 @@ public partial class Scene : GameObject
 
 		foreach ( var prop in Game.TypeLibrary.GetType<Scene>()
 			.Properties
-			.Where( x => x.HasAttribute<PropertyAttribute>() )
+			.Where( x => x.HasAttribute<PropertyAttribute>() || x.HasAttribute<BlowoutExposeField>() )
+			.OrderBy( x => x.Name ) )
+		{
+			if ( prop.Name == "Enabled" ) continue;
+			if ( prop.Name == "Name" ) continue;
+			if ( prop.Name == "Lerp" ) continue;
+
+			jso.Add( prop.Name, JsonValue.Create( prop.GetValue( this ) ) );
+		}
+
+		foreach ( var prop in Game.TypeLibrary.GetType<Scene>()
+			.Fields
+			.Where( x => x.HasAttribute<BlowoutExposeField>() )
 			.OrderBy( x => x.Name ) )
 		{
 			if ( prop.Name == "Enabled" ) continue;
@@ -278,13 +464,13 @@ public partial class Scene : GameObject
 			var systemTypeName = systemType.FullName;
 			Dictionary<string, object> propertiesToSerialize = null;
 
-			foreach ( var property in systemType.Properties.Where( x => x.HasAttribute<PropertyAttribute>() ) )
+			foreach ( var property in systemType.Properties.Where( x => x.HasAttribute<PropertyAttribute>() || x.HasAttribute<BlowoutExposeField>() ) )
 			{
 				if ( !property.CanWrite ) continue;
 
 				var currentValue = property.GetValue( system );
 				var hasGlobalValue = ProjectSettings.Systems.TryGetPropertyValue( systemType, property, out var globalValue );
-				var compareValue = hasGlobalValue ? globalValue : property.GetCustomAttribute<DefaultValueAttribute>()?.Value;
+				var compareValue = hasGlobalValue ? globalValue : property.GetCustomAttribute<DefaultValueAttribute>()?.Value ?? property.GetCustomAttribute<System.ComponentModel.DefaultValueAttribute>()?.Value;
 
 				var currentJson = JsonSerializer.SerializeToNode( currentValue, Json.options );
 				var compareJson = JsonSerializer.SerializeToNode( compareValue, Json.options );
@@ -294,6 +480,23 @@ public partial class Scene : GameObject
 				{
 					propertiesToSerialize ??= new Dictionary<string, object>();
 					propertiesToSerialize[property.Name] = currentValue;
+				}
+			}
+
+			foreach ( var field in systemType.Fields.Where( x => x.HasAttribute<PropertyAttribute>() || x.HasAttribute<BlowoutExposeField>() ) )
+			{
+				var currentValue = field.GetValue( system );
+				var hasGlobalValue = ProjectSettings.Systems.TryGetFieldValue( systemType, field, out var globalValue );
+				var compareValue = hasGlobalValue ? globalValue : field.GetCustomAttribute<DefaultValueAttribute>()?.Value ?? field.GetCustomAttribute<System.ComponentModel.DefaultValueAttribute>()?.Value;
+
+				var currentJson = JsonSerializer.SerializeToNode( currentValue, Json.options );
+				var compareJson = JsonSerializer.SerializeToNode( compareValue, Json.options );
+
+				// Is this slow?
+				if ( !JsonNode.DeepEquals( currentJson, compareJson ) )
+				{
+					propertiesToSerialize ??= new Dictionary<string, object>();
+					propertiesToSerialize[field.Name] = currentValue;
 				}
 			}
 

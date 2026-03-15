@@ -1,4 +1,6 @@
-﻿namespace Editor;
+﻿using BlowoutTeamSoft.Engine.Interfaces.Assets;
+
+namespace Editor;
 
 [CustomEditor( typeof( Resource ) )]
 public class ResourceControlWidget : ControlWidget
@@ -143,8 +145,8 @@ public class ResourceControlWidget : ControlWidget
 	{
 		var m = new ContextMenu();
 
-		var resource = SerializedProperty.GetValue<Resource>( null );
-		var asset = (resource != null) ? AssetSystem.FindByPath( resource.ResourcePath ) : null;
+		var resource = SerializedProperty.GetValue<IBlowoutEngineAsset>( null );
+		var asset = (resource != null) ? AssetSystem.FindByPath( resource.AssetPath ) : null;
 
 		m.AddOption( "Open in Editor", "edit", () => asset?.OpenInEditor() ).Enabled = asset != null && !asset.IsProcedural;
 		m.AddOption( "Find in Asset Browser", "search", () => LocalAssetBrowser.OpenTo( asset, true ) ).Enabled = asset is not null;
@@ -164,10 +166,10 @@ public class ResourceControlWidget : ControlWidget
 
 		if ( ReadOnly ) return;
 
-		var resource = SerializedProperty.GetValue<Resource>( null );
-		var asset = resource != null ? AssetSystem.FindByPath( resource.ResourcePath ) : null;
+		var resource = SerializedProperty.GetValue<IBlowoutEngineAsset>( null );
+		var asset = resource != null ? AssetSystem.FindByPath( resource.AssetPath ) : null;
 
-		var assetType = AssetType.FromType( resource.IsValid() ? resource.GetType() : SerializedProperty.PropertyType );
+		var assetType = AssetType.FromType( resource.IsAlive ? resource.GetType() : SerializedProperty.PropertyType );
 
 		PropertyStartEdit();
 
@@ -192,7 +194,7 @@ public class ResourceControlWidget : ControlWidget
 		if ( asset is null ) return;
 		if ( !CanAssignAssetType( asset ) ) return;
 
-		Resource resource;
+		IBlowoutEngineAsset resource;
 		if ( SerializedProperty.PropertyType.IsInterface )
 		{
 			// For interface types, use the asset directly since we've already verified

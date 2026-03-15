@@ -1,5 +1,10 @@
-﻿using System.Runtime.InteropServices;
+﻿using BlowoutTeamSoft.Engine.Interfaces.Audio;
+using BlowoutTeamSoft.Engine.Interfaces.Audio.Async;
+using System.Runtime.InteropServices;
+using System.Runtime.Serialization;
 using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
+using System.Threading;
 
 namespace Sandbox.Audio;
 
@@ -7,7 +12,7 @@ namespace Sandbox.Audio;
 /// Takes a bunch of samples and processes them. It's common for these to be chained together.
 /// It's also common for the processor to store state between calls.
 /// </summary>
-public abstract partial class AudioProcessor
+public abstract partial class AudioProcessor : IAudioEffect, IAudioEffectAsync
 {
 	/// <summary>
 	/// Is this processor active?
@@ -21,6 +26,12 @@ public abstract partial class AudioProcessor
 	[Range( 0, 1 )]
 	[Group( "Processor Settings" )]
 	public float Mix { get; set; } = 1;
+
+	[DataMember, JsonInclude, Hide]
+	public bool IsAlive { get; private set; } = true;
+
+	[IgnoreDataMember, Hide, JsonIgnore]
+	private bool _requestDestroy;
 
 	private MultiChannelBuffer scratch = new MultiChannelBuffer( 8 );
 
@@ -102,7 +113,34 @@ public abstract partial class AudioProcessor
 
 	internal virtual void OnRemovedInternal()
 	{
+		_requestDestroy = true;
 		OnDestroy();
+	}
+
+	public void Apply( IAudioChannel channel )
+	{
+		throw new NotImplementedException();
+	}
+
+	public Task ApplyAsync( IAudioChannel channel, CancellationToken token = default )
+	{
+		throw new NotImplementedException();
+	}
+
+	public void Dispose()
+	{
+		IsAlive = false;
+		GC.SuppressFinalize( this );
+	}
+
+	public async ValueTask DisposeAsync()
+	{
+		IsAlive = false;
+		GC.SuppressFinalize( this );
+		while ( !_requestDestroy )
+		{
+			await Task.Yield();
+		}
 	}
 }
 

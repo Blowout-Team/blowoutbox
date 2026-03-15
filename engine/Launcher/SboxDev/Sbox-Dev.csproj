@@ -7,7 +7,7 @@
 		<AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<GenerateDocumentationFile>False</GenerateDocumentationFile>
-		<AssemblyName>sbox-dev</AssemblyName>
+		<AssemblyName>bsource-dev</AssemblyName>
 		<CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
 		<SatelliteResourceLanguages>en</SatelliteResourceLanguages>
 		<NoWarn>1701;1702;1591;NETSDK1138</NoWarn>
@@ -22,14 +22,16 @@
 		<StartupObject>Sandbox.Program</StartupObject>
 		<ProduceReferenceAssembly>False</ProduceReferenceAssembly>
 		<DebugType>embedded</DebugType>
-		<ApplicationIcon>sbox-dev.ico</ApplicationIcon>
+		<ApplicationIcon>bbox-dev.ico</ApplicationIcon>
 		<GenerateDependencyFile>false</GenerateDependencyFile>
 		<CETCompat>false</CETCompat>
+		<Configurations>Debug;Release;Blowout_Source2_Debug;Blowout_Source2_Release</Configurations>
 	</PropertyGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\..\Sandbox.AppSystem\Sandbox.AppSystem.csproj" Private="false"/>
-		<ProjectReference Include="..\..\Sandbox.Engine\Sandbox.Engine.csproj"  Private="false"/>
+		<ProjectReference Include="..\..\BlowoutTeamSoft\Engine\BlowoutTeamSoft.Engine.csproj" />
+		<ProjectReference Include="..\..\Sandbox.AppSystem\Sandbox.AppSystem.csproj" Private="false" />
+		<ProjectReference Include="..\..\Sandbox.Engine\Sandbox.Engine.csproj" Private="false" />
 		<ProjectReference Include="..\..\Sandbox.GameInstance\Sandbox.GameInstance.csproj" Private="false" />
 		<ProjectReference Include="..\..\Sandbox.Tools\Sandbox.Tools.csproj" Private="false" />
 	</ItemGroup>

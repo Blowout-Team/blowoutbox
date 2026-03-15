@@ -1,12 +1,20 @@
-﻿using Sandbox.Utility;
-using System.Runtime.CompilerServices;
+﻿using BlowoutTeamSoft.Engine.Core;
+using BlowoutTeamSoft.Engine.Enums;
+using BlowoutTeamSoft.Engine.Extensions;
+using BlowoutTeamSoft.Engine.Interfaces;
+using BlowoutTeamSoft.Engine.Logger;
+using BlowoutTeamSoft.Engine.Math;
+using BlowoutTeamSoft.Engine.Render;
+using Sandbox.Engine.Extensions;
 using Sandbox.Interpolation;
+using Sandbox.Utility;
+using System.Runtime.CompilerServices;
 
 namespace Sandbox;
 
 [Expose, ActionGraphIgnore]
 [Icon( "control_camera" )]
-public partial class GameTransform
+public partial class GameTransform : IBlowoutTransform
 {
 	/// <summary>
 	/// Automatically interpolate the transform over multiple frames when changed within the context
@@ -112,6 +120,147 @@ public partial class GameTransform
 			SetLocalTransform( value, ShouldInterpolate() );
 		}
 	}
+
+	public BlowoutTransformNativeHandle Handle => new BlowoutTransformNativeHandle( GameObject.Id.Variant );
+
+	public string Tag => GameObject.Tag;
+
+	public IBlowoutTransform Parent => GameObject.Parent.Transform;
+
+	public IEnumerable<IBlowoutTransform> Childs
+	{
+		get
+		{
+			foreach ( var child in GameObject.Children )
+			{
+				yield return child.Transform;
+			}
+		}
+	}
+
+	public int ChildCount => GameObject.Children.Count;
+
+	public System.Numerics.Vector3 EulerAngles { get => ((System.Numerics.Quaternion)GameObject.LocalRotation).ToEulerAngles(); set => GameObject.LocalRotation = BlowoutMath.Euler( value ); }
+	public System.Numerics.Vector3 WorldEulerAngles { get => WorldRotation.ToEulerAngles(); set => WorldRotation = BlowoutMath.Euler( value ); }
+
+	System.Numerics.Vector3 IBlowoutTransform.Position
+	{
+		get => Proxy != null ? Proxy.GetLocalTransform().Position : Local.Position;
+		set
+		{
+			if ( Proxy != null )
+			{
+				Proxy.SetLocalTransform( Proxy.GetLocalTransform().WithPosition( value ) );
+				return;
+			}
+
+			Local = Local.WithPosition( value );
+		}
+	}
+
+	public System.Numerics.Vector3 WorldPosition
+	{
+		get => Proxy != null ? Proxy.GetWorldTransform().Position : World.Position; set
+		{
+			if ( Proxy != null )
+			{
+				Proxy.SetWorldTransform( Proxy.GetWorldTransform().WithPosition( value ) );
+				return;
+			}
+
+			World = World.WithPosition( value );
+		}
+	}
+
+	System.Numerics.Quaternion IBlowoutTransform.Rotation
+	{
+		get => Proxy != null ? Proxy.GetLocalTransform().Rotation : GameObject.LocalRotation; set
+		{
+			if ( Proxy != null )
+			{
+				Proxy.SetLocalTransform( Proxy.GetLocalTransform().WithRotation( value ) );
+				return;
+			}
+
+			GameObject.LocalRotation = value;
+		}
+	}
+
+	public System.Numerics.Quaternion WorldRotation
+	{
+		get => Proxy != null ? Proxy.GetWorldTransform().Rotation : GameObject.WorldRotation;
+		set
+		{
+			if ( Proxy != null )
+			{
+				Proxy.SetWorldTransform( Proxy.GetWorldTransform().WithRotation( value ) );
+				return;
+			}
+
+			GameObject.WorldRotation = value;
+		}
+	}
+
+	public System.Numerics.Vector3 WorldScale
+	{
+		get => Proxy != null ? Proxy.GetWorldTransform().Scale : GameObject.WorldScale;
+		set
+		{
+			if ( Proxy != null )
+			{
+				Proxy.SetWorldTransform( Proxy.GetWorldTransform().WithScale( value ) );
+				return;
+			}
+
+			GameObject.WorldScale = value;
+		}
+	}
+
+	System.Numerics.Vector3 IBlowoutTransform.Scale
+	{
+		get => Proxy != null ? Proxy.GetLocalTransform().Scale : GameObject.LocalScale;
+		set
+		{
+			if ( Proxy != null )
+			{
+				Proxy.SetLocalTransform( Proxy.GetLocalTransform().WithScale( value ) );
+				return;
+			}
+
+			GameObject.LocalScale = value;
+		}
+	}
+
+	public System.Numerics.Vector3 Right => Proxy != null ? Proxy.GetWorldTransform().Right : World.Right;
+
+	public System.Numerics.Vector3 Up => Proxy != null ? Proxy.GetWorldTransform().Up : World.Up;
+
+	public System.Numerics.Vector3 Down => Proxy != null ? Proxy.GetWorldTransform().Down : World.Down;
+
+	public System.Numerics.Vector3 Forward => Proxy != null ? Proxy.GetWorldTransform().Forward : World.Forward;
+
+	public System.Numerics.Vector3 Backward => Proxy != null ? Proxy.GetWorldTransform().Backward : World.Backward;
+
+	public System.Numerics.Vector3 Left => Proxy != null ? Proxy.GetWorldTransform().Left : World.Left;
+
+	public Index SiblingIndex { get => GameObject.SiblidingIndex; set => GameObject.SiblidingIndex = value; }
+
+	public bool IsExecuting { get => GameObject.Enabled; set => GameObject.Enabled = value; }
+
+	public bool IsAliveSystem => GameObject.IsValid();
+
+	public BlowoutSystemMode SystemMode
+	{
+		get => GameObject.Flags.ToSystemMode();
+		set => GameObject.Flags = value.ToSourceFlags();
+	}
+
+	BlowoutEngineGameObject IBlowoutGameSystem.SystemGameObject => GameObject;
+
+	public bool IsActive => GameObject.Enabled;
+
+	public BlowoutTeamSoft.Engine.BlowoutEngineObject Native => GameObject;
+
 
 	void SetLocalTransform( in Transform value, bool interpolate = false )
 	{
@@ -328,6 +477,8 @@ public partial class GameTransform
 		}
 	}
 
+	public Guid Id => GameObject?.Id ?? Guid.Empty;
+
 	/// <summary>
 	/// Performs linear interpolation between this and the given transform.
 	/// </summary>
@@ -357,6 +508,64 @@ public partial class GameTransform
 		}
 	}
 
+	public System.Numerics.Vector3 TransferToSelfVector( System.Numerics.Vector3 input )
+	{
+		return Proxy != null ? (System.Numerics.Vector3)Proxy.GetLocalTransform().PointToLocal( input ) :
+			(System.Numerics.Vector3)GameObject.LocalTransform.PointToLocal( input );
+	}
+
+	public System.Numerics.Vector3 TransferToSelfPoint( System.Numerics.Vector3 input ) =>
+		Proxy != null ? (System.Numerics.Vector3)Proxy.GetLocalTransform().PointToLocal( input ) :
+			(System.Numerics.Vector3)GameObject.LocalTransform.PointToLocal( input );
+
+	public System.Numerics.Vector3 TransferToSelfDirection( System.Numerics.Vector3 input ) =>
+		Proxy != null ? (System.Numerics.Vector3)Proxy.GetLocalTransform().PointToLocal( input ) :
+			(System.Numerics.Vector3)GameObject.LocalTransform.PointToLocal( input );
+
+	public System.Numerics.Vector3 RevertVector( System.Numerics.Vector3 input ) =>
+		Proxy != null ? (System.Numerics.Vector3)Proxy.GetLocalTransform().PointToWorld( input ) :
+			(System.Numerics.Vector3)GameObject.LocalTransform.PointToWorld( input );
+
+	public System.Numerics.Vector3 RevertPoint( System.Numerics.Vector3 input ) =>
+		Proxy != null ? (System.Numerics.Vector3)Proxy.GetLocalTransform().PointToWorld( input ) :
+			(System.Numerics.Vector3)GameObject.LocalTransform.PointToWorld( input );
+
+	public System.Numerics.Vector3 RevertDirection( System.Numerics.Vector3 input ) =>
+		Proxy != null ? (System.Numerics.Vector3)Proxy.GetLocalTransform().PointToWorld( input ) :
+			(System.Numerics.Vector3)GameObject.LocalTransform.PointToWorld( input );
+
+	public void SetParent( IBlowoutTransform transform ) =>
+		GameObject.SetParent( (GameObject)transform.SystemGameObject, false );
+
+	public void SetKeepTransformParent( IBlowoutTransform transform ) =>
+		GameObject.SetParent( (GameObject)transform.SystemGameObject, true );
+
+	public void AddChild( IBlowoutTransform transform ) =>
+		GameObject.AddSibling( (GameObject)transform.SystemGameObject, true );
+
+	public void RemoveChild( int index ) =>
+		GameObject.Children.RemoveAt( index );
+
+	public void RotateAround( System.Numerics.Vector3 center, System.Numerics.Quaternion rotation )
+	{
+		if ( Proxy != null )
+		{
+			Proxy.SetWorldTransform( Proxy.GetWorldTransform().RotateAround( center, rotation ) );
+			return;
+		}
+
+		World = World.RotateAround( center, rotation );
+	}
+
+	public void RotateAround( System.Numerics.Vector3 center, System.Numerics.Vector3 axis, float angle ) =>
+		RotateAround( center, System.Numerics.Quaternion.CreateFromAxisAngle( System.Numerics.Vector3.Normalize( axis ), angle ) );
+
+	public void Rotate( float x, float y, float z ) =>
+		RotateAround( Vector3.Zero, BlowoutMath.Euler( x, y, z ) );
+
+	public IBlowoutTransform FindChild( string name ) =>
+		GameObject.Children.Find( x => StringComparer.Ordinal.Equals( name, x.Name ) ).Transform;
+
 	/// <summary>
 	/// Disable the proxy temporarily
 	/// </summary>
@@ -368,5 +577,24 @@ public partial class GameTransform
 		Proxy = default;
 
 		return DisposeAction.Create( () => { Proxy = saved; } );
+	}
+
+	object IBlowoutGameSystem.InstallParentClone( IBlowoutGameSystem gameSystem ) =>
+		this;
+
+	public void ForceChangeId( Guid id, bool isRefresh = false )
+	{
+		if ( isRefresh )
+		{
+			GameObject.SetDeterministicId(id);
+			return;
+		}
+
+		GameObject.ForceChangeId( id );
+	}
+
+	public void Destroy()
+	{
+		Log.Error("Trying destroy transform. Why u do this?");
 	}
 }

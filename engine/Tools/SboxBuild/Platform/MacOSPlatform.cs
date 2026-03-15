@@ -10,6 +10,6 @@ internal class MacOSPlatform : Platform
 	public override bool CompileSolution( string solutionName, bool forceRebuild = false )
 	{
 		string buildArgs = forceRebuild ? "clean build" : "build";
-		return Utility.RunProcess( "xcodebuild", $"-project {solutionName}.xcodeproj -configuration Release {buildArgs}", "src" );
+		return Utility.RunProcess( "xcodebuild", $"-project {solutionName}.xcodeproj -configuration Blowout_Source2_Release {buildArgs}", "src" );
 	}
 }

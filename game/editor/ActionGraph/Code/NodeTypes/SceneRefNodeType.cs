@@ -3,6 +3,7 @@ using Sandbox;
 using System.Collections.Generic;
 using Editor.NodeEditor;
 using Sandbox.ActionGraphs;
+using BlowoutTeamSoft.Engine.Interfaces;
 
 namespace Editor.ActionGraphs;
 
@@ -19,7 +20,7 @@ public class SceneRefNodeType : LibraryNodeType
 			return;
 		}
 
-		if ( ev.Query.Plug is IPlugIn { Type: { } inputType } && (inputType.IsAssignableTo( typeof( Component ) ) || inputType.IsInterface) )
+		if ( ev.Query.Plug is IPlugIn { Type: { } inputType } && (inputType.IsAssignableTo( typeof( IBlowoutGameSystem ) ) || inputType.IsInterface) )
 		{
 			// If we're dragging from an input that accepts a component, suggest all matching components in the current scene
 
@@ -27,7 +28,7 @@ public class SceneRefNodeType : LibraryNodeType
 
 			foreach ( var comp in components )
 			{
-				ev.Output.Add( new SceneRefNodeType( comp ) );
+					ev.Output.Add( new SceneRefNodeType( comp ) );
 			}
 
 			return;
@@ -51,7 +52,7 @@ public class SceneRefNodeType : LibraryNodeType
 
 			if ( go.IsPrefabInstance ) continue;
 
-			foreach ( var comp in go.GetComponents<Component>( true ) )
+			foreach ( var comp in go.GetComponents<IBlowoutGameSystem>( true ) )
 			{
 				ev.Output.Add( new SceneRefNodeType( comp, rootObject ) );
 			}
@@ -66,7 +67,7 @@ public class SceneRefNodeType : LibraryNodeType
 		var (go, comp) = value switch
 		{
 			GameObject o => (o, null),
-			Component c => (c.GameObject, c),
+			IBlowoutGameSystem sys => ((GameObject)sys.SystemGameObject, sys),
 			_ => (null, null)
 		};
 
@@ -113,7 +114,13 @@ public class SceneRefNodeType : LibraryNodeType
 		Value = value;
 	}
 
-	public SceneRefNodeType( Component value, GameObject root = null )
+	//public SceneRefNodeType( Component value, GameObject root = null )
+	//	: base( EditorNodeLibrary.Get( "scene.ref" )!, GetPath( value, root ), ActionGraphEditorExtensions.GetNodeProperties( value ) )
+	//{
+	//	Value = value;
+	//}
+
+	public SceneRefNodeType( IBlowoutGameSystem value, GameObject root = null )
 		: base( EditorNodeLibrary.Get( "scene.ref" )!, GetPath( value, root ), ActionGraphEditorExtensions.GetNodeProperties( value ) )
 	{
 		Value = value;

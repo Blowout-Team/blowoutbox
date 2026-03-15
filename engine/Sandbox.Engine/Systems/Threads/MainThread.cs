@@ -1,4 +1,6 @@
-﻿using System.Threading;
+﻿using BlowoutTeamSoft.Engine;
+using System.Collections.Concurrent;
+using System.Threading;
 using System.Threading.Channels;
 
 namespace Sandbox;
@@ -10,6 +12,10 @@ public static class MainThread
 {
 	static Channel<IDisposable> Disposables = Channel.CreateUnbounded<IDisposable>();
 	static Channel<Action> Actions = Channel.CreateUnbounded<Action>();
+
+	static TaskFactory s_Factory;
+
+	private static CancellationTokenSource s_TokenSource = new CancellationTokenSource();
 
 	/// <summary>
 	/// Wait to execute on the main thread
@@ -91,6 +97,19 @@ public static class MainThread
 		Actions.Writer.TryWrite( method );
 	}
 
+	public static void Queue( Func<CancellationToken, ValueTask> methodAsync )
+	{
+		s_Factory ??= new TaskFactory( s_TokenSource.Token, TaskCreationOptions.None, TaskContinuationOptions.ExecuteSynchronously, new BlowoutSource2TaskScheduler() );
+		s_Factory.StartNew( async () => await methodAsync( s_TokenSource.Token ), s_TokenSource.Token );
+		return;
+	}
+
+	public static void ShutdownAsyncOperations()
+	{
+		s_TokenSource.Cancel();
+		s_TokenSource.Dispose();
+	}
+
 	/// <summary>
 	/// Run queued actions on the main thread
 	/// </summary>
@@ -109,5 +128,51 @@ public static class MainThread
 				Log.Warning( e, e.Message );
 			}
 		}
+	}
+}
+
+//TODO: move to another file.
+public sealed class BlowoutSource2TaskScheduler : TaskScheduler
+{
+	private readonly ConcurrentQueue<Task> _taskQueue = new ConcurrentQueue<Task>();
+	private int _scheduled = 0;
+
+	protected override IEnumerable<Task> GetScheduledTasks() =>
+		// is array need??
+		_taskQueue.ToArray();
+
+	private void _ExecuteTasks()
+	{
+		_scheduled = 0;
+
+		while ( _taskQueue.TryDequeue( out var task ) )
+		{
+			TryExecuteTask( task );
+		}
+
+		if ( !_taskQueue.IsEmpty && Interlocked.CompareExchange( ref _scheduled, 1, 0 ) == 0 )
+		{
+			MainThread.Queue( _ExecuteTasks );
+		}
+	}
+
+	protected override void QueueTask( Task task )
+	{
+		_taskQueue.Enqueue( task );
+
+		if ( Interlocked.CompareExchange( ref _scheduled, 1, 0 ) == 0 )
+		{
+			MainThread.Queue( _ExecuteTasks );
+		}
+	}
+
+	protected override bool TryExecuteTaskInline( Task task, bool taskWasPreviouslyQueued )
+	{
+		if ( BlowoutEngine.ValidThreadSafe() )
+		{
+			return TryExecuteTask( task );
+		}
+
+		return false;
 	}
 }

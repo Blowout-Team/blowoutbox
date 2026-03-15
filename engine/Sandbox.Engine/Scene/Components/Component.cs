@@ -1,4 +1,11 @@
-﻿using Sandbox.Internal;
+﻿using BlowoutTeamSoft.Configuration.Serializer.Interfaces;
+using BlowoutTeamSoft.Engine;
+using BlowoutTeamSoft.Engine.Attributes;
+using BlowoutTeamSoft.Engine.Core;
+using BlowoutTeamSoft.Engine.Enums;
+using BlowoutTeamSoft.Engine.Interfaces;
+using Sandbox.Engine.Extensions;
+using Sandbox.Internal;
 using Sandbox.Utility;
 using System.Threading;
 
@@ -8,7 +15,7 @@ namespace Sandbox;
 /// A GameObject can have many components, which are the building blocks of the game.
 /// </summary>
 [Expose, ActionGraphIgnore, ActionGraphExposeWhenCached, Icon( "category" )]
-public abstract partial class Component : IJsonConvert, IComponentLister, IValid
+public abstract partial class Component : IJsonConvert, IComponentLister, IValid, IBlowoutGameSystem, IBlowoutSerializable
 {
 	/// <summary>
 	/// Invokes the callback for the given <paramref name="callback"/> type.
@@ -33,6 +40,32 @@ public abstract partial class Component : IJsonConvert, IComponentLister, IValid
 	/// </summary>
 	[ActionGraphInclude]
 	public Scene Scene => GameObject?.Scene;
+
+	[JsonIgnore, Hide]
+	public CancellationToken AliveToken => GameObject?.EnabledToken ?? new CancellationToken( true );
+
+	[JsonIgnore, Hide]
+	public bool IsAliveSystem => IsValid;
+
+	[JsonIgnore, Hide]
+	public bool IsActive => Active;
+
+	[JsonIgnore, Hide]
+	public BlowoutEngineGameObject SystemGameObject => GameObject;
+
+	[JsonIgnore, Hide]
+	public bool IsExecuting { get => Enabled; set => Enabled = value; }
+
+	[JsonIgnore, Hide]
+	public BlowoutSystemMode SystemMode
+	{
+		get => Flags.ToSystemMode();
+		set => Flags = value.ToSourceComponentFlags();
+	}
+
+	[IgnoreDataMember]
+	[JsonIgnore]
+	public BlowoutEngineObject Native => GameObject;
 
 	/// <summary>
 	/// The transform of the GameObject this component belongs to. Components don't have their own transforms
@@ -391,6 +424,18 @@ public abstract partial class Component : IJsonConvert, IComponentLister, IValid
 			var serialized = so.GetProperty( prop.Name );
 			serialized.SetValue( serialized.GetDefault() );
 		}
+
+		foreach ( var field in t.Fields.Where( x => x.HasAttribute<BlowoutExposeField>() ) )
+		{
+			var serialized = so.GetProperty( field.Name );
+			serialized.SetValue( serialized.GetDefault() );
+		}
+
+		foreach ( var prop in t.Properties.Where( x => x.HasAttribute<BlowoutExposeField>() ) )
+		{
+			var serialized = so.GetProperty( prop.Name );
+			serialized.SetValue( serialized.GetDefault() );
+		}
 	}
 
 	/// <summary>
@@ -496,5 +541,16 @@ public abstract partial class Component : IJsonConvert, IComponentLister, IValid
 	public virtual void OnParentDestroy()
 	{
 
+	}
+
+	public void ForceChangeId( Guid id, bool isRefresh = false )
+	{
+		if ( isRefresh )
+		{
+			Id = id;
+			return;
+		}
+
+		ForceChangeId( id );
 	}
 }

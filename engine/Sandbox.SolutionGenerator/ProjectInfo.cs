@@ -22,6 +22,7 @@ public class ProjectInfo
 	{
 		"Sandbox.System.dll",
 		"Sandbox.Engine.dll",
+		"BlowoutTeamSoft.Engine.dll",
 		"Sandbox.Filesystem.dll",
 		"Sandbox.Reflection.dll",
 		"Sandbox.Mounting.dll",

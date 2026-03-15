@@ -3,7 +3,8 @@ namespace Editor.ProjectSettingPages;
 [Title( "Game Exporting" ), Icon( "publish" )]
 internal sealed class StandaloneCategory : ProjectSettingsWindow.Category
 {
-	[Title( "Disable Whitelist" )]
+	// why u named it as 'Disable Whitelist'?
+	[Title( "Engine Game Mode" )]
 	public bool IsStandaloneOnly
 	{
 		get => Project.Config.IsStandaloneOnly;

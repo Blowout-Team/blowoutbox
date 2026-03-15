@@ -255,6 +255,8 @@ public class BindCollection
 			ButtonList = FullString.Split( new[] { '+', ' ' }, StringSplitOptions.RemoveEmptyEntries ).ToHashSet( StringComparer.OrdinalIgnoreCase );
 		}
 
+		public IEnumerable<string> Buttons => ButtonList.AsEnumerable();
+
 		internal bool Test( string button, HashSet<string> activeButtons )
 		{
 			if ( ButtonList == null ) return false;

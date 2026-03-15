@@ -1,4 +1,5 @@
-﻿using Sandbox.Utility;
+﻿using BlowoutTeamSoft.Engine.Interfaces.Audio;
+using Sandbox.Utility;
 
 namespace Sandbox.Audio;
 
@@ -58,7 +59,7 @@ public partial class Mixer
 		{
 			lock ( Lock )
 			{
-				return _processorList.Count();
+				return _processorList.Where(x=> x.IsAlive).Count();
 			}
 		}
 	}
@@ -70,7 +71,7 @@ public partial class Mixer
 	{
 		lock ( Lock )
 		{
-			return _processorList.ToArray();
+			return _processorList.Where(x=> x.IsAlive).ToArray();
 		}
 	}
 
@@ -81,7 +82,7 @@ public partial class Mixer
 	{
 		lock ( Lock )
 		{
-			return _processorList.OfType<T>().FirstOrDefault();
+			return _processorList.Where(x=> x.IsAlive).OfType<T>().FirstOrDefault();
 		}
 	}
 
@@ -123,6 +124,8 @@ public partial class Mixer
 
 	void ApplyProcessors( MultiChannelBuffer targetBuffer, Listener listener )
 	{
+		_processorList.RemoveAll( x => !x.IsAlive );
+
 		foreach ( var processor in _processorList )
 		{
 			if ( !processor.Enabled ) continue;

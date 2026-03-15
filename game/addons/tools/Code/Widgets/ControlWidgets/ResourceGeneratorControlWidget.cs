@@ -1,4 +1,6 @@
 ﻿using Sandbox.Resources;
+using BlowoutTeamSoft.Engine.Interfaces.Assets;
+using BlowoutTeamSoft.Engine.Assets;
 
 namespace Editor;
 
@@ -15,7 +17,7 @@ public class ResourceGeneratorControlWidget : ControlWidget
 	bool _isDirty = false;
 	bool _isGenerating = false;
 
-	public ResourceGeneratorControlWidget( ResourceGenerator generator, SerializedProperty property ) : base( property )
+	public ResourceGeneratorControlWidget(ResourceGenerator generator, SerializedProperty property) : base(property)
 	{
 		Layout = Layout.Row();
 		Layout.Spacing = 2;
@@ -27,11 +29,11 @@ public class ResourceGeneratorControlWidget : ControlWidget
 		var generatorObject = generator.GetSerialized();
 		Generator = generator;
 
-		LoadFromResource( property.GetValue<Resource>() );
+		LoadFromResource(property.GetValue<IBlowoutEngineAsset>());
 
-		var prop = EditorTypeLibrary.CreateProperty<ResourceGenerator>( "Generator", generatorObject );
+		var prop = EditorTypeLibrary.CreateProperty<ResourceGenerator>("Generator", generatorObject);
 
-		Editor = new GenericControlWidget( prop );
+		Editor = new GenericControlWidget(prop);
 		generatorObject.OnPropertyChanged = x => MakeDirty();
 
 		BuildContent();
@@ -42,7 +44,7 @@ public class ResourceGeneratorControlWidget : ControlWidget
 	protected virtual void BuildContent()
 	{
 		var col = Layout.AddColumn();
-		col.Add( Editor );
+		col.Add(Editor);
 		col.AddStretchCell();
 		Layout.AddStretchCell();
 	}
@@ -51,22 +53,40 @@ public class ResourceGeneratorControlWidget : ControlWidget
 	/// We might want existing data from an embedded resource - in that case, deserialize it
 	/// </summary>
 	/// <param name="resource"></param>
-	void LoadFromResource( Resource resource )
+	void LoadFromResource(IBlowoutEngineAsset resource)
 	{
-		var embeddedResource = resource?.EmbeddedResource;
-
-		if ( embeddedResource is null )
-		{
+		if(resource == null)
 			return;
+
+		Sandbox.Resources.EmbeddedResource? embeddedResource = null;
+		if (resource is Resource res)
+		{
+			embeddedResource = res?.EmbeddedResource;
+
+			if (embeddedResource is null)
+			{
+				return;
+			}
 		}
+
+		if(resource is BlowoutAssetInstancePackable packable)
+		{
+			embeddedResource = packable.GetPackage<Sandbox.Resources.EmbeddedResource?>();
+
+			if(embeddedResource == null)
+				return;
+		}
+
+		if(embeddedResource == null)
+			return;
 
 		// Not a matching compiler
-		if ( embeddedResource.Value.ResourceGenerator != EditorTypeLibrary.GetType( Generator.GetType() ).ClassName )
+		if (embeddedResource.Value.ResourceGenerator != EditorTypeLibrary.GetType(Generator.GetType()).ClassName)
 		{
 			return;
 		}
 
-		Generator.Deserialize( embeddedResource.Value.Data );
+		Generator.Deserialize(embeddedResource.Value.Data);
 	}
 
 	void MakeDirty()
@@ -80,9 +100,9 @@ public class ResourceGeneratorControlWidget : ControlWidget
 
 		try
 		{
-			var resource = await Generator.FindOrCreateObjectAsync( ResourceGenerator.Options.Default, default );
-			SerializedProperty.SetValue( resource );
-			OnResourceChanged( resource );
+			var resource = await Generator.FindOrCreateObjectAsync(ResourceGenerator.Options.Default, default);
+			SerializedProperty.SetValue(resource);
+			OnResourceChanged(resource);
 			Update();
 		}
 		finally
@@ -91,7 +111,7 @@ public class ResourceGeneratorControlWidget : ControlWidget
 		}
 	}
 
-	protected virtual void OnResourceChanged( Resource resource )
+	protected virtual void OnResourceChanged(IBlowoutEngineAsset resource)
 	{
 
 	}
@@ -99,10 +119,10 @@ public class ResourceGeneratorControlWidget : ControlWidget
 	[EditorEvent.Frame]
 	public void FrameUpdate()
 	{
-		if ( _isGenerating ) return;
-		if ( !_isDirty ) return;
+		if (_isGenerating) return;
+		if (!_isDirty) return;
 
-		if ( Generator is not null )
+		if (Generator is not null)
 		{
 			_isDirty = false;
 			_ = UpdateGenerator();
@@ -117,32 +137,32 @@ public class ResourceGeneratorControlWidget : ControlWidget
 	/// <summary>
 	/// Create a ResourceGeneratorControlWidget for a specific generator
 	/// </summary>
-	internal static Widget Create( ResourceGenerator generator, SerializedProperty serializedProperty )
+	internal static Widget Create(ResourceGenerator generator, SerializedProperty serializedProperty)
 	{
 		var allTypes = EditorTypeLibrary.GetTypes<ResourceGeneratorControlWidget>();
-		var editor = allTypes.OrderByDescending( x => Score( generator, x ) ).FirstOrDefault();
+		var editor = allTypes.OrderByDescending(x => Score(generator, x)).FirstOrDefault();
 
-		return editor.Create<Widget>( [generator, serializedProperty] );
+		return editor.Create<Widget>([generator, serializedProperty]);
 	}
 
 	/// <summary>
 	/// score a ResourceGeneratorControlWidget based on how well it matches the target ResourceGenerator
 	/// </summary>
-	private static int Score( ResourceGenerator target, TypeDescription targetEditor )
+	private static int Score(ResourceGenerator target, TypeDescription targetEditor)
 	{
 		var editorTarget = targetEditor.GetAttribute<CanEditAttribute>()?.Type;
 
 		//
 		// Target editor doesn't have a CanEdit
 		//
-		if ( editorTarget == null ) return 100;
+		if (editorTarget == null) return 100;
 
 		int score = 1000;
 		var targetType = target.GetType();
 
-		while ( targetType != null )
+		while (targetType != null)
 		{
-			if ( editorTarget.IsAssignableFrom( targetType ) )
+			if (editorTarget.IsAssignableFrom(targetType))
 			{
 				return score;
 			}

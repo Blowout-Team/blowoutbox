@@ -1,5 +1,8 @@
-﻿using Sandbox.Engine;
+﻿using BlowoutTeamSoft.Engine.Input;
+using R3;
+using Sandbox.Engine;
 using Sandbox.VR;
+using System.Numerics;
 
 namespace Sandbox;
 
@@ -40,6 +43,9 @@ public static partial class Input
 	}
 
 	static Angles _analogLook;
+
+	public static Action<BlowoutInputKey> OnAnyKey;
+	public static Action<BlowoutInputKey> OnAnyKeyOnce;
 
 	/// <summary>
 	/// Analog look value from the default input device. This is scaled by Preferences.Sensitivity - so you don't need to scale it afterwards.

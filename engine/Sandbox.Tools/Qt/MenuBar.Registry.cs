@@ -1,4 +1,5 @@
 ﻿using System;
+using BlowoutTeamSoft.Editor.Attributes;
 
 namespace Editor;
 
@@ -30,6 +31,14 @@ public partial class MenuBar : Widget
 			foreach ( var m in EditorTypeLibrary.GetMembersWithAttribute<MenuAttribute>().Where( x => x.Attribute.Target == target.Key ).OrderBy( x => x.Attribute.Priority ) )
 			{
 				Register( m.Attribute, m.Member, target.Value );
+			}
+		}
+
+		if ( Targets.TryGetValue( "Editor", out MenuBar menu ) )
+		{
+			foreach ( var m in EditorTypeLibrary.GetMembersWithAttribute<BlowoutMenuAttribute>() )
+			{
+				Register( new MenuAttribute( "Editor", m.Attribute.Path, m.Attribute.Icon ), m.Member, menu );
 			}
 		}
 	}

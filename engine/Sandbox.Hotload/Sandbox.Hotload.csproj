@@ -11,6 +11,7 @@
     <GenerateAssemblyProductAttribute>false</GenerateAssemblyProductAttribute>
     <NoWarn>1701;1702;1591</NoWarn>
     <LangVersion>latest</LangVersion>
+    <Configurations>Debug;Release;Blowout_Source2_Debug;Blowout_Source2_Release</Configurations>
   </PropertyGroup>
 
   <ItemGroup>
@@ -27,6 +28,10 @@
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Blowout_Source2_Debug|AnyCPU'">
     <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
   </PropertyGroup>
 

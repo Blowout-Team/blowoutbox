@@ -43,7 +43,7 @@ public partial class RoundTrip
 	[TestMethod]
 	public void Array_Values_Huge()
 	{
-		var array = Array.CreateInstance( typeof( global::Vector3 ), 10_000 );
+		var array = Array.CreateInstance( typeof( global::Sandbox.Vector3 ), 10_000 );
 
 		DoRoundTrip( array );
 	}
@@ -54,9 +54,9 @@ public partial class RoundTrip
 	{
 		DoRoundTrip( new object[] { 1 } );
 		DoRoundTrip( new object[] { 1, 2000.0, "the", 4, 6.0f } );
-		DoRoundTrip( new object[] { 1, 2000.0, "the", 4, 6.0f, global::Vector3.One, null, null, 34, "poops" } );
+		DoRoundTrip( new object[] { 1, 2000.0, "the", 4, 6.0f, global::Sandbox.Vector3.One, null, null, 34, "poops" } );
 
-		var objectArray = new object[] { 1, 2000.0, "the", 4, 6.0f, global::Vector3.One, null, null, 34, "poops" };
+		var objectArray = new object[] { 1, 2000.0, "the", 4, 6.0f, global::Sandbox.Vector3.One, null, null, 34, "poops" };
 		var valueArray = new int[] { 1, 2, 3, 4 };
 
 		DoRoundTrip( new object[] { 1, 2, objectArray, "the", valueArray } );
@@ -75,7 +75,7 @@ public partial class RoundTrip
 		var list = new List<object>();
 
 		for ( int i = 0; i < 10_000; i++ )
-			list.Add( global::Vector3.Random );
+			list.Add( global::Sandbox.Vector3.Random );
 
 		DoRoundTrip( list.ToArray() );
 	}

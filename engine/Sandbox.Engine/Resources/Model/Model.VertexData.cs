@@ -4,6 +4,8 @@ namespace Sandbox;
 
 public partial class Model
 {
+	public int VertexCount => MeshGlue.GetModelNumVertices( native );
+
 	/// <summary>
 	/// Experimental!
 	/// </summary>
@@ -21,6 +23,22 @@ public partial class Model
 		}
 
 		return vertices;
+	}
+
+	public unsafe int GetVerticesSpan(scoped Span<Vertex> buffer)
+	{
+		int numVertices = MeshGlue.GetModelNumVertices( native );
+		if ( numVertices == 0 )
+			return 0;
+
+		buffer = stackalloc Vertex[numVertices];
+
+		fixed ( Vertex* vmem = &buffer[0] )
+		{
+			MeshGlue.GetModelVertices( native, (IntPtr)vmem, (uint)numVertices );
+		}
+
+		return numVertices;
 	}
 
 	/// <summary>

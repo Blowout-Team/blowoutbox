@@ -1,4 +1,5 @@
 ﻿
+using BlowoutTeamSoft.Engine.Render;
 using Sandbox;
 using System.Globalization;
 using System.Runtime.CompilerServices;
@@ -542,7 +543,7 @@ public partial struct Color : IEquatable<Color>
 		return c;
 	}
 
-	/// <summary>
+	/// <summary>e
 	/// Saturates the color by given amount.
 	/// </summary>
 	/// <param name="fraction">How much to saturate the color by, in range of 0 (not at all) to 1 (double the saturation). Negative values will desaturate the color.</param>
@@ -553,6 +554,9 @@ public partial struct Color : IEquatable<Color>
 		c.Saturation *= 1.0f + fraction;
 		return c;
 	}
+
+	public readonly BlowoutColor ToBlowoutColor() =>
+		new BlowoutColor( r, g, b, a );
 
 	/// <summary>
 	/// Returns how many color components would be changed between this color and another color
@@ -1239,6 +1243,7 @@ public partial struct Color : IEquatable<Color>
 	public static implicit operator Color( in Vector3 value ) => new Color( value.x, value.y, value.z );
 	public static implicit operator Color( in Color32 color ) => color.ToColor();
 	public static implicit operator Color( string value ) => Parse( value ) ?? new Color( 1, 0, 1, 1 );
+	public static implicit operator Color( BlowoutColor value) => new Color(value.R, value.G, value.B, value.A);
 
 	/// <summary>
 	/// Get color components by numerical index.

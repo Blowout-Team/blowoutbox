@@ -54,7 +54,13 @@ public partial class GameObject : IValid
 		if ( Scene.IsEditor )
 			return;
 
-		Components.ForEach( "OnParentDestroy", true, c => c.OnParentDestroyInternal() );
+		Components.ForEach( "OnParentDestroy", true, c =>
+		{
+			if(c is Component comp )
+			{
+				comp.OnParentDestroyInternal();
+			}
+		} );
 	}
 
 	/// <summary>

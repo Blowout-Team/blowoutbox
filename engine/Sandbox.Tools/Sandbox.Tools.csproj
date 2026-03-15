@@ -11,9 +11,14 @@
     <NoWarn>1701;1702;1591;CA1416</NoWarn>
     <OutputPath>../../game/bin/managed</OutputPath>
     <LangVersion>latest</LangVersion>
+    <Configurations>Debug;Release;Blowout_Source2_Debug;Blowout_Source2_Release</Configurations>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Blowout_Source2_Debug|AnyCPU'">
     <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
   </PropertyGroup>
 
@@ -29,6 +34,7 @@
     <ProjectReference Include="../Sandbox.Event/Sandbox.Event.csproj" />
     <ProjectReference Include="../Sandbox.GameInstance/Sandbox.GameInstance.csproj" />
     <ProjectReference Include="../Sandbox.Reflection/Sandbox.Reflection.csproj" />
+    <ProjectReference Include="..\BlowoutTeamSoft\Editor.Drawers\BlowoutTeamSoft.Editor.Drawers.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -5,6 +5,8 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Text.Json.Serialization;
 
+namespace Sandbox;
+
 [JsonConverter( typeof( Sandbox.Internal.JsonConvert.Vector2IntConverter ) )]
 [StructLayout( LayoutKind.Sequential )]
 public struct Vector2Int : IEquatable<Vector2Int>, IParsable<Vector2Int>

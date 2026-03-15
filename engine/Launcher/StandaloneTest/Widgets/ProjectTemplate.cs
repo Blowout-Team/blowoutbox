@@ -1,4 +1,7 @@
-﻿using Sandbox.DataModel;
+﻿using BlowoutTeamSoft.Engine;
+using BlowoutTeamSoft.Source2.Core;
+using NLog;
+using Sandbox.DataModel;
 using System.IO;
 using System.Text.Json;
 namespace Editor;
@@ -45,23 +48,29 @@ internal class ProjectTemplate
 		var title = config.Title;
 
 		var fullPath = Path.Combine( sourceDir, "$ident.sbproj" );
+		var bxprojPath = Path.Combine( sourceDir, "$ident.bxproj" );
 
 		if ( File.Exists( fullPath ) )
 		{
-			// Grab everything we can from the template
 			config = JsonSerializer.Deserialize<ProjectConfig>( File.ReadAllText( fullPath ) );
 
 			// Restore ident & title from our addon's preferences
 			config.Ident = ident;
 			config.Title = title;
 
-			// Clear out ProjectTemplate from our new addon. It's not needed for end users.
 			config.SetMeta( "ProjectTemplate", null );
 
 			//Log.Info( $"OK" );
 		}
-		else
+
+		if(File.Exists(bxprojPath))
 		{
+			config = (ProjectConfig)BlowoutSource2Engine.BSource2XProject.ReadFromFile( bxprojPath );
+
+			config.Ident = ident;
+			config.Title = title;
+
+			config.SetMeta( "ProjectTemplate", null );
 			//Log.Warning( $"Something went wrong while applying template to new project" );
 		}
 	}
@@ -102,7 +111,13 @@ internal class ProjectTemplate
 		}
 		else
 		{
-			File.Copy( file, targetname );
+			if ( BlowoutSource2Engine.BSource2XProject.IsLegacy( targetname ) )
+			{
+				var proj = (ProjectConfig)BlowoutSource2Engine.BSource2XProject.ConvertFromLegacy( File.ReadAllText(file) );
+				File.WriteAllText(targetname, proj.ToXml());
+			}
+			else
+				File.Copy( file, targetname );
 		}
 	}
 

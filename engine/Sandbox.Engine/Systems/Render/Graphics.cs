@@ -1,3 +1,5 @@
+using BlowoutTeamSoft.Engine.Enums.Rendering;
+using BlowoutTeamSoft.Reflection;
 using NativeEngine;
 using System.Runtime.CompilerServices;
 
@@ -34,6 +36,20 @@ public static partial class Graphics
 	/// don't need to think about this, but when you do, it's here.
 	/// </summary>
 	public static SceneLayerType LayerType => _state.layerType;
+
+	public static BlowoutDeviceRenderType DeviceRenderType
+	{
+		get
+		{
+			var renderDevice = g_pRenderDevice.GetRenderDeviceAPI();
+			return renderDevice switch
+			{
+				RenderDeviceAPI_t.RENDER_DEVICE_API_DX11 => BlowoutDeviceRenderType.Direct3D11,
+				RenderDeviceAPI_t.RENDER_DEVICE_API_VULKAN => BlowoutDeviceRenderType.Vulkan,
+				_ => BlowoutDeviceRenderType.Unknown,
+			};
+		}
+	}
 
 	struct RenderState
 	{

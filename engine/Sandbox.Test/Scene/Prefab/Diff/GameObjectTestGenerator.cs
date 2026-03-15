@@ -199,7 +199,7 @@ public static class GameObjectTestDataGenerator
 		var allComponents = new List<Component>();
 		foreach ( var obj in root.GetAllObjects( false ) )
 		{
-			allComponents.AddRange( obj.Components.GetAll() );
+			allComponents.AddRange( obj.Components.GetAll().OfType<Component>() );
 		}
 
 		if ( allComponents.Count == 0 )
@@ -341,7 +341,7 @@ public static class GameObjectTestDataGenerator
 	private static void CreateRandomComponent( GameObject go, Random random )
 	{
 		var type = ComponentMutators.Keys.ElementAt( random.Next( ComponentMutators.Count ) );
-		var comp = go.Components.Create( type );
+		var comp = (Component)go.Components.Create( type );
 		ComponentMutators[type]( comp, random );
 	}
 

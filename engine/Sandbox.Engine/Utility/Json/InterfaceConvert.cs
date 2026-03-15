@@ -1,4 +1,6 @@
-﻿using System.Text;
+﻿using BlowoutTeamSoft.Engine;
+using BlowoutTeamSoft.Engine.Assets;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -64,6 +66,24 @@ internal sealed class InterfaceConverter<T> : JsonConverter<T> where T : class
 			return (T)obj;
 		}
 
+		if ( data.Type == "AssetPackableInstance" )
+		{
+			if ( data.Value.ValueKind == JsonValueKind.String )
+			{
+				var path = data.Value.GetString();
+				if ( !path.EndsWith( "_c" ) ) path += "_c";
+
+				var extension = System.IO.Path.GetExtension( path );
+				if ( Game.Resources.TryGetType( extension, out var resourceAttribute ) )
+				{
+					typeToConvert = resourceAttribute.TargetType;
+				}
+
+				var res = BlowoutEngine.CreateAsset( typeToConvert, path );
+				return res as T;
+			}
+		}
+
 		//
 		// Resource types
 		//
@@ -88,6 +108,15 @@ internal sealed class InterfaceConverter<T> : JsonConverter<T> where T : class
 		{
 			writer.WriteNull( "Type" );
 			writer.WriteNull( "Value" );
+			writer.WriteEndObject();
+			return;
+		}
+
+		if ( value is BlowoutAssetInstancePackable assetInstance )
+		{
+			writer.WriteString( "Type", "AssetPackableInstance" );
+			writer.WritePropertyName( "Value" );
+			writer.WriteStringValue( assetInstance.AssetPath );
 			writer.WriteEndObject();
 			return;
 		}

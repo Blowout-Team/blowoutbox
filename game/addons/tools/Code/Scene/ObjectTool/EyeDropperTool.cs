@@ -1,4 +1,6 @@
-﻿namespace Editor;
+﻿using BlowoutTeamSoft.Engine.Interfaces;
+
+namespace Editor;
 
 [EditorTool( "tools.eye-dropper-tool", Hidden = true )]
 public class EyeDropperTool : EditorTool
@@ -167,7 +169,7 @@ public class EyeDropperTool : EditorTool
 		}
 	}
 
-	static void ProcessComponent( Component comp )
+	static void ProcessComponent( IBlowoutGameSystem comp )
 	{
 		if ( TargetProperty is null ) return;
 		TargetProperty.SetValue( comp );

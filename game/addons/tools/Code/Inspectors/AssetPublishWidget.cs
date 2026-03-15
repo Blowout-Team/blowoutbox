@@ -1,4 +1,5 @@
-﻿using Editor.Wizards;
+﻿using BlowoutTeamSoft.Engine.Interfaces;
+using Editor.Wizards;
 
 namespace Editor.Inspectors;
 
@@ -9,11 +10,11 @@ sealed class AssetPublishWidget : Widget, AssetSystem.IEventListener
 
 	Label label;
 
-	public AssetPublishWidget( Widget parent, Asset asset ) : base( parent )
+	public AssetPublishWidget(Widget parent, Asset asset) : base(parent)
 	{
 		Asset = asset;
 		SerializedObject = asset.Publishing.GetSerialized();
-		SerializedObject.OnPropertyChanged += ( p ) => asset.Publishing.Save();
+		SerializedObject.OnPropertyChanged += (p) => asset.Publishing.Save();
 		Layout = Layout.Row();
 		Layout.Margin = 8;
 
@@ -22,17 +23,17 @@ sealed class AssetPublishWidget : Widget, AssetSystem.IEventListener
 		StartBuild();
 	}
 
-	void AssetSystem.IEventListener.OnAssetChanged( Asset asset )
+	void AssetSystem.IEventListener.OnAssetChanged(Asset asset)
 	{
-		if ( asset != Asset ) return;
+		if (asset != Asset) return;
 
 		StartBuild();
 	}
 
 	protected override void OnPaint()
 	{
-		Paint.SetBrushAndPen( Theme.Primary.WithAlpha( 0.2f ) );
-		Paint.DrawRect( LocalRect );
+		Paint.SetBrushAndPen(Theme.Primary.WithAlpha(0.2f));
+		Paint.DrawRect(LocalRect);
 	}
 
 	ResourcePublishContext BuildPubishContext()
@@ -42,12 +43,16 @@ sealed class AssetPublishWidget : Widget, AssetSystem.IEventListener
 		// pre fill?
 
 		var resource = Asset.LoadResource();
-		if ( resource == null )
+		if (resource == null)
 		{
 			return context;
 		}
 
-		resource.ConfigurePublishing( context );
+		if (resource is Resource res)
+		{
+			res.ConfigurePublishing(context);
+		}
+
 		return context;
 	}
 
@@ -55,22 +60,22 @@ sealed class AssetPublishWidget : Widget, AssetSystem.IEventListener
 	{
 		var context = BuildPubishContext();
 
-		Layout.Clear( true );
+		Layout.Clear(true);
 
 		Layout.Spacing = 8;
-		var enableDisable = Layout.Add( ControlWidget.Create( SerializedObject.GetProperty( "Enabled" ) ) );
+		var enableDisable = Layout.Add(ControlWidget.Create(SerializedObject.GetProperty("Enabled")));
 
-		label = Layout.Add( new Label( "" ) );
+		label = Layout.Add(new Label(""));
 		label.Color = Color.White;
 
-		if ( !context.PublishingEnabled )
+		if (!context.PublishingEnabled)
 		{
 			label.Text = $"Can't publish - {context.ReasonForDisabling}";
 			enableDisable.Hide();
 			return;
 		}
 
-		if ( !Asset.Publishing.Enabled )
+		if (!Asset.Publishing.Enabled)
 		{
 			label.Text = "Enable Publishing";
 		}
@@ -90,7 +95,7 @@ sealed class AssetPublishWidget : Widget, AssetSystem.IEventListener
 	{
 		// fake addon for upload
 
-		if ( AssetSystem.IsCloudInstalled( Asset.Package ) && string.IsNullOrWhiteSpace( Asset.GetSourceFile( true ) ) )
+		if (AssetSystem.IsCloudInstalled(Asset.Package) && string.IsNullOrWhiteSpace(Asset.GetSourceFile(true)))
 		{
 			Enabled = false;
 			Visible = false;
@@ -106,32 +111,32 @@ sealed class AssetPublishWidget : Widget, AssetSystem.IEventListener
 
 		var addon = Asset.Publishing.CreateTemporaryProject();
 
-		if ( !Asset.Publishing.Enabled )
+		if (!Asset.Publishing.Enabled)
 			return;
 
-		var upload = Layout.Add( new IconButton( "upload" ) );
+		var upload = Layout.Add(new IconButton("upload"));
 		upload.ToolTip = "Publish";
 		upload.Background = Theme.Green;
-		upload.OnClick = () => OpenProjectWindow( addon );
+		upload.OnClick = () => OpenProjectWindow(addon);
 
-		var settings = Layout.Add( new IconButton( "settings" ) );
+		var settings = Layout.Add(new IconButton("settings"));
 		settings.ToolTip = "Settings";
-		settings.OnClick = () => ProjectSettingsWindow.OpenForProject( addon );
+		settings.OnClick = () => ProjectSettingsWindow.OpenForProject(addon);
 
-		var package = await Package.FetchAsync( addon.Config.FullIdent, false );
-		if ( package is not null )
+		var package = await Package.FetchAsync(addon.Config.FullIdent, false);
+		if (package is not null)
 		{
-			var view = Layout.Add( new IconButton( "launch" ) );
+			var view = Layout.Add(new IconButton("launch"));
 			view.ToolTip = "Open Web";
-			view.OnClick = () => EditorUtility.OpenFolder( addon.ViewUrl );
+			view.OnClick = () => EditorUtility.OpenFolder(addon.ViewUrl);
 		}
 
 		Update();
 	}
 
-	void OpenProjectWindow( Project project )
+	void OpenProjectWindow(Project project)
 	{
-		var w = PublishWizard.Open( project, BuildPubishContext() );
+		var w = PublishWizard.Open(project, BuildPubishContext());
 	}
 }
 

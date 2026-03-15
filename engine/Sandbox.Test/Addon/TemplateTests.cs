@@ -1,4 +1,6 @@
 ﻿
+using BlowoutTeamSoft.Engine;
+using Sandbox;
 using Sandbox.DataModel;
 using System;
 using System.Collections.Generic;
@@ -81,14 +83,28 @@ namespace Addon
 
 			foreach ( var addon in addons )
 			{
-				var json = File.ReadAllText( addon );
-				var projectConfig = System.Text.Json.JsonSerializer.Deserialize<ProjectConfig>( json );
-				projectConfig.Directory = new DirectoryInfo( Path.GetDirectoryName( addon ) );
+				var content = File.ReadAllText( addon );
 
-				if ( projectConfig.Type != type )
-					continue;
+				if ( BlowoutEngine.Current.XProjectProvider.IsLegacy( addon ) )
+				{
+					var projectConfig = System.Text.Json.JsonSerializer.Deserialize<ProjectConfig>( content );
+					projectConfig.Directory = new DirectoryInfo( Path.GetDirectoryName( addon ) );
 
-				result.Add( projectConfig );
+					if ( projectConfig.Type != type )
+						continue;
+
+					result.Add( projectConfig );
+				}
+				else
+				{
+					var projectConfig = (ProjectConfig)BlowoutEngine.Current.XProjectProvider.ReadFrom( content );
+					projectConfig.Directory = new DirectoryInfo( Path.GetDirectoryName( addon ) );
+
+					if ( projectConfig.Type != type )
+						continue;
+
+					result.Add( projectConfig );
+				}
 			}
 
 			return result;

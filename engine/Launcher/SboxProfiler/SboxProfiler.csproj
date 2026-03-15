@@ -25,6 +25,7 @@
 		<ApplicationIcon>sbox-profiler.ico</ApplicationIcon>
 		<ProduceReferenceAssembly>false</ProduceReferenceAssembly>
 		<ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+		<Configurations>Debug;Release;Blowout_Source2_Debug;Blowout_Source2_Release</Configurations>
 	</PropertyGroup>
 
 	<ItemGroup>

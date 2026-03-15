@@ -10,9 +10,14 @@
     <PackageId>Sandbox.System</PackageId>
     <NoWarn>1701;1702;1591</NoWarn>
 	<LangVersion>latest</LangVersion>
+	<Configurations>Debug;Release;Blowout_Source2_Debug;Blowout_Source2_Release</Configurations>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Blowout_Source2_Debug|AnyCPU'">
     <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
   </PropertyGroup>
 
@@ -30,6 +35,10 @@
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.0.0-2.final" />
     <PackageReference Include="Sentry" Version="5.15.1" />
     <PackageReference Include="Vestris.ResourceLib" Version="2.2.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\BlowoutTeamSoft\Engine\BlowoutTeamSoft.Engine.csproj" />
   </ItemGroup>
   
 </Project>

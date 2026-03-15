@@ -1,3 +1,4 @@
+using BlowoutTeamSoft.Engine.Enums.Rendering;
 using NativeEngine;
 using System.Runtime.InteropServices;
 
@@ -83,10 +84,15 @@ namespace Sandbox
 			return this;
 		}
 
-		/// <inheritdoc cref="TextureBuilder.WithFormat"/>
 		public Texture2DBuilder WithFormat( ImageFormat format )
 		{
 			config.WithFormat( format );
+			return this;
+		}
+
+		public Texture2DBuilder WithFormat( BlowoutGraphicsFormat format )
+		{
+			config.WithFormat( format.ToSourceFormat() );
 			return this;
 		}
 

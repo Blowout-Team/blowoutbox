@@ -1,4 +1,6 @@
-﻿namespace Sandbox
+﻿using BlowoutTeamSoft.Engine.Interfaces;
+
+namespace Sandbox
 {
 	public partial class Scene : GameObject
 	{
@@ -98,6 +100,13 @@ public interface ISceneUndoScope
 	ISceneUndoScope WithGameObjectDestructions( GameObject gameObject );
 	ISceneUndoScope WithGameObjectChanges( IEnumerable<GameObject> objects, GameObjectUndoFlags flags );
 	ISceneUndoScope WithGameObjectChanges( GameObject gameObject, GameObjectUndoFlags flags );
+
+	ISceneUndoScope WithBlowoutGameSystemCreations();
+	ISceneUndoScope WithBlowoutGameSystemChanges( IEnumerable<IBlowoutGameSystem> gameSystems );
+	ISceneUndoScope WithBlowoutGameSystemChanges( IBlowoutGameSystem gameSystem );
+	ISceneUndoScope WithBlowoutGameSystemDestructions( IEnumerable<IBlowoutGameSystem> gameSystems );
+	ISceneUndoScope WithBlowoutGameSystemDestructions( IBlowoutGameSystem gameSystem );
+
 	ISceneUndoScope WithComponentCreations();
 	ISceneUndoScope WithComponentDestructions( IEnumerable<Component> components );
 	ISceneUndoScope WithComponentDestructions( Component component );

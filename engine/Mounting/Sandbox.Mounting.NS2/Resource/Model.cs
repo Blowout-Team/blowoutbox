@@ -1,7 +1,6 @@
 ﻿using Sandbox;
 using System;
 using System.Text;
-using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Runtime.CompilerServices;
 
@@ -198,7 +197,7 @@ class ModelLoader( string fullPath ) : ResourceLoader<GameMount>
 			pos.x, pos.y, pos.z, 1
 		);
 
-		Matrix4x4.Decompose( mat, out var scale, out var rot, out var pos2 );
+		System.Numerics.Matrix4x4.Decompose( mat, out var scale, out var rot, out var pos2 );
 		return new Transform { Position = pos2, Rotation = rot, Scale = scale };
 	}
 

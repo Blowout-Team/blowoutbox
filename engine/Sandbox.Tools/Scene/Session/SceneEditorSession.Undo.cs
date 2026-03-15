@@ -1,4 +1,7 @@
-﻿using Sandbox.Helpers;
+﻿using BlowoutTeamSoft.Configuration.Serializer.Interfaces;
+using BlowoutTeamSoft.Engine.Interfaces;
+using BlowoutTeamSoft.Engine.NativeHandles;
+using Sandbox.Helpers;
 using System;
 using System.Text.Json.Nodes;
 
@@ -69,7 +72,7 @@ public partial class SceneEditorSession
 
 internal sealed class SceneUndoSnapshot : IDisposable
 {
-	sealed record ScopeSnapshot( JsonObject Scene, SelectionSnapshot Selection, ComponentSnapshot ComponentSnapshot, GameObjectSnapshot GameObjectSnapshot )
+	sealed record ScopeSnapshot( JsonObject Scene, SelectionSnapshot Selection, ComponentSnapshot ComponentSnapshot, GameObjectSnapshot GameObjectSnapshot, GameSystemSnapshot GameSystemSnapshot )
 	{
 		public bool Equals( ScopeSnapshot other )
 		{
@@ -87,7 +90,7 @@ internal sealed class SceneUndoSnapshot : IDisposable
 
 		public override int GetHashCode()
 		{
-			return HashCode.Combine( Scene, Selection, ComponentSnapshot, GameObjectSnapshot );
+			return HashCode.Combine( Scene, Selection, ComponentSnapshot, GameObjectSnapshot, GameSystemSnapshot );
 		}
 	}
 
@@ -168,6 +171,69 @@ internal sealed class SceneUndoSnapshot : IDisposable
 		public override int GetHashCode()
 		{
 			return HashCode.Combine( SelectedGoRefs, SelectedComponentRefs, SelectedObjectRefs );
+		}
+	}
+
+	sealed record GameSystemSnapshot
+	{
+		public readonly JsonNode[] State;
+		public readonly BlowoutGameSystemReference[] SystemsRefs;
+
+		public GameSystemSnapshot( IEnumerable<IBlowoutGameSystem> components )
+		{
+			SystemsRefs = components.Select( ( x ) =>
+			{
+				return new BlowoutGameSystemReference( BlowoutGameSystemReference.EXPECTED_REFERENCE_TYPE, x.Id, x.SystemGameObject.Id, Game.TypeLibrary.GetType( x.GetType() ).ClassName );
+			} ).ToArray();
+
+			var serializeOptions = new GameObject.SerializeOptions { };
+			State = components.OfType<IBlowoutSerializable>().Select( comp => comp.Serialize( serializeOptions ).ToJson() ).ToArray();
+		}
+
+		public void Restore( Scene scene )
+		{
+			for ( int i = 0; i < State.Length; i++ )
+			{
+				IBlowoutGameSystem comp = null;
+				comp = SystemsRefs[i].Resolve( scene );
+
+				if ( comp is null )
+				{
+					continue;
+				}
+
+				if ( comp is IBlowoutSerializable serializable )
+					serializable.DeserializeLazy( State[i].AsObject() );
+			}
+		}
+
+		public void PostRestore( Scene scene )
+		{
+			foreach ( var compRef in SystemsRefs )
+			{
+				var comp = compRef.Resolve( scene );
+				if ( comp.IsAliveSystem && comp is IBlowoutSerializable serializable )
+				{
+					serializable?.DeserializeNow();
+				}
+			}
+		}
+
+		public bool Equals( ComponentSnapshot other )
+		{
+			if ( other == null )
+				return false;
+			if ( State == other.State &&
+				SystemsRefs.Select( x => x.SystemId ).SequenceEqual( other.ComponentRefs.Select( x => x.ComponentId ) ) )
+			{
+				return true;
+			}
+			return false;
+		}
+
+		public override int GetHashCode()
+		{
+			return HashCode.Combine( State, SystemsRefs );
 		}
 	}
 
@@ -366,13 +432,19 @@ internal sealed class SceneUndoSnapshot : IDisposable
 
 	private HashSet<Component> _createdComponents = new();
 
+	private HashSet<IBlowoutGameSystem> _createdGameSystems = new();
+
 	private Dictionary<GameObject, GameObjectUndoFlags> _initalCapturedGameObjects = new();
 
 	private HashSet<Component> _initialCapturedComponents = new();
 
+	private HashSet<IBlowoutGameSystem> _initialCapturedGameSystems = new();
+
 	private Dictionary<GameObject, GameObjectReference> _destroyedGameObjects { get; } = new();
 
 	private Dictionary<Component, ComponentReference> _destroyedComponents { get; } = new();
+
+	private Dictionary<IBlowoutGameSystem, BlowoutGameSystemReference> _destroyedGameSystems { get; } = new();
 
 	private bool _captureDestructions = false;
 
@@ -446,6 +518,35 @@ internal sealed class SceneUndoSnapshot : IDisposable
 			_destroyedComponents[destroyedComp] = ComponentReference.FromInstance( destroyedComp );
 		}
 
+		foreach ( var destroyedSys in builder.DestroyedGameSystems )
+		{
+			// if destroyed component is part of prefab we need to update it's instance cache
+			if ( destroyedSys.SystemGameObject is GameObject gm && gm.IsPrefabInstance )
+			{
+				_initalCapturedGameObjects[gm.OutermostPrefabInstanceRoot] = GameObjectUndoFlags.All;
+			}
+			var type = Game.TypeLibrary.GetType( destroyedSys.GetType() );
+			_destroyedGameSystems[destroyedSys] = new BlowoutGameSystemReference( BlowoutGameSystemReference.EXPECTED_REFERENCE_TYPE, destroyedSys.Id, destroyedSys.SystemGameObject.Id, type?.ClassName );
+		}
+
+		foreach ( var sys in builder.CapturedGameSystems )
+		{
+			// Need to capture the prefab root and only the prefab root if we edited an instance
+			if ( sys.SystemGameObject is GameObject gm )
+			{
+				if( gm.IsPrefabInstance )
+				{
+					_initalCapturedGameObjects[gm.OutermostPrefabInstanceRoot] = GameObjectUndoFlags.All;
+					continue;
+				}
+
+				if ( !_initalCapturedGameObjects.ContainsKey( gm ) || !_initalCapturedGameObjects[gm].Contains( GameObjectUndoFlags.Components ) )
+				{
+					_initialCapturedGameSystems.Add( sys );
+				}
+			}
+		}
+
 		foreach ( var comp in builder.CapturedComponents )
 		{
 			// Need to capture the prefab root and only the prefab root if we edited an instance
@@ -496,7 +597,14 @@ internal sealed class SceneUndoSnapshot : IDisposable
 			gameObjectSnapshot = new GameObjectSnapshot( _initalCapturedGameObjects );
 		}
 
-		_initialState = new ScopeSnapshot( scene, selection, componentSnapshot, gameObjectSnapshot );
+		GameSystemSnapshot gameSystemSnapshot = null;
+		// If deletion was requested we already captured the whole scene, no point in capturing individual components
+		if ( !_captureDestructions && _initialCapturedGameSystems.Count > 0 )
+		{
+			gameSystemSnapshot = new( _initialCapturedGameSystems );
+		}
+
+		_initialState = new ScopeSnapshot( scene, selection, componentSnapshot, gameObjectSnapshot, gameSystemSnapshot );
 
 		if ( _captureGameObjectCreations )
 		{
@@ -586,6 +694,36 @@ internal sealed class SceneUndoSnapshot : IDisposable
 			createdGameObjectRefs.Add( GameObjectReference.FromInstance( go ) );
 		}
 
+		HashSet<BlowoutGameSystemReference> createdGameSystems = new();
+		foreach ( var system in _createdGameSystems )
+		{
+			if ( !system.IsAliveSystem )
+			{
+				// can hapen if component was created and immediatly destoryed within undo scope
+				continue;
+			}
+			if ( system.SystemGameObject is GameObject sourceObject )
+			{
+				// Need to capture the prefab root and only the prefab root if we edited an instance
+				if ( sourceObject.IsPrefabInstance )
+				{
+					disposeWatchedGameObjects[sourceObject.OutermostPrefabInstanceRoot] = GameObjectUndoFlags.All;
+				}
+				else if ( disposeWatchedGameObjects.ContainsKey( sourceObject ) )
+				{
+					disposeWatchedGameObjects[sourceObject] |= GameObjectUndoFlags.Components;
+				}
+				else
+				{
+					disposeWatchedGameObjects[sourceObject] = GameObjectUndoFlags.Components;
+				}
+			}
+
+			var systemType = Game.TypeLibrary.GetType( system.GetType() );
+
+			createdGameSystems.Add( new BlowoutGameSystemReference( BlowoutGameSystemReference.EXPECTED_REFERENCE_TYPE, system.Id, system.SystemGameObject.Id, systemType?.ClassName ) );
+		}
+
 		// for all components that have been created capture their parent go
 		HashSet<ComponentReference> createdComponentRefs = new();
 		foreach ( var component in _createdComponents )
@@ -632,6 +770,29 @@ internal sealed class SceneUndoSnapshot : IDisposable
 			}
 		}
 
+		HashSet<IBlowoutGameSystem> disposeWatchedGameSystems = new();
+		foreach ( var sys in _initialCapturedGameSystems )
+		{
+			if ( !sys.IsAliveSystem )
+			{
+				continue;
+			}
+
+			if ( sys.SystemGameObject is GameObject gm )
+			{
+				// Need to capture the prefab root and only the prefab root if we edited an instance
+				if ( gm.IsPrefabInstance )
+				{
+					disposeWatchedGameObjects[gm.OutermostPrefabInstanceRoot] = GameObjectUndoFlags.All;
+				}
+				// only add if parent is not already watched or does not have component flag
+				else if ( !_initalCapturedGameObjects.ContainsKey( gm ) || !_initalCapturedGameObjects[gm].Contains( GameObjectUndoFlags.Components ) )
+				{
+					disposeWatchedGameSystems.Add( sys );
+				}
+			}
+		}
+
 		ComponentSnapshot componentSnapshot = null;
 		if ( disposeWatchedComponents.Count > 0 )
 		{
@@ -644,10 +805,17 @@ internal sealed class SceneUndoSnapshot : IDisposable
 			gameObjectSnapshot = new GameObjectSnapshot( disposeWatchedGameObjects );
 		}
 
-		var disposeState = new ScopeSnapshot( null, selection, componentSnapshot, gameObjectSnapshot );
+		GameSystemSnapshot gameSystemSnapshot = null;
+		if ( disposeWatchedGameSystems.Count > 0 )
+		{
+			gameSystemSnapshot = new GameSystemSnapshot( disposeWatchedGameSystems );
+		}
+
+		var disposeState = new ScopeSnapshot( null, selection, componentSnapshot, gameObjectSnapshot, gameSystemSnapshot );
 
 		var destroyedGameObjectRefs = _destroyedGameObjects.Select( x => x.Value ).ToArray();
 		var destroyedComponentRefs = _destroyedComponents.Select( x => x.Value ).ToArray();
+		var destroyedGameSystemRefs = _destroyedGameSystems.Select( x => x.Value ).ToArray();
 
 		var prefabInstanceRootsRequiringRefresh = new HashSet<GameObject>();
 
@@ -694,14 +862,21 @@ internal sealed class SceneUndoSnapshot : IDisposable
 
 					preChangeStateCopy.GameObjectSnapshot?.Restore( _session.Scene );
 					preChangeStateCopy.ComponentSnapshot?.Restore( _session.Scene );
+					preChangeStateCopy.GameSystemSnapshot?.Restore( _session.Scene );
 
 					preChangeStateCopy.ComponentSnapshot?.PostRestore( _session.Scene );
 					preChangeStateCopy.GameObjectSnapshot?.PostRestore( _session.Scene );
+					preChangeStateCopy.GameSystemSnapshot?.PostRestore( _session.Scene );
 
 					// delete created components
 					foreach ( var compRef in createdComponentRefs )
 					{
 						compRef.Resolve( _session.Scene )?.Destroy();
+					}
+
+					foreach ( var sysRef in createdGameSystems )
+					{
+						sysRef.Resolve( _session.Scene )?.Destroy();
 					}
 
 					// delete created gos
@@ -737,6 +912,11 @@ internal sealed class SceneUndoSnapshot : IDisposable
 					goRef.Resolve( _session.Scene )?.Destroy();
 				}
 
+				foreach ( var goRef in destroyedGameSystemRefs )
+				{
+					goRef.Resolve( _session.Scene )?.Destroy();
+				}
+
 				// Restore Gos and pass created gos which need to be created first
 				disposeState.GameObjectSnapshot?.Restore( _session.Scene, createdGameObjectRefs );
 				disposeState.ComponentSnapshot?.Restore( _session.Scene );
@@ -761,6 +941,11 @@ internal sealed class SceneUndoSnapshot : IDisposable
 		_createdComponents.Add( comp );
 	}
 
+	private void OnGameSystemAdded( IBlowoutGameSystem gameSystem )
+	{
+		_createdGameSystems.Add( gameSystem );
+	}
+
 	private void OnGameObjectAdded( GameObject go )
 	{
 		_createdGameObjects.Add( go );
@@ -774,11 +959,15 @@ internal class SceneUndoScope : ISceneUndoScope
 	internal bool CaptureSelections { get; private set; }
 	internal bool CaptureGameObjectCreations { get; private set; }
 	internal bool CaptureComponentCreations { get; private set; }
+	internal bool CaptureGameSystemsCreations { get; private set; }
+
 	internal List<(GameObject[], GameObjectUndoFlags)> CapturedGameObjects { get; } = new();
+	internal List<IBlowoutGameSystem> CapturedGameSystems { get; } = new();
 	internal List<Component> CapturedComponents { get; } = new();
 	internal List<GameObject> DestroyedGameObjects { get; } = new();
 	internal List<Component> DestroyedComponents { get; } = new();
-	internal bool CaptureDeletions => DestroyedGameObjects.Count > 0 || DestroyedComponents.Count > 0;
+	internal List<IBlowoutGameSystem> DestroyedGameSystems { get; } = new();
+	internal bool CaptureDeletions => DestroyedGameObjects.Count > 0 || DestroyedComponents.Count > 0 || DestroyedGameSystems.Count > 0;
 
 	public SceneUndoScope( SceneEditorSession session, string name )
 	{
@@ -847,5 +1036,62 @@ internal class SceneUndoScope : ISceneUndoScope
 	{
 		var snapshot = new SceneUndoSnapshot( this );
 		return snapshot;
+	}
+
+	public ISceneUndoScope WithBlowoutGameSystemCreations()
+	{
+		CaptureGameSystemsCreations = true;
+		return this;
+	}
+
+	public ISceneUndoScope WithBlowoutGameSystemChanges( IEnumerable<IBlowoutGameSystem> gameSystems )
+	{
+		foreach ( var gameSystem in gameSystems )
+		{
+			if ( gameSystem is Component comp )
+			{
+				CapturedComponents.Add( comp );
+			}
+			else
+				CapturedGameSystems.Add( gameSystem );
+		}
+		return this;
+	}
+
+	public ISceneUndoScope WithBlowoutGameSystemChanges( IBlowoutGameSystem gameSystem )
+	{
+		if ( gameSystem is Component comp )
+		{
+			CapturedComponents.Add( comp );
+		}
+		else
+			CapturedGameSystems.Add( gameSystem );
+		return this;
+	}
+
+	public ISceneUndoScope WithBlowoutGameSystemDestructions( IEnumerable<IBlowoutGameSystem> gameSystems )
+	{
+		foreach ( var sys in gameSystems )
+		{
+			if ( sys is Component comp )
+			{
+				DestroyedComponents.Add( comp );
+			}
+			else
+				DestroyedGameSystems.Add( sys );
+		}
+		return this;
+	}
+
+	public ISceneUndoScope WithBlowoutGameSystemDestructions( IBlowoutGameSystem gameSystem )
+	{
+		if ( gameSystem is Component comp )
+		{
+			DestroyedComponents.Add( comp );
+		}
+		else
+			DestroyedGameSystems.Add( gameSystem );
+
+		return this;
 	}
 }

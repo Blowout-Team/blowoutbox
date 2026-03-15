@@ -1,3 +1,4 @@
+using BlowoutTeamSoft.Engine.Render;
 using System.Collections.Concurrent;
 
 namespace Sandbox.Rendering;
@@ -257,6 +258,23 @@ public sealed partial class CommandList
 			}
 
 			list.AddEntry( &Execute, new Entry { Token = token, Object5 = buffer.Name, Object4 = this, Data1 = new Vector4( mip, 0, 0, 0 ) } );
+		}
+
+		public void Set( StringToken token, BlowoutDynamicRenderTextureHandle.BlowoutSource2ColorTextureRef buffer, int mip = -1 )
+		{
+			static void Execute( ref Entry entry, CommandList commandList )
+			{
+				if ( commandList.state.GetRenderTarget( (string)entry.Object5 ) is not { } target )
+				{
+					Log.Warning( $"[{commandList.DebugName ?? "CommandList"}] Unknown rt: {(string)entry.Object5}" );
+					return;
+				}
+
+				var attrAccess = (AttributeAccess)entry.Object4;
+				attrAccess.attributes.Set( (StringToken)entry.Object1, target.ColorTarget, (int)entry.Data1.x );
+			}
+
+			list.AddEntry( &Execute, new Entry { Object1 = token, Object5 = buffer.Name, Object4 = this, Data1 = new Vector4( mip, 0, 0, 0 ) } );
 		}
 
 		/// <summary>

@@ -1,4 +1,8 @@
-﻿using System.ComponentModel;
+﻿using BlowoutTeamSoft.Engine;
+using BlowoutTeamSoft.Engine.Core;
+using BlowoutTeamSoft.Engine.Enums;
+using BlowoutTeamSoft.Engine.Interfaces;
+using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
 namespace Sandbox;
@@ -8,9 +12,21 @@ namespace Sandbox;
 /// and is disposed when the scene is disposed.
 /// </summary>
 [Expose]
-public abstract partial class GameObjectSystem : IDisposable
+public abstract partial class GameObjectSystem : IDisposable, IBlowoutGameSystem
 {
 	public Scene Scene { get; private set; }
+
+	public bool IsExecuting { get; set; } = true;
+
+	public bool IsActive => Scene != null;
+
+	public bool IsAliveSystem => IsActive;
+
+	public BlowoutSystemMode SystemMode { get; set; }
+
+	public BlowoutEngineGameObject SystemGameObject => Scene;
+
+	public BlowoutEngineObject Native => Scene;
 
 	List<IDisposable> disposables = new List<IDisposable>();
 
@@ -39,6 +55,19 @@ public abstract partial class GameObjectSystem : IDisposable
 		var d = Scene.AddHook( stage, order, function, GetType().Name, debugName );
 		disposables.Add( d );
 	}
+
+	public object InstallParentClone( IBlowoutGameSystem gameSystem )
+	{
+		return this;
+	}
+
+	public void ForceChangeId( Guid id, bool isRefresh = false )
+	{
+		Id = id;
+	}
+
+	public void Destroy() =>
+		Dispose();
 
 	/// <summary>
 	/// A list of stages in the scene tick in which we can hook

@@ -1,3 +1,7 @@
+using BlowoutTeamSoft.Engine.Interfaces.Rendering;
+using BlowoutTeamSoft.Engine.Interfaces.Shaders;
+using BlowoutTeamSoft.Engine.Render;
+using BlowoutTeamSoft.Reflection;
 using NativeEngine;
 
 namespace Sandbox;
@@ -5,7 +9,7 @@ namespace Sandbox;
 /// <summary>
 /// A material. Uses several <see cref="Texture"/>s and a <see cref="Shader"/> with specific settings for more interesting visual effects.
 /// </summary>
-public sealed partial class Material : Resource
+public sealed partial class Material : Resource, IBlowoutMaterial
 {
 	internal IMaterial native;
 
@@ -14,12 +18,26 @@ public sealed partial class Material : Resource
 	/// <summary>
 	/// Name (or path) of the material.
 	/// </summary>
-	public string Name { get; internal set; }
+	public string Name { get; set; }
 
 	/// <summary>
 	/// Access to all of the attributes of this material.
 	/// </summary>
 	public RenderAttributes Attributes { get; internal set; }
+
+	public IBlowoutShaderParameters Parameters => Attributes;
+
+	public BlowoutColor Color
+	{
+		get
+		{
+			var color = GetColor( "color" );
+			return new( color.r, color.g, color.b, color.a );
+		}
+		set => Set( "color", new Color( value.R, value.G, value.B, value.A ) );
+	}
+
+	public BlowoutMaterialHandle Handle => new BlowoutMaterialHandle();
 
 	/// <summary>
 	/// Private constructor, use <see cref="FromNative(IMaterial, string)"/>
@@ -64,5 +82,10 @@ public sealed partial class Material : Resource
 	public Material CreateCopy( string name = null )
 	{
 		return FromNative( MaterialSystem2.CreateProceduralMaterialCopy( native, 0, true ), name );
+	}
+
+	public void SetPass( int pass )
+	{
+		Log.Info("Dehs: Idk what to do with that :)");
 	}
 }

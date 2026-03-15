@@ -1,4 +1,5 @@
 using Sandbox.Mounting;
+using System.Threading;
 
 namespace Sandbox;
 
@@ -28,8 +29,9 @@ public partial class Model
 	/// Load a model by file path.
 	/// </summary>
 	/// <param name="filename">The file path to load as a model.</param>
+	/// <param name="token">Token to cancel operation.</param>
 	/// <returns>The loaded model, or null</returns>
-	public static async Task<Model> LoadAsync( string filename )
+	public static async Task<Model> LoadAsync( string filename, CancellationToken token = default )
 	{
 		ThreadSafe.AssertIsMainThread();
 
@@ -44,7 +46,7 @@ public partial class Model
 		using var manifest = AsyncResourceLoader.Load( filename );
 		if ( manifest is not null )
 		{
-			await manifest.WaitForLoad();
+			await manifest.WaitForLoad(token);
 		}
 
 		// TODO - make async

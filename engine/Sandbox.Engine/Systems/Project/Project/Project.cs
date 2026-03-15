@@ -1,7 +1,13 @@
-﻿using Sandbox.Engine;
+﻿using BlowoutTeamSoft.Engine;
+using BlowoutTeamSoft.Engine.Helpers;
+using Sandbox.DataModel;
+using Sandbox.Engine;
 using System.IO;
+using System.Runtime.Serialization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Xml;
+using System.Xml.Serialization;
 
 namespace Sandbox;
 
@@ -125,14 +131,33 @@ public sealed partial class Project
 			RootDirectory = new DirectoryInfo( System.IO.Path.GetDirectoryName( ConfigFilePath ) );
 			Assert.True( RootDirectory.Exists, $"{RootDirectory} does not exist" );
 
-			if ( !ConfigFilePath.EndsWith( ".sbproj" ) )
+			if ( !ConfigFilePath.EndsWith( ".sbproj" ) && !ConfigFilePath.EndsWith( ".bxproj" ) )
 			{
-				// Turn Path from myproject/ into myproject/.sbproj
-				ConfigFilePath = System.IO.Path.Combine( RootDirectory.FullName, ".sbproj" );
+				// Turn Path from myproject/ into myproject/.bxproj
+				ConfigFilePath = System.IO.Path.Combine( RootDirectory.FullName, ".bxproj" );
+				if ( File.Exists( ConfigFilePath ) )
+					ConfigFilePath = System.IO.Path.Combine( RootDirectory.FullName, ".sbproj" );
 			}
 
-			var text = File.ReadAllText( ConfigFilePath );
-			Config = JsonSerializer.Deserialize<DataModel.ProjectConfig>( text );
+			if ( ConfigFilePath.EndsWith( ".bxproj" ) )
+			{
+				DataContractSerializer serializer = new DataContractSerializer( typeof( ProjectConfig ), new DataContractSerializerSettings()
+				{
+					PreserveObjectReferences = true,
+					KnownTypes = BlowoutEnumerable.From( typeof( JsonElement ) )
+				} );
+
+				using FileStream fileStream = new FileStream( ConfigFilePath, FileMode.Open, FileAccess.Read );
+				using ( var xmlWriter = new XmlTextReader( fileStream ) )
+				{
+					Config = (ProjectConfig)serializer.ReadObject( xmlWriter );
+				}
+			}
+			else
+			{
+				Config = JsonSerializer.Deserialize<DataModel.ProjectConfig>( File.ReadAllText( ConfigFilePath ) );
+			}
+
 			Config.Init( ConfigFilePath );
 
 			UpdateMockPackage();
@@ -165,15 +190,15 @@ public sealed partial class Project
 	}
 
 	/// <summary>
-	/// Absolute path to the location of the <c>.sbproj</c> file of the project.
+	/// Absolute path to the location of the <c>.bxproj</c> file of the project.
 	/// </summary>
 	public string GetRootPath() => RootDirectory.FullName;
 
 	/// <summary>
-	/// Gets the .sbproj file for this project
+	/// Gets the .bxproj file for this project
 	/// </summary>
 	/// <returns></returns>
-	public string GetProjectPath() => System.IO.Directory.EnumerateFiles( GetRootPath(), "*.sbproj" ).FirstOrDefault();
+	public string GetProjectPath() => System.IO.Directory.EnumerateFiles( GetRootPath(), "*.bxproj" ).FirstOrDefault();
 
 	/// <summary>
 	/// Absolute path to the Code folder of the project.
@@ -221,9 +246,10 @@ public sealed partial class Project
 		if ( IsTransient )
 			return;
 
-		if ( !ConfigFilePath.EndsWith( ".sbproj" ) ) return;
+		if ( !ConfigFilePath.EndsWith( ".bxproj" ) && !ConfigFilePath.EndsWith( ".sbproj" ) ) return;
 
-		var json = Config.ToJson();
+		//bxproj using xml.
+		var content = ConfigFilePath.EndsWith( ".bxproj" ) ? Config.ToXml() : Config.ToJson();
 
 		// Check if we need to do this first..
 		try
@@ -231,12 +257,12 @@ public sealed partial class Project
 			if ( File.Exists( ConfigFilePath ) )
 			{
 				var existingContents = File.ReadAllText( ConfigFilePath );
-				if ( json == existingContents ) return;
+				if ( content == existingContents ) return;
 			}
 		}
 		catch ( System.Exception ) { }
 
-		File.WriteAllText( ConfigFilePath, json );
+		File.WriteAllText( ConfigFilePath, content );
 
 		// update the package with new details
 		UpdateMockPackage();

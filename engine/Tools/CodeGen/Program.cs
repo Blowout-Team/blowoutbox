@@ -74,6 +74,7 @@ class Program
 		refs.Add( MetadataReference.CreateFromFile( typeof( System.Object ).Assembly.Location ) );
 		refs.Add( MetadataReference.CreateFromFile( Path.Combine( path, "System.Runtime.dll" ) ) );
 		refs.Add( MetadataReference.CreateFromFile( typeof( Sandbox.CodeGeneratorAttribute ).Assembly.Location ) );
+		refs.Add( MetadataReference.CreateFromFile( typeof( BlowoutTeamSoft.Engine.BlowoutEngine ).Assembly.Location ) );
 
 		CSharpCompilation compiler = CSharpCompilation.Create( $"CodeGen", SyntaxTree, refs, optn );
 

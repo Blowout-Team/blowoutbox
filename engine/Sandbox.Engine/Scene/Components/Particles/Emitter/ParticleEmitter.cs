@@ -116,6 +116,12 @@ public abstract class ParticleEmitter : Component, Component.ExecuteInEditor, Co
 
 	void OnParticleStep( float delta )
 	{
+		if ( target.IsRequiredStop )
+		{
+			time = 0f;
+			target.IsRequiredStop = false;
+		}
+
 		if ( !target.IsValid() ) return;
 		if ( !target.Active ) return;
 		if ( suspended ) return;

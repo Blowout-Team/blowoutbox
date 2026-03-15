@@ -1,4 +1,6 @@
-﻿public partial struct Vector3
+﻿namespace Sandbox;
+
+public partial struct Vector3
 {
 	/// <summary>
 	/// Everything you need to smooth damp a Vector3. Just call Update every frame.

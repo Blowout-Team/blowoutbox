@@ -2,6 +2,12 @@
 *
 !*/
 
+#
+# Blowout Dependencies
+#
+!gitassets/*
+!game/core/tools/images/blow_*
+
 # Git
 !.gitignore
 !.gitattributes
@@ -13,6 +19,8 @@
 !*.cs
 !*.razor
 
+# BCompiler stuff
+blowout_precompile.json
 
 # Sandbox source files
 !*.scene
@@ -101,3 +109,4 @@ engine/TestResults/
 /game/tools
 /game/aftermath_dumps
 /game/gamecache
+/game/addons/menu/Transients

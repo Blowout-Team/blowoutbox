@@ -1,5 +1,7 @@
+using BlowoutTeamSoft.Engine.Input;
 using NativeEngine;
 using Sandbox.Engine;
+using System.Numerics;
 
 namespace Sandbox;
 
@@ -178,6 +180,13 @@ public static partial class Input
 
 	static HashSet<string> activeButtons = new HashSet<string>();
 
+	internal static string GetActionFromnIndex( int index )
+	{
+		if ( index > InputActions.Count )
+			return string.Empty;
+		return InputActions[index].KeyboardCode;
+	}
+
 	/// <summary>
 	/// Called when a compatible button is pressed.
 	/// </summary>
@@ -253,6 +262,10 @@ public static partial class Input
 					e.AccumActionsReleased |= 1UL << i;
 				}
 			}
+
+			OnAnyKey?.Invoke( new BlowoutInputKey( action.Name, default, default ) );
+			OnAnyKeyOnce?.Invoke( new BlowoutInputKey( action.Name, default, default ) );
+			OnAnyKeyOnce = default;
 
 			handled = true;
 		}

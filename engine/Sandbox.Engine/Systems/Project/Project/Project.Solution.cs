@@ -290,6 +290,8 @@ file static class ProjectExtensions
 		{
 			project.References.Add( "Sandbox.AppSystem.dll" );
 			project.References.Add( "Sandbox.Tools.dll" );
+			project.References.Add("BlowoutTeamSoft.Editor.dll");
+			project.References.Add("BlowoutTeamSoft.Editor.Drawers.dll");
 			project.References.Add( "Sandbox.Compiling.dll" );
 			project.References.Add( "Microsoft.CodeAnalysis.dll" );
 			project.References.Add( "Microsoft.CodeAnalysis.CSharp.dll" );

@@ -8,10 +8,12 @@ partial class StandaloneExporter
 	private static string[] DllBlacklist = [
 		// DLLs that *aren't* needed for the game to boot
 		"assetsystem.dll",
+		//TODO: Add Qt UI Engine for BlowoutTeamSoft Source 2 Support.
 		"Qt5Concurrent.dll",
 		"Qt5Core.dll",
 		"Qt5Gui.dll",
 		"Qt5Widgets.dll",
+		//
 		"rendersystemdx11.dll",
 		"steamdatagram_gamecoordinator.dll",
 		"toolframework2.dll",

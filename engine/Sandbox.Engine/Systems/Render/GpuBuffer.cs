@@ -1,3 +1,6 @@
+using BlowoutTeamSoft.Engine.Interfaces.GPU;
+using BlowoutTeamSoft.Engine.Render;
+using BlowoutTeamSoft.Engine.Validators;
 using NativeEngine;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -369,8 +372,17 @@ public partial class GpuBuffer : IValid, IDisposable
 /// The type of data that the GpuBuffer will store.
 /// Must be a <see href="https://docs.microsoft.com/en-us/dotnet/framework/interop/blittable-and-non-blittable-types">blittable</see> value type.
 /// </typeparam>
-public class GpuBuffer<T> : GpuBuffer where T : unmanaged
+public class GpuBuffer<T> : GpuBuffer, IBlowoutGPUBuffer<T>
+	where T : unmanaged
 {
+	public int ItemSize => ElementSize;
+
+	public int Count => ElementCount;
+
+	public Sandbox.Graphics.PrimitiveType PrimitiveType { get; set; } = Graphics.PrimitiveType.Triangles;
+
+	public bool IsQuad { get; set; }
+
 	public GpuBuffer( int elementCount, UsageFlags flags = UsageFlags.Structured, string debugName = null ) : base()
 	{
 		if ( !SandboxedUnsafe.IsAcceptablePod( typeof( T ) ) )
@@ -384,4 +396,39 @@ public class GpuBuffer<T> : GpuBuffer where T : unmanaged
 	public void SetData( Span<T> data, int elementOffset = 0 ) => SetData<T>( data, elementOffset );
 	public void GetDataAsync( Action<ReadOnlySpan<T>> callback ) => GetDataAsync<T>( callback );
 	public void GetDataAsync( Action<ReadOnlySpan<T>> callback, int start, int count ) => GetDataAsync<T>( callback, start, count );
+
+	public void Write( Span<T> data ) =>
+		SetData( data );
+
+	public void Write( T[] data ) =>
+		SetData( data );
+
+	public Memory<T> ToWritableMemory()
+	{
+		throw new NotImplementedException();
+	}
+
+	public T[] Read()
+	{
+		T[] count = new T[Count];
+		GetData( count, 0, ElementCount );
+		return count;
+	}
+
+	public ReadOnlyMemory<T> ReadMemory() =>
+		Read();
+
+	public BlowoutValidatorResult Validate()
+	{
+		if ( native == IntPtr.Zero )
+			return BlowoutValidatorResult.WithError("Native handle is nullptr");
+
+		return BlowoutValidatorResult.Success;
+	}
+
+	public int ReadSpan( Span<T> buffer )
+	{
+		GetData( buffer );
+		return ElementCount;
+	}
 }

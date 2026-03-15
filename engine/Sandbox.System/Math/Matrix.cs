@@ -1,5 +1,4 @@
 ﻿using Sandbox;
-using System.Numerics;
 using System.Runtime.InteropServices;
 
 /// <summary>
@@ -33,7 +32,7 @@ public struct Matrix : System.IEquatable<Matrix>
 
 	public Matrix( float m11, float m12, float m13, float m14, float m21, float m22, float m23, float m24, float m31, float m32, float m33, float m34, float m41, float m42, float m43, float m44 )
 	{
-		_numerics = new Matrix4x4( m11, m12, m13, m14, m21, m22, m23, m24, m31, m32, m33, m34, m41, m42, m43, m44 );
+		_numerics = new System.Numerics.Matrix4x4( m11, m12, m13, m14, m21, m22, m23, m24, m31, m32, m33, m34, m41, m42, m43, m44 );
 	}
 
 
@@ -68,7 +67,7 @@ public struct Matrix : System.IEquatable<Matrix>
 		System.Numerics.Matrix4x4.Decompose( mb, out var _, out var rb, out var _ );
 
 		var mo = Matrix.Identity;
-		mo *= (Matrix)System.Numerics.Matrix4x4.CreateFromQuaternion( Quaternion.Slerp( ra, rb, frac ) );
+		mo *= (Matrix)System.Numerics.Matrix4x4.CreateFromQuaternion( System.Numerics.Quaternion.Slerp( ra, rb, frac ) );
 
 		return mo;
 	}
@@ -91,7 +90,7 @@ public struct Matrix : System.IEquatable<Matrix>
 	/// <returns></returns>
 	public Matrix Transpose()
 	{
-		return Matrix4x4.Transpose( _numerics );
+		return System.Numerics.Matrix4x4.Transpose( _numerics );
 	}
 
 	/// <summary>
@@ -196,7 +195,7 @@ public struct Matrix : System.IEquatable<Matrix>
 
 	internal Transform ExtractTransform()
 	{
-		Matrix4x4.Decompose( _numerics, out var scale, out var rot, out var pos );
+		System.Numerics.Matrix4x4.Decompose( _numerics, out var scale, out var rot, out var pos );
 
 		return new Transform()
 		{
@@ -237,7 +236,7 @@ public struct Matrix : System.IEquatable<Matrix>
 		float height = t - b;
 		float reverseDepth = zn - zf;
 
-		cameraToProjection = new Matrix4x4();
+		cameraToProjection = new System.Numerics.Matrix4x4();
 
 		cameraToProjection._numerics.M11 = (2f * zn) / width;
 		cameraToProjection._numerics.M22 = (2f * zn) / height;

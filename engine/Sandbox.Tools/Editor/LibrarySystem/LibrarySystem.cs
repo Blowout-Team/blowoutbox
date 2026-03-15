@@ -33,8 +33,14 @@ public static class LibrarySystem
 	/// </summary>
 	private static LibraryProject AddFromFolder( string folder )
 	{
-		var configs = System.IO.Directory.EnumerateFiles( folder, "*.sbproj" ).ToArray();
-		if ( configs.Length != 1 ) return default;
+		var configs = System.IO.Directory.EnumerateFiles( folder, "*.bxproj" ).Union( System.IO.Directory.EnumerateFiles( folder, "*.sbproj" ) ).ToArray();
+
+		if ( configs.Length != 1 )
+		{
+			
+			if ( configs.Length != 1 )
+				return default;
+		}
 
 		var project = Project.AddFromFile( configs[0], true );
 		if ( project is null ) return default;

@@ -1,4 +1,13 @@
+using BlowoutTeamSoft.Engine;
+using BlowoutTeamSoft.Engine.Geometry.Mesh;
+using BlowoutTeamSoft.Engine.Interfaces.Geometry;
+using BlowoutTeamSoft.Engine.Interfaces.Mesh;
+using BlowoutTeamSoft.Engine.Render;
+using BlowoutTeamSoft.Engine.Validators;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using NativeEngine;
+using NoAlloq;
+using System.Linq;
 using System.Runtime.InteropServices;
 
 namespace Sandbox
@@ -21,10 +30,12 @@ namespace Sandbox
 	///
 	/// <para>A set of meshes can be used to create a <see cref="Model"/> via the <see cref="ModelBuilder"/> class.</para>
 	/// </summary>
-	public partial class Mesh : IValid
+	public partial class Mesh : IBlowoutMesh, IValid, IBlowoutDynamicMesh
 	{
 		internal IMesh native;
 		internal long instanceId;
+
+		private Model _coreModel;
 
 		public Mesh() : this( null, MeshPrimitiveType.Triangles )
 		{
@@ -66,6 +77,13 @@ namespace Sandbox
 		/// <inheritdoc cref="IValid.IsValid"/>
 		public bool IsValid => native.IsValid && native.IsStrongHandleValid();
 
+		public BlowoutValidatorResult Validate()
+		{
+			if ( !native.IsValid )
+				return BlowoutValidatorResult.WithError("Native type is nullptr");
+			return BlowoutValidatorResult.Success;
+		}
+
 		/// <summary>
 		/// Sets the primitive type for this mesh.
 		/// </summary>
@@ -103,6 +121,70 @@ namespace Sandbox
 			set
 			{
 				MeshGlue.SetMeshUvDensity( native, value );
+			}
+		}
+
+		private BBox _calculated;
+		IBlowoutBounds IBlowoutModel.Bounds
+		{
+			get
+			{
+				if ( !HasVertexBuffer )
+					return new BBox();
+
+				return _calculated;
+			}
+		}
+
+		public bool IsProcedural => true;
+
+		public BlowoutMeshId MeshHandle => new BlowoutMeshId( instanceId );
+
+		public IEnumerable<System.Numerics.Vector3> Vertices 
+		{ 
+			get 
+			{
+				if ( !HasVertexBuffer )
+					return Enumerable.Empty<System.Numerics.Vector3>();
+
+				System.Numerics.Vector3[] vertices = Array.Empty<System.Numerics.Vector3>();
+				LockVertexBuffer<Vertex>((x) => vertices = x.Select(x=> x.Position.ToSystemNumerics()).ToArray());
+
+				return vertices;
+			}
+			set
+			{
+				var vertices = value.Select( x => new Vertex(x) ).ToList();
+				CreateBuffers(new VertexBuffer(vertices));
+			}
+		}
+
+		public IEnumerable<BlowoutColor> Colors
+		{
+			get
+			{
+				if ( !HasVertexBuffer )
+					return Enumerable.Empty<BlowoutColor>();
+
+				BlowoutColor[] colors = Array.Empty<BlowoutColor>();
+				LockVertexBuffer<Vertex>( ( x ) => colors = x.Select( x => x.Color.ToColor().ToBlowoutColor() ).ToArray() );
+
+				return colors;
+			}
+			set
+			{
+				List<Vertex> vertices = new List<Vertex>( value.Count() );
+				var enumerator = value.GetEnumerator();
+				LockVertexBuffer<Vertex>( ( x ) =>
+				{
+					
+					for ( int i = 0; i < x.Length; i++ )
+					{
+						if ( !enumerator.MoveNext() )
+							return;
+						x[i].Color = enumerator.Current.ToColor32();
+					}
+				} );
 			}
 		}
 
@@ -152,6 +234,7 @@ namespace Sandbox
 					bounds = bounds.AddPoint( v.Position );
 				}
 
+				_calculated = bounds;
 				Bounds = bounds;
 			}
 		}
@@ -216,10 +299,36 @@ namespace Sandbox
 					outVertices = new Vector3[arrVectors.Count()];
 					for ( var i = 0; i < outVertices.Length; ++i )
 						outVertices[i] = arrVectors.Element( i );
-
 					arrVectors.DeleteThis();
 				}
 			}
 		}
+
+		public Model ToModel()
+		{
+			_coreModel ??= new ModelBuilder().AddMesh( this ).Create();
+
+			return _coreModel;
+		}
+
+		public void Dispose()
+		{
+			var n = native;
+			native = default;
+
+			MainThread.Queue( () => n.DestroyStrongHandle() );
+			GC.SuppressFinalize( this );
+		}
+
+		public void Perform( BlowoutDynamicMeshBuilder builder )
+		{
+			var vertices = builder.Vertices.Zip( builder.Colors, builder.Normals.Zip( builder.Tangents, builder.UV ) )
+				.Select( x => new Vertex( x.First) { Normal = x.Third.First, TexCoord0 = new Vector4(x.Third.Third.X, x.Third.Third.Y), Color = x.Second.ToColor32(), Tangent = x.Third.Second } ).ToList();
+			
+			CreateBuffers( new VertexBuffer( vertices ) );
+		}
+
+		public void SetBounds( IBlowoutBounds bounds ) =>
+			Bounds = new BBox(bounds.Min, bounds.Max);
 	}
 }

@@ -8,6 +8,8 @@ public partial class AccessRules
 	{
 		AssemblyWhitelist.Add( "System.Private.CoreLib" );
 		AssemblyWhitelist.Add( "Sandbox.Engine" );
+		AssemblyWhitelist.Add( "BlowoutTeamSoft.Engine" );
+		AssemblyWhitelist.Add( "BlowoutTeamSoft.Engine.Configuration.Serializer" );
 		AssemblyWhitelist.Add( "Sandbox.Reflection" );
 		AssemblyWhitelist.Add( "Sandbox.Mounting" );
 		AssemblyWhitelist.Add( "Microsoft.AspNetCore.Components" ); // this is our fake razor assembly

@@ -186,8 +186,9 @@ public class ProjectCreator : Dialog
 		if ( pt != null )
 			pt.Apply( addonPath, ref config );
 
-		var configPath = System.IO.Path.Combine( addonPath, $"{config.Ident}.sbproj" );
-		var txt = config.ToJson();
+		var legacyPath = System.IO.Path.Combine( addonPath, $"{config.Ident}.sbproj" );
+		var configPath = System.IO.Path.Combine( addonPath, $"{config.Ident}.bxproj" );
+		var txt = config.ToXml();
 
 		System.IO.File.WriteAllText( configPath, txt );
 
@@ -203,6 +204,9 @@ public class ProjectCreator : Dialog
 		{
 			LauncherPreferences.DefaultProjectLocation = FolderEdit.Text;
 		}
+
+		if ( File.Exists( legacyPath ) )
+			File.Delete( legacyPath );
 
 		Close();
 

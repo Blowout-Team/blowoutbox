@@ -84,6 +84,10 @@ public partial class Surface : GameResource
 	[Category( "Fluid" ), Title( "Angular Drag" ), Range( 0, 20 ), DefaultValue( 0.1f )]
 	public float FluidAngularDrag { get; set; } = 0.1f;
 
+	public Surface()
+	{
+	}
+
 	/// <summary>
 	/// Returns the base surface of this surface, or null if we are the default surface.
 	/// </summary>

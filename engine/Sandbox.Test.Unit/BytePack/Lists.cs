@@ -36,10 +36,10 @@ public partial class RoundTrip
 	[TestMethod]
 	public void List_Values_Huge()
 	{
-		var list = new List<global::Vector3>();
+		var list = new List<global::Sandbox.Vector3>();
 
 		for ( int i = 0; i < 10_000; i++ )
-			list.Add( global::Vector3.One );
+			list.Add( global::Sandbox.Vector3.One );
 
 		DoRoundTrip( list );
 	}
@@ -50,9 +50,9 @@ public partial class RoundTrip
 	{
 		DoRoundTrip( new List<object> { 1 } );
 		DoRoundTrip( new List<object> { 1, 2000.0, "the", 4, 6.0f } );
-		DoRoundTrip( new List<object> { 1, 2000.0, "the", 4, 6.0f, global::Vector3.One, null, null, 34, "poops" } );
+		DoRoundTrip( new List<object> { 1, 2000.0, "the", 4, 6.0f, global::Sandbox.Vector3.One, null, null, 34, "poops" } );
 
-		var objectArray = new object[] { 1, 2000.0, "the", 4, 6.0f, global::Vector3.One, null, null, 34, "poops" };
+		var objectArray = new object[] { 1, 2000.0, "the", 4, 6.0f, global::Sandbox.Vector3.One, null, null, 34, "poops" };
 		var valueArray = new int[] { 1, 2, 3, 4 };
 
 		DoRoundTrip( new List<object> { 1, 2, objectArray, "the", valueArray } );
@@ -70,7 +70,7 @@ public partial class RoundTrip
 		var list = new List<object>();
 
 		for ( int i = 0; i < 10_000; i++ )
-			list.Add( global::Vector3.Random );
+			list.Add( global::Sandbox.Vector3.Random );
 
 		DoRoundTrip( list );
 	}

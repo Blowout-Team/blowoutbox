@@ -86,17 +86,17 @@ public class ComponentGet
 
 		// In parent only
 		Assert.AreEqual( 2, TwoTwo.Components.GetAll( FindMode.InParent ).Count() );
-		Assert.IsTrue( TwoTwo.Components.GetAll( FindMode.InParent ).All( x => x.GameObject == Two ) );
+		Assert.IsTrue( TwoTwo.Components.GetAll( FindMode.InParent ).All( x => x.SystemGameObject == Two ) );
 
 		// In parent enabled only
 		Assert.AreEqual( 1, TwoTwo.Components.GetAll( FindMode.InParent | FindMode.Enabled ).Count() );
-		Assert.IsTrue( TwoTwo.Components.GetAll( FindMode.InParent | FindMode.Enabled ).All( x => x.Enabled ) );
-		Assert.IsTrue( TwoTwo.Components.GetAll( FindMode.InParent | FindMode.Enabled ).All( x => x.GameObject == Two ) );
+		Assert.IsTrue( TwoTwo.Components.GetAll( FindMode.InParent | FindMode.Enabled ).All( x => x.IsExecuting ) );
+		Assert.IsTrue( TwoTwo.Components.GetAll( FindMode.InParent | FindMode.Enabled ).All( x => x.SystemGameObject == Two ) );
 
 		// In parent disabled only
 		Assert.AreEqual( 1, TwoTwo.Components.GetAll( FindMode.InParent | FindMode.Disabled ).Count() );
-		Assert.IsTrue( TwoTwo.Components.GetAll( FindMode.InParent | FindMode.Disabled ).All( x => !x.Enabled ) );
-		Assert.IsTrue( TwoTwo.Components.GetAll( FindMode.InParent | FindMode.Disabled ).All( x => x.GameObject == Two ) );
+		Assert.IsTrue( TwoTwo.Components.GetAll( FindMode.InParent | FindMode.Disabled ).All( x => !x.IsExecuting ) );
+		Assert.IsTrue( TwoTwo.Components.GetAll( FindMode.InParent | FindMode.Disabled ).All( x => x.SystemGameObject == Two ) );
 	}
 
 	[TestMethod]
@@ -111,17 +111,17 @@ public class ComponentGet
 
 		// In children only
 		Assert.AreEqual( 8, TwoTwo.Components.GetAll( FindMode.InChildren ).Count() );
-		Assert.IsTrue( TwoTwo.Components.GetAll( FindMode.InChildren ).All( x => x.GameObject.Parent == TwoTwo ) );
+		Assert.IsTrue( TwoTwo.Components.GetAll( FindMode.InChildren ).All( x => x.SystemGameObject.Transform.Parent.SystemGameObject == TwoTwo ) );
 
 		// In children enabled only
 		Assert.AreEqual( 4, TwoTwo.Components.GetAll( FindMode.InChildren | FindMode.Enabled ).Count() );
-		Assert.IsTrue( TwoTwo.Components.GetAll( FindMode.InChildren | FindMode.Enabled ).All( x => x.Enabled ) );
-		Assert.IsTrue( TwoTwo.Components.GetAll( FindMode.InChildren | FindMode.Enabled ).All( x => x.GameObject.Parent == TwoTwo ) );
+		Assert.IsTrue( TwoTwo.Components.GetAll( FindMode.InChildren | FindMode.Enabled ).All( x => x.IsExecuting ) );
+		Assert.IsTrue( TwoTwo.Components.GetAll( FindMode.InChildren | FindMode.Enabled ).All( x => x.SystemGameObject.Transform.Parent.SystemGameObject == TwoTwo ) );
 
 		// In children disabled only
 		Assert.AreEqual( 4, TwoTwo.Components.GetAll( FindMode.InChildren | FindMode.Disabled ).Count() );
-		Assert.IsTrue( TwoTwo.Components.GetAll( FindMode.InChildren | FindMode.Disabled ).All( x => !x.Enabled ) );
-		Assert.IsTrue( TwoTwo.Components.GetAll( FindMode.InChildren | FindMode.Disabled ).All( x => x.GameObject.Parent == TwoTwo ) );
+		Assert.IsTrue( TwoTwo.Components.GetAll( FindMode.InChildren | FindMode.Disabled ).All( x => !x.IsExecuting ) );
+		Assert.IsTrue( TwoTwo.Components.GetAll( FindMode.InChildren | FindMode.Disabled ).All( x => x.SystemGameObject.Transform.Parent.SystemGameObject == TwoTwo ) );
 	}
 
 	[TestMethod]
@@ -137,17 +137,17 @@ public class ComponentGet
 
 		// In descendants only
 		Assert.AreEqual( 16, Two.Components.GetAll( FindMode.InDescendants ).Count() );
-		Assert.IsTrue( Two.Components.GetAll( FindMode.InDescendants ).All( x => x.GameObject.Parent == Two || x.GameObject.Parent.Parent == Two ) );
+		Assert.IsTrue( Two.Components.GetAll( FindMode.InDescendants ).All( x => x.SystemGameObject.Transform.Parent.SystemGameObject == Two || x.SystemGameObject.Transform.Parent.SystemGameObject == Two ) );
 
 		// In descendants enabled only
 		Assert.AreEqual( 8, Two.Components.GetAll( FindMode.InDescendants | FindMode.Enabled ).Count() );
-		Assert.IsTrue( Two.Components.GetAll( FindMode.InDescendants | FindMode.Enabled ).All( x => x.Enabled ) );
-		Assert.IsTrue( Two.Components.GetAll( FindMode.InDescendants | FindMode.Enabled ).All( x => x.GameObject.Parent == Two || x.GameObject.Parent.Parent == Two ) );
+		Assert.IsTrue( Two.Components.GetAll( FindMode.InDescendants | FindMode.Enabled ).All( x => x.IsExecuting ) );
+		Assert.IsTrue( Two.Components.GetAll( FindMode.InDescendants | FindMode.Enabled ).All( x => x.SystemGameObject.Transform.Parent.SystemGameObject == Two || x.SystemGameObject.Transform.Parent.SystemGameObject == Two ) );
 
 		// In descendants disabled only
 		Assert.AreEqual( 8, Two.Components.GetAll( FindMode.InDescendants | FindMode.Disabled ).Count() );
-		Assert.IsTrue( Two.Components.GetAll( FindMode.InDescendants | FindMode.Disabled ).All( x => !x.Enabled ) );
-		Assert.IsTrue( Two.Components.GetAll( FindMode.InDescendants | FindMode.Disabled ).All( x => x.GameObject.Parent == Two || x.GameObject.Parent.Parent == Two ) );
+		Assert.IsTrue( Two.Components.GetAll( FindMode.InDescendants | FindMode.Disabled ).All( x => !x.IsExecuting ) );
+		Assert.IsTrue( Two.Components.GetAll( FindMode.InDescendants | FindMode.Disabled ).All( x => x.SystemGameObject.Transform.Parent.SystemGameObject == Two || x.SystemGameObject.Transform.Parent.SystemGameObject == Two ) );
 	}
 
 	[TestMethod]
@@ -165,16 +165,16 @@ public class ComponentGet
 
 		// In descendants only
 		Assert.AreEqual( 4, TwoTwoTwo.Components.GetAll( FindMode.InAncestors ).Count() );
-		Assert.IsTrue( TwoTwoTwo.Components.GetAll( FindMode.InAncestors ).All( x => x.GameObject == Two || x.GameObject == TwoTwo ) );
+		Assert.IsTrue( TwoTwoTwo.Components.GetAll( FindMode.InAncestors ).All( x => x.SystemGameObject.Transform.Parent.SystemGameObject == Two || x.SystemGameObject.Transform.Parent.SystemGameObject == TwoTwo ) );
 
 		// In descendants enabled only
 		Assert.AreEqual( 2, TwoTwoTwo.Components.GetAll( FindMode.InAncestors | FindMode.Enabled ).Count() );
-		Assert.IsTrue( TwoTwoTwo.Components.GetAll( FindMode.InAncestors | FindMode.Enabled ).All( x => x.Enabled ) );
-		Assert.IsTrue( TwoTwoTwo.Components.GetAll( FindMode.InAncestors | FindMode.Enabled ).All( x => x.GameObject == Two || x.GameObject == TwoTwo ) );
+		Assert.IsTrue( TwoTwoTwo.Components.GetAll( FindMode.InAncestors | FindMode.Enabled ).All( x => x.IsExecuting ) );
+		Assert.IsTrue( TwoTwoTwo.Components.GetAll( FindMode.InAncestors | FindMode.Enabled ).All( x => x.SystemGameObject.Transform.Parent.SystemGameObject == Two || x.SystemGameObject.Transform.Parent.SystemGameObject == TwoTwo ) );
 
 		// In descendants disabled only
 		Assert.AreEqual( 2, TwoTwoTwo.Components.GetAll( FindMode.InAncestors | FindMode.Disabled ).Count() );
-		Assert.IsTrue( TwoTwoTwo.Components.GetAll( FindMode.InAncestors | FindMode.Disabled ).All( x => !x.Enabled ) );
-		Assert.IsTrue( TwoTwoTwo.Components.GetAll( FindMode.InAncestors | FindMode.Disabled ).All( x => x.GameObject == Two || x.GameObject == TwoTwo ) );
+		Assert.IsTrue( TwoTwoTwo.Components.GetAll( FindMode.InAncestors | FindMode.Disabled ).All( x => !x.IsExecuting ) );
+		Assert.IsTrue( TwoTwoTwo.Components.GetAll( FindMode.InAncestors | FindMode.Disabled ).All( x => x.SystemGameObject.Transform.Parent.SystemGameObject == Two || x.SystemGameObject.Transform.Parent.SystemGameObject == TwoTwo ) );
 	}
 }

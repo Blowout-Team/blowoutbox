@@ -1,6 +1,15 @@
+using BlowoutTeamSoft.Engine.Exceptions.LowLevel;
+using BlowoutTeamSoft.Engine.Geometry.Mesh;
+using BlowoutTeamSoft.Engine.Interfaces.Geometry;
+using BlowoutTeamSoft.Engine.Interfaces.Mesh;
+using BlowoutTeamSoft.Engine.Render;
+using BlowoutTeamSoft.Engine.Validators;
+using HalfEdgeMesh;
+using Microsoft.CodeAnalysis;
 using NativeEngine;
 using System.Runtime.InteropServices;
 using System.Text;
+using static Sandbox.Api;
 
 namespace Sandbox
 {
@@ -8,7 +17,7 @@ namespace Sandbox
 	/// Provides ability to generate <see cref="Model"/>s at runtime.
 	/// A static instance of this class is available at <see cref="Model.Builder"/>
 	/// </summary>
-	public sealed partial class ModelBuilder
+	public sealed partial class ModelBuilder : IBlowoutModelBuilder, IBlowoutDynamicMesh, IBlowoutModel
 	{
 		private readonly List<Mesh> meshes = new();
 		private readonly List<Vector3> vertices = new();
@@ -35,6 +44,28 @@ namespace Sandbox
 		private readonly float[] lodSwitchDistance = Enumerable.Range( 0, 8 )
 			.Select( i => i * 50.0f )
 			.ToArray();
+
+		public BlowoutMeshId MeshHandle => new BlowoutMeshId( 0 );
+
+		public IEnumerable<System.Numerics.Vector3> Vertices
+		{
+			get => vertices.Select( x => x.ToSystemNumerics() ).AsEnumerable();
+			set
+			{
+				vertices.Clear();
+				vertices.AddRange( value.Select( x => new Vector3( x.X, x.Y, x.Z ) ) );
+			}
+		}
+
+		public IEnumerable<BlowoutColor> Colors { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+
+		public IBlowoutBounds Bounds => BBox.FromPoints(boxes.Select( x => x.extents ));
+
+		public int VertexCount => vertices.Count;
+
+		public bool IsProcedural => true;
+
+		public bool IsValid => true;
 
 		private struct BoxDesc
 		{
@@ -323,6 +354,15 @@ namespace Sandbox
 			return this;
 		}
 
+		// dehs: unstable.
+		public ModelBuilder AddModel(Model model )
+		{
+			var mesh = new Sandbox.Mesh( model.Materials.First() );
+			mesh.CreateBuffers( new VertexBuffer( model.GetVertices().ToList() ) );
+			AddMesh(mesh);
+			return this;
+		}
+
 		/// <summary>
 		/// Add a bunch of meshes.
 		/// </summary>
@@ -528,6 +568,34 @@ namespace Sandbox
 			return this;
 		}
 
+		public void Perform( BlowoutDynamicMeshBuilder builder )
+		{
+			vertices.Clear();
+			vertices.AddRange( builder.Vertices.Select(x=> new Vector3(x.X, x.Y, x.Z)) );
+
+			
+		}
+
+		public void SetBounds( IBlowoutBounds bounds )
+		{
+			boxes.Clear();
+			boxes.Add( new()
+			{
+				extents = bounds.Extents,
+				transform = new Transform( bounds.Center, Rotation.Identity )
+			} );
+
+		}
+
+		public BlowoutValidatorResult Validate()
+		{
+			return BlowoutValidatorResult.Success;
+		}
+
+		public void Dispose()
+		{
+		}
+
 		/// <summary>
 		/// Provide a name to identify the model by
 		/// </summary>
@@ -624,5 +692,73 @@ namespace Sandbox
 				return Model.FromNative( model, true, modelName );
 			}
 		}
+
+		public IBlowoutModelBuilder AddWorldBone( string name, System.Numerics.Vector3 position, System.Numerics.Quaternion rotation, string parentName = null )
+		{
+			AddBone( name, position, new Rotation( rotation ), parentName );
+			return this;
+		}
+
+		public IBlowoutModelBuilder AddMesh( IBlowoutMesh mesh, int lodLevel, string groupName, int meshIndex )
+		{
+			if ( mesh is not Sandbox.Mesh sourceMesh )
+				throw new BlowoutUnsupportedException( $"Unsupported mesh type ('{mesh.GetType().FullName}'). It supports only native Source 2 Mesh." );
+
+			return AddMesh( sourceMesh, lodLevel, groupName, meshIndex );
+		}
+
+		public IBlowoutModelBuilder AddMesh( IBlowoutMesh mesh, string groupName, int meshIndex )
+		{
+			if ( mesh is not Sandbox.Mesh sourceMesh )
+				throw new BlowoutUnsupportedException( $"Unsupported mesh type ('{mesh.GetType().FullName}'). It supports only native Source 2 Mesh." );
+
+			return AddMesh( sourceMesh, groupName, meshIndex );
+		}
+
+		public IBlowoutModelBuilder AddMesh( IBlowoutMesh mesh, int lodLevel )
+		{
+			if ( mesh is not Sandbox.Mesh sourceMesh )
+				throw new BlowoutUnsupportedException( $"Unsupported mesh type ('{mesh.GetType().FullName}'). It supports only native Source 2 Mesh." );
+
+			return AddMesh( sourceMesh, lodLevel );
+		}
+
+		public IBlowoutModelBuilder AddMeshes( IEnumerable<IBlowoutMesh> meshes, int lodLevel )
+		{
+			if ( meshes == null || !meshes.Any() )
+				return this;
+
+			int numMeshes = 0;
+			foreach ( var mesh in meshes.OfType<Sandbox.Mesh>() )
+			{
+				if ( mesh == null || !mesh.IsValid )
+					continue;
+
+				//if ( !mesh.HasVertexBuffer )
+				//	throw new ArgumentException( "Mesh has invalid vertex buffer" );
+
+				this.meshes.Add( mesh );
+				numMeshes++;
+			}
+
+			if ( numMeshes == 0 )
+				return this;
+
+			lods.AddRange( Enumerable.Repeat( 255, numMeshes ) );
+			bodyGroups.AddRange( Enumerable.Repeat( ulong.MaxValue, numMeshes ) );
+
+			return this;
+		}
+
+		public IBlowoutModelBuilder WithPhysicsMass( float mass ) =>
+			WithMass( mass );
+
+		IBlowoutModelBuilder IBlowoutModelBuilder.WithName( string name )
+		{
+			return WithName( name );
+		}
+
+		public IBlowoutModel Build() =>
+			Create();
 	}
 }

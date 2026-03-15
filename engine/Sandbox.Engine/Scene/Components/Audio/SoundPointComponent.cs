@@ -39,7 +39,7 @@ public sealed class SoundPointComponent : BaseSoundComponent, Component.ITempora
 		if ( SoundEvent is null )
 			return;
 
-		SoundHandle = Sound.Play( SoundEvent, source.WorldPosition );
+		SoundHandle = Sandbox.Sound.Play( SoundEvent, source.WorldPosition );
 		ApplyOverrides( SoundHandle );
 
 		TimeUntilRepeat = Random.Shared.Float( MinRepeatTime, MaxRepeatTime );

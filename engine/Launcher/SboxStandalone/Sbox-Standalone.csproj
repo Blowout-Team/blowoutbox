@@ -25,11 +25,12 @@
 		<ApplicationIcon>sbox.ico</ApplicationIcon>
 		<GenerateDependencyFile>false</GenerateDependencyFile>
 		<CETCompat>false</CETCompat>
+		<Configurations>Debug;Release;Blowout_Source2_Debug;Blowout_Source2_Release</Configurations>
 	</PropertyGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\..\Sandbox.AppSystem\Sandbox.AppSystem.csproj" Private="false"/>
-		<ProjectReference Include="..\..\Sandbox.Engine\Sandbox.Engine.csproj"  Private="false"/>
+		<ProjectReference Include="..\..\Sandbox.AppSystem\Sandbox.AppSystem.csproj" Private="false" />
+		<ProjectReference Include="..\..\Sandbox.Engine\Sandbox.Engine.csproj" Private="false" />
 		<ProjectReference Include="..\..\Sandbox.System\Sandbox.System.csproj" Private="false" />
 	</ItemGroup>
 

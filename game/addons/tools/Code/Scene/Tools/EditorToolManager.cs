@@ -131,7 +131,7 @@ public class EditorToolManager
 
 			foreach ( var component in components )
 			{
-				if ( !component.IsValid() )
+				if ( !component.IsAliveSystem )
 					continue;
 
 				selectionHash = HashCode.Combine( selectionHash, component.GetHashCode() );

@@ -6,6 +6,7 @@
     <Nullable>disable</Nullable>
     <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
     <LangVersion>latest</LangVersion>
+    <Configurations>Debug;Release;Blowout_Source2_Debug;Blowout_Source2_Release</Configurations>
   </PropertyGroup>
 
   <ItemGroup>

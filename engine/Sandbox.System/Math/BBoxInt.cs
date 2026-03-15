@@ -1,0 +1,621 @@
+﻿using BlowoutTeamSoft.Engine;
+using BlowoutTeamSoft.Engine.Interfaces.Geometry;
+using BlowoutTeamSoft.Engine.Math;
+using BlowoutTeamSoft.Engine.Query;
+using Sandbox;
+using System.Runtime.InteropServices;
+using System.Runtime.Serialization;
+using System.Text.Json.Serialization;
+
+/// <summary>
+/// An <a href="https://en.wikipedia.org/wiki/Minimum_bounding_box">Axis Aligned Bounding Box</a>.
+/// </summary>
+[StructLayout( LayoutKind.Sequential )]
+public struct BBoxInt : System.IEquatable<BBoxInt>, IBlowoutBoundsInt
+{
+	/// <summary>
+	/// The minimum corner extents of the AABB. Values on each axis should be mathematically smaller than values on the same axis of <see cref="Maxs"/>. See <see cref="Vector3.Sort"/>
+	/// </summary>
+	[JsonInclude]
+	public Vector3Int Mins;
+
+	/// <summary>
+	/// The maximum corner extents of the AABB. Values on each axis should be mathematically larger than values on the same axis of <see cref="Mins"/>. See <see cref="Vector3.Sort"/>
+	/// </summary>
+	[JsonInclude]
+	public Vector3Int Maxs;
+
+	/// <summary>
+	/// Initialize an AABB with given mins and maxs corners. See <see cref="Vector3.Sort"/>.
+	/// </summary>
+	public BBoxInt( Vector3Int mins, Vector3Int maxs )
+	{
+		Mins = Vector3Int.Min( mins, maxs );
+		Maxs = Vector3Int.Max( mins, maxs );
+	}
+
+	/// <summary>
+	/// An enumerable that contains all corners of this AABB.
+	/// </summary>
+	[JsonIgnore]
+	public readonly IEnumerable<Vector3Int> Corners
+	{
+		get
+		{
+			yield return new Vector3Int( Mins.x, Mins.y, Mins.z );
+			yield return new Vector3Int( Maxs.x, Mins.y, Mins.z );
+
+			yield return new Vector3Int( Maxs.x, Maxs.y, Mins.z );
+			yield return new Vector3Int( Mins.x, Maxs.y, Mins.z );
+			yield return new Vector3Int( Mins.x, Mins.y, Maxs.z );
+
+			yield return new Vector3Int( Maxs.x, Mins.y, Maxs.z );
+			yield return new Vector3Int( Maxs.x, Maxs.y, Maxs.z );
+			yield return new Vector3Int( Mins.x, Maxs.y, Maxs.z );
+		}
+	}
+
+	[JsonIgnore]
+	public readonly Vector3Int Center => System.Numerics.Vector3.FusedMultiplyAdd( Size.ToSystemNumerics(), new Vector3( 0.5f ), new Vector3( Mins.x, Mins.y, Mins.z ) ).ToVectorInt();
+
+	/// <summary>
+	/// Calculated size of the AABB on each axis.
+	/// </summary>
+	[JsonIgnore]
+	public readonly Vector3Int Size => (Maxs - Mins);
+
+
+	/// <summary>
+	/// The extents of the bbox. This is half the size.
+	/// </summary>
+	[JsonIgnore]
+	public readonly Vector3 Extents => Size * 0.5f;
+
+	[JsonIgnore, IgnoreDataMember]
+	public Vector3Int Max { get => Maxs; set => Maxs = value; }
+	[JsonIgnore, IgnoreDataMember]
+	public Vector3Int Min { get => Mins; set => Mins = value; }
+
+	/// <summary>
+	/// Move this box by this amount and return
+	/// </summary>
+	public readonly BBoxInt Translate( in Vector3Int point )
+	{
+		var b = this;
+
+		b.Mins += point;
+		b.Maxs += point;
+
+		return b;
+	}
+
+	/// <summary>
+	/// Rotate this box by this amount and return
+	/// </summary>
+	public readonly BBoxInt Rotate( in Rotation rotation )
+	{
+		var b = this;
+
+		var rotationInv = rotation.Conjugate.Normal;
+		var xAxis = Vector3.Forward * rotationInv;
+		var yAxis = Vector3.Right * rotationInv;
+		var zAxis = Vector3.Up * rotationInv;
+		var localCenter = 0.5f * (b.Mins + b.Maxs);
+		var localExtents = b.Maxs - localCenter;
+		var center = rotation * localCenter;
+		var extents = new Vector3(
+			MathF.Abs( localExtents.x * xAxis.x ) + MathF.Abs( localExtents.y * xAxis.y ) + MathF.Abs( localExtents.z * xAxis.z ),
+			MathF.Abs( localExtents.x * yAxis.x ) + MathF.Abs( localExtents.y * yAxis.y ) + MathF.Abs( localExtents.z * yAxis.z ),
+			MathF.Abs( localExtents.x * zAxis.x ) + MathF.Abs( localExtents.y * zAxis.y ) + MathF.Abs( localExtents.z * zAxis.z ) );
+
+		b.Mins = (center - extents).ToSystemNumerics().ToVectorInt();
+		b.Maxs = (center + extents).ToSystemNumerics().ToVectorInt();
+
+		return b;
+	}
+
+	/// <summary>
+	/// Transform this box by this amount and return
+	/// </summary>
+	public readonly BBoxInt Transform( in Transform transform )
+	{
+		// Inspired by https://gist.github.com/cmf028/81e8d3907035640ee0e3fdd69ada543f (Solution3)
+		Vector3 center = Center;
+		Vector3 extents = Extents;
+
+		// Transform center with the full transform
+		Vector3 transformedCenter = transform.PointToWorld( center );
+
+		// Get rotation matrix components and take absolute values
+		// We need the absolute value of each rotation component multiplied by scale
+		Rotation rotation = transform.Rotation;
+		Vector3 scale = transform.Scale;
+
+		// Axis transformation
+		Vector3 absX = (rotation.Forward * scale.x).Abs();
+		Vector3 absY = (rotation.Right * scale.y).Abs();
+		Vector3 absZ = (rotation.Up * scale.z).Abs();
+
+		// Apply absolute rotation+scale to extents (using dot product)
+		Vector3 transformedExtents = new Vector3(
+			absX.x * extents.x + absY.x * extents.y + absZ.x * extents.z,
+			absX.y * extents.x + absY.y * extents.y + absZ.y * extents.z,
+			absX.z * extents.x + absY.z * extents.y + absZ.z * extents.z
+		);
+
+		return new BBoxInt(
+			(transformedCenter - transformedExtents).ToSystemNumerics().ToVectorInt(),
+			(transformedCenter + transformedExtents).ToSystemNumerics().ToVectorInt()
+		);
+	}
+
+	internal readonly BBoxInt Scale( in Vector3 scale )
+	{
+		return new BBoxInt(
+			mins: System.Numerics.Vector3.FusedMultiplyAdd( -scale, Extents, Center.ToSystemNumerics() ).ToVectorInt(),
+			maxs: System.Numerics.Vector3.FusedMultiplyAdd( scale, Extents, Center.ToSystemNumerics() ).ToVectorInt()
+		);
+	}
+
+	[JsonIgnore]
+	public readonly Vector3 RandomPointInside
+	{
+		get
+		{
+			return Random.Shared.VectorInCube( this );
+		}
+	}
+
+	/// <summary>
+	/// Returns a random point within this AABB.
+	/// </summary>
+	[JsonIgnore]
+	public readonly Vector3 RandomPointOnEdge
+	{
+		get
+		{
+			var originalSize = Size;
+
+			var size = originalSize;
+			size.x *= SandboxSystem.Random.Int( 0, 1 );
+			size.y *= SandboxSystem.Random.Int( 0, 1 );
+			size.z *= SandboxSystem.Random.Int( 0, 1 );
+
+			var face = Random.Shared.Int( 0, 5 );
+			if ( face == 0 ) size.x = 0;
+			else if ( face == 1 ) size.y = 0;
+			else if ( face == 2 ) size.z = 0;
+			else if ( face == 3 ) size.x = originalSize.x;
+			else if ( face == 4 ) size.y = originalSize.y;
+			else if ( face == 5 ) size.z = originalSize.z;
+
+			return Mins + size;
+		}
+	}
+
+	/// <summary>
+	/// Returns the physical volume of this AABB.
+	/// </summary>
+	[JsonIgnore]
+	public readonly float Volume
+	{
+		get
+		{
+			var size = Size.Abs();
+			return size.x * size.y * size.z;
+		}
+	}
+
+	public BlowoutTeamSoft.Engine.Numerics.Vector3Int Position { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+
+	BlowoutTeamSoft.Engine.Numerics.Vector3Int IBlowoutBoundsInt.Center => Center;
+
+	BlowoutTeamSoft.Engine.Numerics.Vector3Int IBlowoutBoundsInt.Size { get => Size; set 
+		{
+			Sandbox.Vector3 extents = Extents;
+			Sandbox.Vector3 input = new Vector3( value.X, value.Y, value.Z );
+			Mins = (input - Extents).ToSystemNumerics().ToVectorInt();
+			Maxs = (input + Extents).ToSystemNumerics().ToVectorInt();
+		}
+	}
+	BlowoutTeamSoft.Engine.Numerics.Vector3Int IBlowoutBoundsInt.Max { get => Max; set => Max = value; }
+	BlowoutTeamSoft.Engine.Numerics.Vector3Int IBlowoutBoundsInt.Min { get => Min; set => Min = value; }
+
+	public IEnumerable<System.Numerics.Vector3> AllPositionsWithin
+	{
+		get
+		{
+			foreach(var corner in Corners )
+			{
+				yield return corner.ToSystemNumerics();
+			}
+		}
+	}
+
+	/// <summary>
+	/// Returns true if this AABB completely contains given AABB
+	/// </summary>
+	public readonly bool Contains( in BBox b )
+	{
+		return b.Mins.x >= Mins.x && b.Maxs.x <= Maxs.x &&
+			   b.Mins.y >= Mins.y && b.Maxs.y <= Maxs.y &&
+			   b.Mins.z >= Mins.z && b.Maxs.z <= Maxs.z;
+	}
+
+	/// <summary>
+	/// Returns true if this AABB contains given point
+	/// </summary>
+	public readonly bool Contains( in Vector3 b, float epsilon = 0.0001f )
+	{
+		return b.x >= Mins.x - epsilon && b.x <= Maxs.x + epsilon &&
+			   b.y >= Mins.y - epsilon && b.y <= Maxs.y + epsilon &&
+			   b.z >= Mins.z - epsilon && b.z <= Maxs.z + epsilon;
+	}
+
+	/// <summary>
+	/// Returns true if this AABB somewhat overlaps given AABB
+	/// </summary>
+	public readonly bool Overlaps( in BBox b )
+	{
+		return Mins.x < b.Maxs.x && b.Mins.x < Maxs.x &&
+				Mins.y < b.Maxs.y && b.Mins.y < Maxs.y &&
+				Mins.z < b.Maxs.z && b.Mins.z < Maxs.z;
+	}
+
+	public readonly BBoxInt AddPoint( in Vector3Int point )
+	{
+		var b = this;
+
+		b.Mins = Vector3Int.Min( Mins, point );
+		b.Maxs = Vector3Int.Max( Maxs, point );
+
+		return b;
+	}
+
+	/// <summary>
+	/// Returns this bbox but stretched to include given bbox
+	/// </summary>
+	public readonly BBoxInt AddBBox( in BBoxInt point )
+	{
+		var b = this;
+
+		b.Mins = Vector3Int.Min( Mins, point.Mins );
+		b.Maxs = Vector3Int.Max( Maxs, point.Maxs );
+
+		return b;
+	}
+
+	public readonly BBoxInt Grow( in int skin )
+	{
+		var b = this;
+
+		b.Mins -= skin;
+		b.Maxs += skin;
+
+		return b;
+	}
+
+	/// <summary>
+	/// Returns the closest point on this AABB to another point
+	/// </summary>
+	public readonly Vector3 ClosestPoint( in Vector3 point )
+	{
+		return Vector3.Clamp( point, Mins, Maxs );
+	}
+
+	/// <summary>
+	/// Creates an AABB of <paramref name="radius"/> length and depth, and given <paramref name="height"/>
+	/// </summary>
+	public static BBox FromHeightAndRadius( float height, float radius )
+	{
+		return new BBox( (Vector3.One * -radius).WithZ( 0 ), (Vector3.One * radius).WithZ( height ) );
+	}
+
+	/// <summary>
+	/// Creates an AABB at given position <paramref name="center"/> and given <paramref name="size"/> which acts as a <b>diameter</b> of a sphere contained within the AABB.
+	/// </summary>
+	public static BBoxInt FromPositionAndSize( in Vector3Int center, int size = 0 )
+	{
+		var o = new BBoxInt();
+		o.Mins = (center - size * 0.5f).ToSystemNumerics().ToVectorInt();
+		o.Maxs = (center + size * 0.5f).ToSystemNumerics().ToVectorInt();
+		return o;
+	}
+
+	/// <summary>
+	/// Creates an AABB at given position <paramref name="center"/> and given <paramref name="size"/> a.k.a. "extents".
+	/// </summary>
+	public static BBoxInt FromPositionAndSize( Vector3 center, Vector3 size )
+	{
+		var o = new BBoxInt();
+
+		o.Mins = System.Numerics.Vector3.FusedMultiplyAdd( -size, new Vector3( 0.5f ), center ).ToVectorInt();
+		o.Maxs = System.Numerics.Vector3.FusedMultiplyAdd( size, new Vector3( 0.5f ), center ).ToVectorInt();
+
+		return o;
+	}
+
+	public static BBoxInt operator *( BBoxInt c1, int c2 )
+	{
+		c1.Mins *= c2;
+		c1.Maxs *= c2;
+		return c1;
+	}
+
+	public static BBoxInt operator +( BBoxInt c1, Vector3Int c2 )
+	{
+		c1.Mins += c2;
+		c1.Maxs += c2;
+		return c1;
+	}
+
+	public static BBoxInt FromBoxes( IEnumerable<BBoxInt> boxes )
+	{
+		using var e = boxes.GetEnumerator();
+
+		if ( !e.MoveNext() )
+			return default;
+
+		BBoxInt bbox = e.Current;
+
+		while ( e.MoveNext() )
+		{
+			bbox = bbox.AddBBox( e.Current );
+		}
+
+		return bbox;
+	}
+
+	/// <summary>
+	/// Create a bounding box from an arbituary number of points
+	/// </summary>
+	public static BBoxInt FromPoints( IEnumerable<Vector3Int> points, float size = 0.0f )
+	{
+		using var e = points.GetEnumerator();
+
+		if ( !e.MoveNext() )
+			return default;
+
+		BBoxInt bbox = BBoxInt.FromPositionAndSize( e.Current, size );
+
+		while ( e.MoveNext() )
+		{
+			bbox = bbox.AddBBox( BBoxInt.FromPositionAndSize( e.Current, size ) );
+		}
+
+		return bbox;
+	}
+
+	/// <summary>
+	/// Trace a ray against this box. If hit then return the distance.
+	/// </summary>
+	public readonly bool Trace( in Ray ray, float distance, out float hitDistance )
+	{
+		hitDistance = 0;
+
+		int i;
+		float d1, d2;
+		float f;
+
+		int nHitSide = -1;
+		float t1 = -1.0f;
+		float t2 = 1.0f;
+
+		var _delta = ray.Forward.Normal * distance;
+
+		bool startsolid = false;
+
+		for ( i = 0; i < 6; ++i )
+		{
+			if ( i >= 3 )
+			{
+				d1 = ray.Position[i - 3] - Maxs[i - 3];
+				d2 = d1 + _delta[i - 3];
+			}
+			else
+			{
+				d1 = -ray.Position[i] + Mins[i];
+				d2 = d1 - _delta[i];
+			}
+
+			// if completely in front of face, no intersection
+			if ( d1 > 0 && d2 > 0 )
+				return false;
+
+			// completely inside, check next face
+			if ( d1 <= 0 && d2 <= 0 )
+				continue;
+
+			if ( d1 > 0 )
+			{
+				startsolid = false;
+			}
+
+			// crosses face
+			if ( d1 > d2 )
+			{
+				f = d1;
+				if ( f < 0 )
+				{
+					f = 0;
+				}
+				f = f / (d1 - d2);
+				if ( f > t1 )
+				{
+					t1 = f;
+					nHitSide = i;
+				}
+			}
+			else
+			{
+				// leave
+				f = (d1) / (d1 - d2);
+				if ( f < t2 )
+				{
+					t2 = f;
+					if ( nHitSide < 0 )
+					{
+						nHitSide = i;
+					}
+				}
+			}
+		}
+
+		hitDistance = distance * t1;
+
+		return startsolid || (t1 < t2 && t1 >= 0.0f);
+	}
+
+	public void SetMinMax( Vector3Int min, Vector3Int max )
+	{
+		Mins = min;
+		Maxs = max;
+	}
+
+	public void Encapsulate( Vector3Int point )
+	{
+		Mins = Vector3Int.Min( Mins, point );
+		Maxs = Vector3Int.Max( Maxs, point );
+	}
+
+	public void Encapsulate( IBlowoutBoundsInt bounds )
+	{
+		Encapsulate( bounds.Min );
+		Encapsulate( bounds.Max );
+	}
+
+	public float SqrDistance( BlowoutTeamSoft.Engine.Numerics.Vector3Int point )
+	{
+		float dx = MathF.Max( Min.x - point.X, 0f );
+		dx = MathF.Max( dx, point.X - Max.x );
+
+		float dy = MathF.Max( Min.y - point.Y, 0f );
+		dy = MathF.Max( dy, point.Y - Max.y );
+
+		float dz = MathF.Max( Min.z - point.Z, 0f );
+		dz = MathF.Max( dz, point.Z - Max.z );
+
+		return dx * dx + dy * dy + dz * dz;
+	}
+
+	public bool Contains( BlowoutTeamSoft.Engine.Numerics.Vector3Int point ) =>
+		point.X >= Min.x && point.X <= Max.x &&
+		point.Y >= Min.y && point.Y <= Max.y &&
+		point.Z >= Min.z && point.Z <= Max.z;
+
+	/// dehs: aabb method (slab method).
+	public bool IsIntersectRay( BlowoutRay ray, out float distance )
+	{
+		distance = 0f;
+
+		Vector3 invDir = new Vector3(
+			1f / ray.Direction.X,
+			1f / ray.Direction.Y,
+			1f / ray.Direction.Z
+		);
+
+		float t1 = (Min.x - ray.Origin.X) * invDir.x;
+		float t2 = (Max.x - ray.Origin.X) * invDir.x;
+		float t3 = (Min.y - ray.Origin.Y) * invDir.y;
+		float t4 = (Max.y - ray.Origin.Y) * invDir.y;
+		float t5 = (Min.z - ray.Origin.Z) * invDir.z;
+		float t6 = (Max.z - ray.Origin.Z) * invDir.z;
+
+		float tmin = MathF.Max(
+			MathF.Max( MathF.Min( t1, t2 ), MathF.Min( t3, t4 ) ),
+			MathF.Min( t5, t6 )
+		);
+
+		float tmax = MathF.Min(
+			MathF.Min( MathF.Max( t1, t2 ), MathF.Max( t3, t4 ) ),
+			MathF.Max( t5, t6 )
+		);
+
+		if ( tmax < 0 || tmin > tmax )
+			return false;
+
+		distance = tmin >= 0 ? tmin : tmax;
+		return true;
+	}
+
+	public bool IsIntersectRay( BlowoutRay ray ) =>
+		IsIntersectRay( ray, out _ );
+
+	public bool Intersects( IBlowoutBounds bounds ) => Mins.x < bounds.Max.X && bounds.Min.X < Maxs.x &&
+					Mins.y < bounds.Max.Y && bounds.Min.Y < Maxs.y &&
+					Mins.z < bounds.Max.Z && bounds.Min.Z < Maxs.z;
+
+	public void Expand( int amount )
+	{
+		// maybe add half?
+		Mins -= amount;
+		Maxs += amount;
+	}
+
+	public void Expand( BlowoutTeamSoft.Engine.Numerics.Vector3Int amount )
+	{
+		Min -= amount;
+		Max += amount;
+	}
+
+	/// <summary>
+	/// Formats this AABB into a string "mins x,y,z, maxs x,y,z"
+	/// </summary>
+	public override readonly string ToString()
+	{
+		return $"mins {Mins:0.###}, maxs {Maxs:0.###}";
+	}
+
+	public bool Equals( IBlowoutBoundsInt other )
+	{
+		if ( other is BBoxInt otherBox )
+			return Equals( other );
+
+		return Min == other.Min && Max == other.Max;
+	}
+
+	public readonly string ToString( string format, IFormatProvider formatProvider )
+	{
+		if ( formatProvider == null )
+			return string.Format( format, Mins, Maxs );
+
+		return string.Format( formatProvider, format, Mins, Maxs );
+	}
+
+	/// <summary>
+	/// Get the volume of this AABB
+	/// </summary>
+	[Obsolete( "Use BBox.Volume instead." )]
+	public float GetVolume()
+	{
+		return Volume;
+	}
+
+	/// <summary>
+	/// Snap this AABB to a grid
+	/// </summary>
+	public readonly BBox Snap( int distance )
+	{
+		return new BBox( Mins.SnapToGrid( distance ), Maxs.SnapToGrid( distance ) );
+	}
+
+	/// <summary>
+	/// Calculates the shortest distance from the specified local position to the nearest edge of the shape.
+	/// </summary>
+	public readonly float GetEdgeDistance( Vector3 localPos )
+	{
+		return MathF.Min(
+			MathF.Min(
+				MathF.Min( MathF.Abs( localPos.x - Mins.x ), MathF.Abs( localPos.x - Maxs.x ) ),
+				MathF.Min( MathF.Abs( localPos.y - Mins.y ), MathF.Abs( localPos.y - Maxs.y ) )
+			),
+			MathF.Min( MathF.Abs( localPos.z - Mins.z ), MathF.Abs( localPos.z - Maxs.z ) )
+		);
+	}
+
+	public static bool operator ==( BBoxInt left, BBoxInt right ) => left.Equals( right );
+	public static bool operator !=( BBoxInt left, BBoxInt right ) => !(left == right);
+	public readonly override bool Equals( object obj ) => obj is BBoxInt o && Equals( o );
+	public readonly bool Equals( BBoxInt o ) => (Mins, Maxs) == (o.Mins, o.Maxs);
+	public override readonly int GetHashCode() => HashCode.Combine( Mins, Maxs );
+}

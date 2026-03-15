@@ -7,6 +7,7 @@ internal class BuildManaged( string name, bool clean = false ) : Step( name )
 	protected override ExitCode RunInternal()
 	{
 		string engineDir = Path.Combine( Directory.GetCurrentDirectory(), "engine" );
+		string blowoutTeamSoftDir = Path.Combine( Directory.GetCurrentDirectory(), "engine", "BlowoutTeamSoft");
 		string rootDir = Directory.GetCurrentDirectory();
 
 		try
@@ -26,13 +27,18 @@ internal class BuildManaged( string name, bool clean = false ) : Step( name )
 			if ( !Utility.RunDotnetCommand( engineDir, "restore" ) )
 				return ExitCode.Failure;
 
-			Log.Info( "Step 3: Build CodeGen.exe" );
-			if ( !Utility.RunDotnetCommand( engineDir, "build Tools/CodeGen/ -o Tools/CodeGen/bin" ) )
-				return ExitCode.Failure;
+			Log.Info( "Step 3: Build CodeGen.exe");
+			{
+				if (!Utility.RunDotnetCommand(engineDir, "build Tools/CodeGen/ -o Tools/CodeGen/bin -c Blowout_Source2_Release"))
+					return ExitCode.Failure;
+			}
 
 			Log.Info( "Step 3a: Build CreateGameCache.exe" );
-			if ( !Utility.RunDotnetCommand( engineDir, "build Tools/CreateGameCache/ -o Tools/CreateGameCache/bin" ) )
-				return ExitCode.Failure;
+
+			{
+				if (!Utility.RunDotnetCommand(engineDir, "build Tools/CreateGameCache/ -o Tools/CreateGameCache/bin -c Blowout_Source2_Release"))
+					return ExitCode.Failure;
+			}
 
 			Log.Info( "Step 4: Clear managed folder" );
 			string managedDir = Path.Combine( rootDir, "game", "bin", "managed" );
@@ -57,7 +63,18 @@ internal class BuildManaged( string name, bool clean = false ) : Step( name )
 			}
 
 			Log.Info( "Step 5: Build Managed" );
-			if ( !Utility.RunDotnetCommand( engineDir, "build -c Release Sandbox-Engine.slnx -p:TreatWarningsAsErrors=true" ) )
+
+			// facepunch realization.
+			//if ( !Utility.RunDotnetCommand( engineDir, "build -c Blowout_Source2_Release Sandbox-Engine.slnx -p:TreatWarningsAsErrors=true") )
+			//	return ExitCode.Failure;
+
+			// blowout team realization.
+			if (!Utility.RunDotnetCommand(engineDir, "build -c Blowout_Source2_Release Sandbox-Engine.slnx"))
+				return ExitCode.Failure;
+
+			Log.Info("Step 6: Build BlowoutTeamSoft.Engine");
+
+			if (!Utility.RunDotnetCommand(blowoutTeamSoftDir, "build -c Blowout_Source2_Release BlowoutTeamSoft.sln"))
 				return ExitCode.Failure;
 
 			Log.Info( "Build completed successfully!" );

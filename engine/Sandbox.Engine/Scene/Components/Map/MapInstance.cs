@@ -741,8 +741,21 @@ file class MapComponentMapLoader : SceneMapLoader
 
 		using ( CallbackBatch.Batch() )
 		{
-			go.Components.ForEach( "Loading", true, c => c.OnLoadInternal() );
-			go.Components.ForEach( "OnValidate", true, c => c.OnValidateInternal() );
+			go.Components.ForEach( "Loading", true, c =>
+			{
+				if(c is Component comp )
+				{
+					comp.OnLoadInternal();
+					//TODO: [Blowout] Add map interfaces pls.
+				}
+			} );
+			go.Components.ForEach( "OnValidate", true, c =>
+			{
+				if(c is Component comp )
+				{
+					comp.OnValidateInternal();
+				}
+			} );
 		}
 	}
 }

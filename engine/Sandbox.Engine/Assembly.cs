@@ -21,12 +21,16 @@ using System.Runtime.CompilerServices;
 [assembly: InternalsVisibleTo( "Sandbox.Mounting.Test" )]
 [assembly: InternalsVisibleTo( "sbox-launcher" )]
 [assembly: InternalsVisibleTo( "sbox-server" )]
-[assembly: InternalsVisibleTo( "sbox-dev" )]
+[assembly: InternalsVisibleTo( "bsource-dev" )]
 [assembly: InternalsVisibleTo( "sbox" )]
 [assembly: InternalsVisibleTo( "sbox-standalone" )]
 [assembly: InternalsVisibleTo( "sbox-profiler" )]
 [assembly: InternalsVisibleTo( "benchmark" )]
 [assembly: InternalsVisibleTo( "CreateGameCache" )]
+
+[assembly: InternalsVisibleTo("BlowoutTeamSoft.Engine")]
+[assembly: InternalsVisibleTo( "BlowoutTeamSoft.Engine.Systems" )]
+[assembly: InternalsVisibleTo("BlowoutTeamSoft.Source2.Core")]
 
 [assembly: TasksPersistOnContextReset]
 

@@ -459,6 +459,7 @@ public partial class ProjectPublisher
 			if ( !allowSourceFiles )
 			{
 				if ( file.Contains( ".sbproj", StringComparison.OrdinalIgnoreCase ) ) return false;
+				if ( file.Contains( ".bxproj", StringComparison.OrdinalIgnoreCase ) ) return false;
 				if ( file.EndsWith( ".cs", StringComparison.OrdinalIgnoreCase ) ) return false;
 				if ( file.EndsWith( ".razor", StringComparison.OrdinalIgnoreCase ) ) return false;
 				if ( file.EndsWith( ".fbx", StringComparison.OrdinalIgnoreCase ) ) return false;

@@ -21,6 +21,6 @@ class LogoWidget : Widget
 		var r = LocalRect;
 		r.Width = r.Height;
 
-		Paint.Draw( r, "logo_rounded.png" );
+		Paint.Draw( r, "blow_logo_rounded.png" );
 	}
 }

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using BlowoutTeamSoft.Engine.Interfaces;
+using System;
 
 namespace Editor.MapEditor;
 
@@ -63,6 +64,31 @@ internal class HammerSceneUndoScope : ISceneUndoScope
 		return this;
 	}
 	public ISceneUndoScope WithComponentChanges( Component component )
+	{
+		return this;
+	}
+
+	public ISceneUndoScope WithBlowoutGameSystemCreations()
+	{
+		return this;
+	}
+
+	public ISceneUndoScope WithBlowoutGameSystemChanges( IEnumerable<IBlowoutGameSystem> gameSystems )
+	{
+		return this;
+	}
+
+	public ISceneUndoScope WithBlowoutGameSystemChanges( IBlowoutGameSystem gameSystem )
+	{
+		return this;
+	}
+
+	public ISceneUndoScope WithBlowoutGameSystemDestructions( IEnumerable<IBlowoutGameSystem> gameSystems )
+	{
+		return this;
+	}
+
+	public ISceneUndoScope WithBlowoutGameSystemDestructions( IBlowoutGameSystem gameSystem )
 	{
 		return this;
 	}

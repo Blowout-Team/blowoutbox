@@ -215,7 +215,8 @@ internal class PanelInput
 			if ( Hovered != null )
 			{
 				Panel.Switch( PseudoClass.Hover, false, Hovered, current );
-				Hovered.CreateEvent( new MousePanelEvent( "onmouseout", Hovered, "none" ) );
+				if ( Hovered.IsEnabled )
+					Hovered.CreateEvent( new MousePanelEvent( "onmouseout", Hovered, "none" ) );
 			}
 
 			Hovered = current;
@@ -225,7 +226,8 @@ internal class PanelInput
 				if ( Active == null || Active == Hovered )
 					Panel.Switch( PseudoClass.Hover, true, Hovered );
 
-				Hovered.CreateEvent( new MousePanelEvent( "onmouseover", Hovered, "none" ) );
+				if ( Hovered.IsEnabled )
+					Hovered.CreateEvent( new MousePanelEvent( "onmouseover", Hovered, "none" ) );
 			}
 		}
 
@@ -355,13 +357,15 @@ internal class PanelInput
 				if ( delta.Length > 5.0f && !Dragged )
 				{
 					Dragged = true;
-					DragTarget?.CreateEvent( new DragEvent( "ondragstart", DragTarget, StartHoldOffsetLocal, StartHoldOffsetScreen ) );
+					if ( DragTarget != null && DragTarget.IsEnabled )
+						DragTarget.CreateEvent( new DragEvent( "ondragstart", DragTarget, StartHoldOffsetLocal, StartHoldOffsetScreen ) );
 
 					// We started dragging - stop active panel being active, no click events
 					{
 						Panel.Switch( PseudoClass.Active, false, Active );
 						Panel.Switch( PseudoClass.Hover, false, Active );
-						Active.CreateEvent( new MousePanelEvent( "onmouseup", Active, GetMouseButtonName( MouseButton ) ) );
+						if ( Active.IsEnabled )
+							Active.CreateEvent( new MousePanelEvent( "onmouseup", Active, GetMouseButtonName( MouseButton ) ) );
 						Active.OnButtonEvent( new ButtonEvent( MouseButton, false ) );
 						Active = null;
 					}
@@ -369,7 +373,8 @@ internal class PanelInput
 
 				if ( Dragged )
 				{
-					DragTarget?.CreateEvent( new DragEvent( "ondrag", DragTarget, StartHoldOffsetLocal, StartHoldOffsetScreen ) { MouseDelta = Mouse.Delta } );
+					if ( DragTarget != null && DragTarget.IsEnabled )
+						DragTarget.CreateEvent( new DragEvent( "ondrag", DragTarget, StartHoldOffsetLocal, StartHoldOffsetScreen ) { MouseDelta = Mouse.Delta } );
 				}
 			}
 
@@ -395,15 +400,21 @@ internal class PanelInput
 		{
 			if ( MouseButton == ButtonCode.MouseBack )
 			{
-				hovered?.CreateEvent( new PanelEvent( "onback", hovered ) );
-				hovered?.OnButtonEvent( new ButtonEvent( MouseButton, true ) );
+				if ( hovered != null && hovered.IsEnabled )
+				{
+					hovered.CreateEvent( new PanelEvent( "onback", hovered ) );
+					hovered.OnButtonEvent( new ButtonEvent( MouseButton, true ) );
+				}
 				return;
 			}
 
 			if ( MouseButton == ButtonCode.MouseForward )
 			{
-				hovered?.CreateEvent( new PanelEvent( "onforward", hovered ) );
-				hovered?.OnButtonEvent( new ButtonEvent( MouseButton, true ) );
+				if ( hovered != null && hovered.IsEnabled )
+				{
+					hovered.CreateEvent( new PanelEvent( "onforward", hovered ) );
+					hovered.OnButtonEvent( new ButtonEvent( MouseButton, true ) );
+				}
 				return;
 			}
 
@@ -430,11 +441,13 @@ internal class PanelInput
 			}
 
 			Active.Focus();
+			if ( Active.IsEnabled )
+			{
+				MouseDownEvent = new MousePanelEvent( "onmousedown", Active, GetMouseButtonName( MouseButton ) );
+				Active.CreateEvent( MouseDownEvent );
 
-			MouseDownEvent = new MousePanelEvent( "onmousedown", Active, GetMouseButtonName( MouseButton ) );
-			Active.CreateEvent( MouseDownEvent );
-
-			Active.OnButtonEvent( new ButtonEvent( MouseButton, true ) );
+				Active.OnButtonEvent( new ButtonEvent( MouseButton, true ) );
+			}
 		}
 
 		void OnReleased( Panel hovered )
@@ -445,11 +458,12 @@ internal class PanelInput
 				return;
 			}
 
-			bool canClick = hovered == Active && !Dragged;
+			bool canClick = hovered == Active && !Dragged && Active.IsEnabled;
 
 			if ( Dragged && DragTarget != null )
 			{
-				DragTarget.CreateEvent( new DragEvent( "ondragend", DragTarget, StartHoldOffsetLocal, StartHoldOffsetScreen ) );
+				if(DragTarget.IsEnabled)
+					DragTarget.CreateEvent( new DragEvent( "ondragend", DragTarget, StartHoldOffsetLocal, StartHoldOffsetScreen ) );
 
 				if ( Input.DropTarget != null )
 				{
@@ -469,7 +483,7 @@ internal class PanelInput
 
 			if ( canClick )
 			{
-				Active.CreateEvent( new MousePanelEvent( "onmouseup", Active, GetMouseButtonName( MouseButton ) ) );
+			    Active.CreateEvent( new MousePanelEvent( "onmouseup", Active, GetMouseButtonName( MouseButton ) ) );
 
 				if ( MouseButton == ButtonCode.MouseLeft )
 				{
@@ -492,7 +506,7 @@ internal class PanelInput
 
 			Panel.Switch( PseudoClass.Active, false, Active );
 
-			Active.OnButtonEvent( new ButtonEvent( MouseButton, false ) );
+			if(Active.IsEnabled) Active.OnButtonEvent( new ButtonEvent( MouseButton, false ) );
 			Active = null;
 		}
 	}

@@ -1,4 +1,5 @@
-﻿using Sandbox.Resources;
+﻿using BlowoutTeamSoft.Engine.Interfaces.Assets;
+using Sandbox.Resources;
 
 namespace Editor;
 
@@ -26,7 +27,7 @@ public class TextureGeneratorControlWidget : ResourceGeneratorControlWidget
 		base.BuildContent();
 	}
 
-	protected override void OnResourceChanged( Resource resource )
+	protected override void OnResourceChanged( IBlowoutEngineAsset resource )
 	{
 		if ( resource is Texture texture )
 		{

@@ -1,5 +1,9 @@
-﻿using Facepunch.ActionGraphs;
+﻿using BlowoutTeamSoft.Debugger.Console.Results;
+using BlowoutTeamSoft.Engine.Enums;
+using BlowoutTeamSoft.Engine.Interfaces.Console;
+using Facepunch.ActionGraphs;
 using Microsoft.CodeAnalysis;
+using Sandbox;
 using Sandbox.ActionGraphs;
 using System;
 using System.Text;
@@ -7,7 +11,7 @@ using System.Text;
 namespace Editor;
 
 [Dock( "Editor", "Console", "text_snippet" )]
-internal class ConsoleWidget : Widget
+internal class ConsoleWidget : Widget, IDebugConsole
 {
 	internal static ConsoleWidget Instance { get; private set; }
 
@@ -23,6 +27,8 @@ internal class ConsoleWidget : Widget
 	ConsoleOutput Output { get; init; }
 	LineEdit Filter { get; init; }
 	StatusBarLog CurrentStatusBarLog { get; set; }
+
+	public ICommandParser UnsafeParser => throw new NotImplementedException();
 
 	MessageCategory Message;
 	MessageCategory Warning;
@@ -865,6 +871,54 @@ internal class ConsoleWidget : Widget
 			RaiseConsole();
 		}
 	}
+
+	public CommandExecutionResult ExecuteCommand( string input )
+	{
+		input = input.Trim();
+		if ( input.Length == 0 )
+			return new CommandExecutionResult() { Success = false };
+
+		Input.Clear();
+		Input.AddHistory( input );
+
+		if ( input == "clear" )
+		{
+			Clear();
+			return new CommandExecutionResult() { Success = true };
+		}
+
+		var textcolor = "#3f3";
+		var message = $"> {input}";
+		var html = $"<div><span style=\"color: rgb(75, 122, 75); background-color: rgb(34, 41, 34);\">&nbsp;{DateTime.Now.ToString( "hh:mm:ss" )}&nbsp;</span> <span style=\"color: {textcolor}\">&nbsp;{message}</span></div>";
+		Output.AddEvent( html, new LogEvent() );
+
+		return ConsoleSystem.Run( input );
+	}
+
+	public void Log( string information, BlowoutLogLevel level )
+	{
+		LogLevel logLevel = LogLevel.Trace;
+		switch ( level )
+		{
+			case BlowoutLogLevel.Fatal or BlowoutLogLevel.Error:
+				logLevel = LogLevel.Error;
+				break;
+			case BlowoutLogLevel.Warning:
+				logLevel = LogLevel.Warn;
+				break;
+			case BlowoutLogLevel.Info:
+				logLevel = LogLevel.Info;
+				break;
+		}
+
+		OnConsoleMessage( new LogEvent() { Level = logLevel, Message = information, Logger = "BLOWOUT ENGINE" } );
+	}
+
+	public void LogLine( string information, BlowoutLogLevel level ) =>
+		Log( information + "\n", level );
+
+	public void Clean() =>
+		Clear();
 
 	[Event( "scene.startplay" )]
 	private static void OnStartPlay()
