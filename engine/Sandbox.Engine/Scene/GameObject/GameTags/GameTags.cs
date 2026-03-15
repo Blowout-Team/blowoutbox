@@ -131,8 +131,8 @@ public class GameTags : ITagSet
 			tags.Add( oldTag );
 		}
 
-		_tokens = newTokens;
-		_tags = tags;
+		_lazyTokens = newTokens;
+		_lazyTags = tags;
 
 		return true;
 	}

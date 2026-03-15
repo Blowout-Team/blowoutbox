@@ -17,7 +17,7 @@ public static class Application
 	/// <summary>
 	/// Steam AppId of S&amp;box.
 	/// </summary>
-	public static ulong AppId { get; internal set; } = 590830;
+	public static ulong AppId { get; internal set; } = 365670; // dehs: We are using 'Blender' for 'BSource 2' :DDD. So in future we will use our own id.
 
 	/// <summary>
 	/// True if we're running the engine as part of a unit test

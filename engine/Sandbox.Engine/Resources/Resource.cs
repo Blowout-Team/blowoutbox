@@ -56,10 +56,15 @@ public abstract partial class Resource : BlowoutEngineObject, IValid, IJsonConve
 	public override string ObjectName { get => AssetName; set => AssetName = value; }
 
 	[Hide, JsonIgnore]
-	public int AssetId { get => ResourceIdLong; set => ResourceIdLong = value; }
+#pragma warning disable CS0618 
+	public int ShortAssetId { get => ResourceId; set => ResourceId = value; }
+#pragma warning restore CS0618 
 
 	[Hide, JsonIgnore]
-	public override Guid Id { get => new Guid( ResourceId, 0, 0, new byte[8] ); protected set => ResourceId = value.ToByteArray()[0]; }
+	public ulong AssetId { get => ResourceIdLong; set => ResourceIdLong = value; }
+
+	[Hide, JsonIgnore]
+	public override Guid Id { get => new Guid( (int)ResourceIdLong, 0, 0, new byte[8] ); protected set => ResourceIdLong = value.ToByteArray()[0]; }
 
 	[Hide, JsonIgnore]
 	public string AssetPath => ResourcePath;
@@ -245,7 +250,7 @@ public abstract partial class Resource : BlowoutEngineObject, IValid, IJsonConve
 		}
 	}
 
-	public void InitializeAsset( string path, int hash, IDisposable manifest )
+	public void InitializeAsset( string path, ulong hash, IDisposable manifest )
 	{
 		// nothing do in native :P
 	}

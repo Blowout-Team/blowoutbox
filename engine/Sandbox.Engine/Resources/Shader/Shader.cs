@@ -14,7 +14,7 @@ public partial class Shader : Resource, IBlowoutShader
 
 	public override bool IsValid => native.IsValid;
 
-	public BlowoutShaderNativeHandle Handle => new BlowoutShaderNativeHandle(AssetId);
+	public BlowoutShaderNativeHandle Handle => new BlowoutShaderNativeHandle(ShortAssetId);
 
 	private Shader( CVfx native, string name )
 	{

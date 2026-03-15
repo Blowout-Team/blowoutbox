@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using BlowoutTeamSoft.Engine.Interfaces;
+using System.Collections.Generic;
 
 namespace Sandbox;
 
@@ -73,9 +74,7 @@ public class ComponentList
     /// Lazily initialized so GameObjects without components don't allocate.
     /// </summary>
     List<IBlowoutGameSystem> _internalList;
-    List<IBlowoutGameSystem> _list => _internalList ??= new List<Component>();
-	List<Component> _internalList;
-	List<Component> _list => _internalList ??= new List<Component>();
+    List<IBlowoutGameSystem> _list => _internalList ??= new List<IBlowoutGameSystem>();
 
 	internal ComponentList( GameObject o )
 	{
@@ -387,7 +386,7 @@ public class ComponentList
 				var component = _list[i];
 				if ( component is null ) continue;
 
-				if ( component is T target && component.Active )
+				if ( component is T target && component.IsActive )
 				{
 					action.Invoke( target );
 				}
@@ -500,7 +499,7 @@ public class ComponentList
 	/// <summary>
 	/// Allows linq style queries
 	/// </summary>
-	public Component FirstOrDefault( Func<Component, bool> value ) => _internalList is null ? null : _internalList.FirstOrDefault( value );
+	public IBlowoutGameSystem FirstOrDefault( Func<IBlowoutGameSystem, bool> value ) => _internalList is null ? null : _internalList.FirstOrDefault( value );
 
 	/// <summary>
 	/// Amount of components - including disabled

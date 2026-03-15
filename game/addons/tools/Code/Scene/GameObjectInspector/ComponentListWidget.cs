@@ -311,10 +311,12 @@ public class ComponentListWidget : Widget
 			{
 				var session = SceneEditorSession.Resolve( gameObject );
 				using var scene = session.Scene.Push();
-				using ( session.UndoScope( $"Replace {component.GetType().Name} Component" ).WithComponentDestructions( component ).WithComponentCreations().Push() )
+				using ( session.UndoScope( $"Replace {component.GetType().Name} Component" ).WithBlowoutGameSystemDestructions( component ).WithComponentCreations().Push() )
 				{
 					var go = (GameObject)component.SystemGameObject;
-					var jso = component.Serialize().AsObject();
+					var jso = component is IBlowoutSerializable serializable ?
+									serializable.Serialize( null ).ToJson().AsObject() : 
+									component is Sandbox.Component sndbxComp ? sndbxComp.Serialize().AsObject() : null;
 					component.Destroy();
 					var newComponent = go.Components.Create( t );
 					newComponent.DeserializeImmediately( jso );

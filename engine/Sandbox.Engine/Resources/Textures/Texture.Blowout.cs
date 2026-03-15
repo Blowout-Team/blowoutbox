@@ -13,7 +13,7 @@ public partial class Texture : IBlowoutTexture,
 	IBlowoutTexture2D,
 	IBlowoutRenderTexture
 {
-	public BlowoutTextureHandle Handle => new BlowoutTextureHandle( AssetId );
+	public BlowoutTextureHandle Handle => new BlowoutTextureHandle( ShortAssetId );
 
 	public BlowoutTextureDimension Dimension
 	{
@@ -55,11 +55,11 @@ public partial class Texture : IBlowoutTexture,
 
 	public bool IsReadable => IsValid;
 
-	public BlowoutTexture2DHandle Handle2D => new BlowoutTexture2DHandle( AssetId );
+	public BlowoutTexture2DHandle Handle2D => new BlowoutTexture2DHandle( ShortAssetId );
 
 	public System.Numerics.Vector3 TexelSize => new System.Numerics.Vector3( Size.x, Size.y, 0f );
 
-	public BlowoutRenderTextureHandle RenderTextureHandle => new BlowoutRenderTextureHandle( AssetId );
+	public BlowoutRenderTextureHandle RenderTextureHandle => new BlowoutRenderTextureHandle( ShortAssetId );
 
 	public bool IsRandomWrite { get; set; }
 

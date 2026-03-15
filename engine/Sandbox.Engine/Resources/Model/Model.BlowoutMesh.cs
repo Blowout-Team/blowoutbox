@@ -12,7 +12,7 @@ namespace Sandbox;
 
 public partial class Model : IBlowoutMesh, IBlowoutModel
 {
-	public BlowoutMeshId MeshHandle => new BlowoutMeshId( AssetId );
+	public BlowoutMeshId MeshHandle => new BlowoutMeshId( ShortAssetId );
 
 	public IEnumerable<System.Numerics.Vector3> Vertices
 	{

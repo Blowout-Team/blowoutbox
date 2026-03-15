@@ -20,7 +20,7 @@ public partial class Surface : IBlowoutPhysicsSurface
 			return;
 		}
 		Name = from.Name;
-		SetIdFromResourcePath( from.Name );
+		ResourceIdLong = from.Name.FastHash64();
 		Create( false );
 	}
 }

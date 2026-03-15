@@ -1301,4 +1301,15 @@ public sealed unsafe partial class CommandList : IBlowoutGPUDispatchCommand, IBl
 			Data1 = new Vector4( rect.Left, rect.Top, rect.Width, rect.Height )
 		} );
 	}
+
+	public void EnsureDisposed()
+	{
+		if ( _entries.Count > 0 )
+			Dispose();
+	}
+
+	public void Dispose()
+	{
+		Flush();
+	}
 }

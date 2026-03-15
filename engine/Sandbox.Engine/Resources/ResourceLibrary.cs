@@ -11,14 +11,14 @@ namespace Sandbox;
 public class ResourceSystem
 {
 	// Index of Json based, GameResources PrefabFile, DecalDefintions etc.
-	private Dictionary<int, Resource> ResourceIndex { get; } = new();
+	private Dictionary<int, IBlowoutEngineAsset> ResourceIndex { get; } = new();
 
 	// Weak references to native resources (Model, Material, Texture, Shader, etc.) — GC-friendly.
-	private Dictionary<int, WeakReference<Resource>> WeakIndex { get; } = new();
+	private Dictionary<int, WeakReference<IBlowoutEngineAsset>> WeakIndex { get; } = new();
 
-	private Dictionary<ulong, Resource> ResourceIndexLong { get; } = new();
+	private Dictionary<ulong, IBlowoutEngineAsset> ResourceIndexLong { get; } = new();
 
-	private Dictionary<ulong, WeakReference<Resource>> WeakIndexLong { get; } = new();
+	private Dictionary<ulong, WeakReference<IBlowoutEngineAsset>> WeakIndexLong { get; } = new();
 
 	/// Maps ResourceIdLong → path for all resources that exist on disk.
 	/// Populated at startup without loading anything; used as on-demand load fallback during
@@ -33,12 +33,12 @@ public class ResourceSystem
 		PathIndex[path.FastHash64()] = path;
 	}
 
-	internal void Register( Resource resource )
+	internal void Register( IBlowoutEngineAsset resource )
 	{
 #pragma warning disable CS0618 // Type or member is obsolete
-		ResourceIndex[resource.ResourceId] = resource;
+		ResourceIndex[resource.ShortAssetId] = resource;
 #pragma warning restore CS0618 // Type or member is obsolete
-		ResourceIndexLong[resource.ResourceIdLong] = resource;
+		ResourceIndexLong[resource.AssetId] = resource;
 
 		if ( resource is GameResource gameResource && !gameResource.IsPromise )
 		{
@@ -49,27 +49,27 @@ public class ResourceSystem
 	/// <summary>
 	/// Register a resource with a weak reference, allowing GC to collect it when no longer in use.
 	/// </summary>
-	internal void RegisterWeak( Resource resource )
+	internal void RegisterWeak( IBlowoutEngineAsset resource )
 	{
 #pragma warning disable CS0618 // Type or member is obsolete
-		WeakIndex[resource.ResourceId] = new WeakReference<Resource>( resource );
+		WeakIndex[resource.ShortAssetId] = new WeakReference<IBlowoutEngineAsset>( resource );
 #pragma warning restore CS0618 // Type or member is obsolete
-		WeakIndexLong[resource.ResourceIdLong] = new WeakReference<Resource>( resource );
+		WeakIndexLong[resource.AssetId] = new WeakReference<IBlowoutEngineAsset>( resource );
 	}
 
-	internal void Unregister( Resource resource )
+	internal void Unregister( IBlowoutEngineAsset resource )
 	{
 		// This isn't thread safe
 		ThreadSafe.AssertIsMainThread();
 
 		// Make sure we're unregistering the currently indexed resource
 
-		ResourceIndexLong.Remove( resource.ResourceIdLong );
-		WeakIndexLong.Remove( resource.ResourceIdLong );
+		ResourceIndexLong.Remove( resource.AssetId );
+		WeakIndexLong.Remove( resource.AssetId );
 
 #pragma warning disable CS0618 // Type or member is obsolete
-		ResourceIndex.Remove( resource.ResourceId );
-		WeakIndex.Remove( resource.ResourceId );
+		ResourceIndex.Remove( resource.ShortAssetId );
+		WeakIndex.Remove( resource.ShortAssetId );
 #pragma warning restore CS0618 // Type or member is obsolete
 
 
@@ -141,7 +141,7 @@ public class ResourceSystem
 	/// Find all alive weak resources of a given type whose ResourcePath starts with the given prefix.
 	/// Used for hotload scenarios like SVG textures with query parameters.
 	/// </summary>
-	internal IEnumerable<T> FindWeakByPathPrefix<T>( string pathPrefix ) where T : Resource
+	internal IEnumerable<T> FindWeakByPathPrefix<T>( string pathPrefix ) where T : IBlowoutEngineAsset
 	{
 		foreach ( var kvp in WeakIndex )
 		{
@@ -151,12 +151,12 @@ public class ResourceSystem
 			if ( resource is not T typed )
 				continue;
 
-			if ( resource.ResourcePath is not null && resource.ResourcePath.TrimStart( '/' ).StartsWith( pathPrefix, StringComparison.OrdinalIgnoreCase ) )
+			if ( resource.AssetPath is not null && resource.AssetPath.TrimStart( '/' ).StartsWith( pathPrefix, StringComparison.OrdinalIgnoreCase ) )
 				yield return typed;
 		}
 	}
 
-	internal Resource Get( System.Type t, string filepath )
+	internal IBlowoutEngineAsset Get( System.Type t, string filepath )
 	{
 		filepath = Resource.FixPath( filepath );
 		ulong identifier = filepath.FastHash64();
@@ -182,7 +182,7 @@ public class ResourceSystem
 	{
 		filepath = Resource.FixPath( filepath );
 
-		return Get( filepath.FastHash() );
+		return Get( typeof(IBlowoutEngineAsset), filepath);
 	}
 
 	/// <summary>
@@ -203,13 +203,13 @@ public class ResourceSystem
 	}
 
 	// Internal use only — do not expose ulong IDs publicly.
-	internal T GetByIdLong<T>( ulong idLong ) where T : Resource
+	internal T GetByIdLong<T>( ulong idLong ) where T : IBlowoutEngineAsset
 	{
-		if ( ResourceIndexLong.TryGetValue( idLong, out var resource ) )
-			return resource as T;
+		if ( ResourceIndexLong.TryGetValue( idLong, out var resource ) && resource is T target)
+			return target;
 
-		if ( WeakIndexLong.TryGetValue( idLong, out var weakRef ) && weakRef.TryGetTarget( out var weakResource ) )
-			return weakResource as T;
+		if ( WeakIndexLong.TryGetValue( idLong, out var weakRef ) && weakRef.TryGetTarget( out var weakResource ) && weakResource is T weakTarget )
+			return weakTarget;
 
 		return default;
 	}
