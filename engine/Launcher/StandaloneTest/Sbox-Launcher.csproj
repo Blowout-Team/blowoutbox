@@ -30,6 +30,8 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+		<ProjectReference Include="..\..\BlowoutTeamSoft\Engine\BlowoutTeamSoft.Engine.csproj" />
+		<ProjectReference Include="..\..\BlowoutTeamSoft\Source2\Source2.Core\BlowoutTeamSoft.Source2.Core.csproj" />
 		<ProjectReference Include="..\..\Sandbox.AppSystem\Sandbox.AppSystem.csproj" Private="false" />
 		<ProjectReference Include="..\..\Sandbox.Engine\Sandbox.Engine.csproj" Private="false" />
 		<ProjectReference Include="..\..\Sandbox.Filesystem\Sandbox.Filesystem.csproj" Private="false" />

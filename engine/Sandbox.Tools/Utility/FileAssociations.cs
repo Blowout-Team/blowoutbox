@@ -15,7 +15,7 @@ internal class FileAssociations
 
 		try
 		{
-			RegistryKey fileTypeKey = Registry.CurrentUser.CreateSubKey( @"SOFTWARE\Classes\Sandbox.ProjectFile" );
+			RegistryKey fileTypeKey = Registry.CurrentUser.CreateSubKey( @"SOFTWARE\Classes\BlowoutEngine.Source2.ProjectFile" );
 			fileTypeKey.SetValue( "", "BlowoutBox Engine Project File" );
 			fileTypeKey.CreateSubKey( "DefaultIcon" ).SetValue( "", sboxExeFilePath );
 

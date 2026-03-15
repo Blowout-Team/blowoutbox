@@ -1,8 +1,12 @@
-﻿using Sandbox.Engine;
+﻿using BlowoutTeamSoft.Engine;
+using BlowoutTeamSoft.Engine.Helpers;
+using Sandbox.DataModel;
+using Sandbox.Engine;
 using System.IO;
 using System.Runtime.Serialization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Xml;
 using System.Xml.Serialization;
 
 namespace Sandbox;
@@ -137,11 +141,17 @@ public sealed partial class Project
 
 			if ( ConfigFilePath.EndsWith( ".bxproj" ) )
 			{
-				DataContractSerializer serializer = new DataContractSerializer( typeof( DataModel.ProjectConfig ) );
+				DataContractSerializer serializer = new DataContractSerializer( typeof( ProjectConfig ), new DataContractSerializerSettings()
+				{
+					PreserveObjectReferences = true,
+					KnownTypes = BlowoutEnumerable.From( typeof( JsonElement ) )
+				} );
 
-				using FileStream file = new FileStream( ConfigFilePath, FileMode.Open, FileAccess.Read );
-				Config = (DataModel.ProjectConfig)serializer.ReadObject(file);
-
+				using FileStream fileStream = new FileStream( ConfigFilePath, FileMode.Open, FileAccess.Read );
+				using ( var xmlWriter = new XmlTextReader( fileStream ) )
+				{
+					Config = (ProjectConfig)serializer.ReadObject( xmlWriter );
+				}
 			}
 			else
 			{

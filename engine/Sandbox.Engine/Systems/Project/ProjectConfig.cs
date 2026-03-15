@@ -1,4 +1,7 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using BlowoutTeamSoft.Engine;
+using BlowoutTeamSoft.Engine.Helpers;
+using BlowoutTeamSoft.Engine.Interfaces;
+using System.ComponentModel.DataAnnotations;
 using System.IO;
 using System.Runtime.Serialization;
 using System.Text.Json;
@@ -13,7 +16,7 @@ namespace Sandbox.DataModel;
 /// </summary>
 [Expose]
 [DataContract]
-public class ProjectConfig
+public class ProjectConfig : IBlowoutXProjectInfo
 {
 	/// <summary>
 	/// The directory housing this addon (TODO)
@@ -207,25 +210,26 @@ public class ProjectConfig
 		return Json.SerializeAsObject( this ).ToJsonString( Json.options );
 	}
 
-	/// <summary>
-	/// Serialize the entire config to a XML string.
-	/// </summary>
-	public string ToXml()
+	public void Serialize(TextWriter writer)
 	{
-
-		DataContractSerializer serializer = new DataContractSerializer( typeof( ProjectConfig ) , new DataContractSerializerSettings()
+		DataContractSerializer serializer = new DataContractSerializer( typeof( ProjectConfig ), new DataContractSerializerSettings()
 		{
-			PreserveObjectReferences = true
+			PreserveObjectReferences = true,
+			KnownTypes = BlowoutEnumerable.From(typeof(JsonElement))
 		} );
 
-		using StringWriter writer = new StringWriter();
-		using ( var xmlWriter = new XmlTextWriter(writer) )
+		using ( var xmlWriter = new XmlTextWriter( writer ) { Formatting = Formatting.Indented } )
 		{
 			serializer.WriteObject( xmlWriter, this );
 			writer.Flush();
-			return writer.ToString();
 		}
 	}
+
+	/// <summary>
+	/// Serialize the entire config to a XML string.
+	/// </summary>
+	public string ToXml() =>
+		BlowoutXProject.Serialize( this );
 
 	/// <summary>
 	/// Try to get a value at given key in <see cref="Metadata"/>.
