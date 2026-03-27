@@ -4,8 +4,10 @@ dotnet build .\engine\BlowoutTeamSoft\Compilation.Module\BlowoutTeamSoft.Compila
 
 .\engine\BlowoutTeamSoft\Compilation.Module\bin\BCompiler.exe precompile --compilation-mode Force
 
+.\engine\BlowoutTeamSoft\Compilation.Module\bin\BCompiler.exe compile_abi --compile-filter "BlowoutTeamSoft.*" --out-directory "BlowoutABIInterop" --expose-errors true --out-pack-pattern "<rs:rust_sdk;cs:csharp_sdk>" --compilation-mode Force
+
 REM For the time being, we will leave an indication only of the 'BlowoutTeamSoft.*' projects and assemblies. The features of the compiler are currently not used in the Sandbox. For quick compilation, we are currently using BlowoutTeamSoft.
-.\engine\BlowoutTeamSoft\Compilation.Module\bin\BCompiler.exe compilation --compile-filter "BlowoutTeamSoft.*" --out-directory "BGenerated" --rel-proj-src true --expose-errors true --compilation-mode Force
+.\engine\BlowoutTeamSoft\Compilation.Module\bin\BCompiler.exe compilation --compile-filter "BlowoutTeamSoft.*" --compile-abi false --out-directory "BGenerated" --rel-proj-src true --expose-errors true --compilation-mode Force
 
 dotnet run --project .\engine\Tools\SboxBuild\SboxBuild.csproj -- build --config Developer
 
