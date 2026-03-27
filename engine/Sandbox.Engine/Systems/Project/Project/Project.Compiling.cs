@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using System.Text.Json.Serialization;
 
 namespace Sandbox;
@@ -147,7 +147,7 @@ public partial class Project
 		if ( !Application.IsEditor )
 			return;
 
-		if ( Config.Type == "game" || Config.Type == "library" )
+		if ( Config.Type == "game" || Config.Type == "library" || Config.Type == "addon" )
 		{
 			UpdateEditorCompiler();
 		}
@@ -155,7 +155,7 @@ public partial class Project
 
 	IEnumerable<Package> PackageReferences()
 	{
-		if ( Config.Type == "game" && !IsBuiltIn )
+		if ( (Config.Type == "game" || Config.Type == "addon") && !IsBuiltIn )
 		{
 			foreach ( var library in Project.Libraries.Where( x => x.HasCodePath() ) )
 			{
@@ -228,7 +228,7 @@ public partial class Project
 			EditorCompiler.AddReference( reference );
 		}
 
-		if ( Config.Type == "game" && !IsBuiltIn )
+		if ( (Config.Type == "game" || Config.Type == "addon") && !IsBuiltIn )
 		{
 			// editor libraries
 			foreach ( var library in Libraries.Where( x => x.HasEditorPath() ) )

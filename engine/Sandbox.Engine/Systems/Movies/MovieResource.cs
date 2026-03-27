@@ -1,4 +1,5 @@
-﻿using Sandbox.MovieMaker.Compiled;
+﻿using System.Collections.Immutable;
+using Sandbox.MovieMaker.Compiled;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
@@ -10,6 +11,7 @@ namespace Sandbox.MovieMaker;
 /// <summary>
 /// A container for a <see cref="MovieClip"/>, including optional <see cref="EditorData"/>.
 /// </summary>
+[JsonConverter( typeof( MovieResourceConverter ) )]
 public interface IMovieResource
 {
 	/// <summary>
@@ -112,7 +114,14 @@ public sealed class EmbeddedMovieResource : IMovieResource
 	public MovieClip? Compiled
 	{
 		get => _compiled ??= _project?.Compile();
-		set => _compiled = value;
+		set
+		{
+			_compiled = value;
+
+			ReferencedPackages = value?.ResolvePrimaryPackages()
+				.Select( x => $"{x.FullIdent}#{x.Revision.VersionId}" )
+				.ToImmutableArray() ?? [];
+		}
 	}
 
 	/// <inheritdoc />
@@ -122,6 +131,10 @@ public sealed class EmbeddedMovieResource : IMovieResource
 		get => _editorData ??= _project?.Serialize();
 		set => _editorData = value;
 	}
+
+	[JsonInclude]
+	[JsonPropertyName( "__references" )]
+	internal ImmutableArray<string> ReferencedPackages { get; set; } = [];
 
 	/// <inheritdoc />
 	public void StateHasChanged( IMovieProject project )
@@ -134,7 +147,7 @@ public sealed class EmbeddedMovieResource : IMovieResource
 	}
 }
 
-internal sealed class MovieResourceConverter : JsonConverter<IMovieResource>
+file sealed class MovieResourceConverter : JsonConverter<IMovieResource>
 {
 	public override void Write( Utf8JsonWriter writer, IMovieResource value, JsonSerializerOptions options )
 	{

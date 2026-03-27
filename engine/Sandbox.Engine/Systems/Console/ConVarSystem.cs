@@ -253,7 +253,7 @@ internal static partial class ConVarSystem
 	/// <summary>
 	/// Run a single command. [command] [args]
 	/// </summary>
-	internal static CommandExecutionResult RunSingle( string v )
+	internal static void RunSingle( string v, bool allowProtected = true )
 	{
 		var parts = v.Split( ' ', 2, StringSplitOptions.RemoveEmptyEntries );
 
@@ -261,6 +261,12 @@ internal static partial class ConVarSystem
 		{
 			Log.Warning( $"Unknown Command '{parts[0]}'" );
 			return new CommandExecutionResult(($"Unknown Command '{parts[0]}'", BlowoutLogLevel.Error) ) { Success = false };
+		}
+
+		if ( !allowProtected && command.IsProtected )
+		{
+			Log.Warning( $"Can't run protected command '{command.Name}'" );
+			return;
 		}
 
 		var hasArguments = parts.Length > 1;
@@ -297,20 +303,56 @@ internal static partial class ConVarSystem
 	}
 
 	/// <summary>
-	/// Run a potential string of commands, seperated by newlines or ;
+	/// Run a potential string of commands, separated by newlines or ;
 	/// </summary>
-	internal static CommandExecutionResult Run( string v )
+	internal static void Run( string v, bool allowProtected = true )
 	{
 		ThreadSafe.AssertIsMainThread();
 
 		if ( string.IsNullOrWhiteSpace( v ) ) return new CommandExecutionResult() { Success = false };
 
-		CommandExecutionResult result = new CommandExecutionResult() { Success = false };
-		foreach ( var part in v.Split( ';', '\n' ) )
+		foreach ( var part in SplitCommands( v ) )
 		{
 			if ( string.IsNullOrWhiteSpace( part ) ) continue;
 
-			result = RunSingle( part );
+			RunSingle( part, allowProtected );
+		}
+	}
+
+	/// <summary>
+	/// Split a command string on ';' and '\n', but respect quoted sections.
+	/// </summary>
+	internal static IEnumerable<string> SplitCommands( string input )
+	{
+		var inQuotes = false;
+		int start = 0;
+
+		for ( var i = 0; i < input.Length; i++ )
+		{
+			var c = input[i];
+
+			if ( c == '\\' && i + 1 < input.Length )
+			{
+				i++;
+				continue;
+			}
+
+			if ( c == '"' )
+			{
+				inQuotes = !inQuotes;
+				continue;
+			}
+
+			if ( inQuotes || (c != ';' && c != '\n') )
+				continue;
+
+			yield return input.Substring( start, i - start );
+			start = i + 1;
+		}
+
+		if ( start < input.Length )
+		{
+			yield return input[start..];
 		}
 
 		return result;
