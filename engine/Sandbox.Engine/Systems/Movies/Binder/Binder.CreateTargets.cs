@@ -1,4 +1,5 @@
-﻿using Sandbox.Internal;
+﻿using Sandbox.Engine.Extensions;
+using Sandbox.Internal;
 
 namespace Sandbox.MovieMaker;
 
@@ -185,9 +186,10 @@ partial class TrackBinder
 			}
 			else
 			{
-				cmp.Flags |= CreatedTargetComponentFlags;
+				cmp.SystemMode |= CreatedTargetComponentFlags.ToSystemMode();
 
-				BindCreatedTarget( Get( match ), cmp );
+				//TODO: [Blowout Team] dehs add support for IBlowoutValidable pls.
+				BindCreatedTarget( Get( match ), (IValid)cmp );
 			}
 		}
 	}

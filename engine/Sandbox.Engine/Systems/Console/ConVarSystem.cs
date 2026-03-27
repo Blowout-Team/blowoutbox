@@ -253,7 +253,7 @@ internal static partial class ConVarSystem
 	/// <summary>
 	/// Run a single command. [command] [args]
 	/// </summary>
-	internal static void RunSingle( string v, bool allowProtected = true )
+	internal static CommandExecutionResult RunSingle( string v, bool allowProtected = true )
 	{
 		var parts = v.Split( ' ', 2, StringSplitOptions.RemoveEmptyEntries );
 
@@ -266,7 +266,7 @@ internal static partial class ConVarSystem
 		if ( !allowProtected && command.IsProtected )
 		{
 			Log.Warning( $"Can't run protected command '{command.Name}'" );
-			return;
+			return new CommandExecutionResult(($"Can't run protected command '{command.Name}'", BlowoutLogLevel.Warning) ) { Success = false };
 		}
 
 		var hasArguments = parts.Length > 1;
@@ -305,18 +305,21 @@ internal static partial class ConVarSystem
 	/// <summary>
 	/// Run a potential string of commands, separated by newlines or ;
 	/// </summary>
-	internal static void Run( string v, bool allowProtected = true )
+	internal static CommandExecutionResult Run( string v, bool allowProtected = true )
 	{
 		ThreadSafe.AssertIsMainThread();
 
 		if ( string.IsNullOrWhiteSpace( v ) ) return new CommandExecutionResult() { Success = false };
 
+		CommandExecutionResult result = new CommandExecutionResult() { Success = false };
 		foreach ( var part in SplitCommands( v ) )
 		{
 			if ( string.IsNullOrWhiteSpace( part ) ) continue;
 
-			RunSingle( part, allowProtected );
+			result = RunSingle( part, allowProtected );
 		}
+
+		return result;
 	}
 
 	/// <summary>
@@ -354,8 +357,6 @@ internal static partial class ConVarSystem
 		{
 			yield return input[start..];
 		}
-
-		return result;
 	}
 
 	/// <summary>

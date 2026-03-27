@@ -68,7 +68,7 @@ public sealed class TemporaryEffect : Component, Component.ExecuteInEditor
 
 			foreach ( var component in go.Components.GetAll() )
 			{
-				if ( component is ITemporaryEffect te && component.Active && te.IsActive )
+				if ( component is ITemporaryEffect te && component.IsActive && te.IsActive )
 					return true;
 			}
 
