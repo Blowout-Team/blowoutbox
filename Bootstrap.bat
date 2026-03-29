@@ -5,7 +5,7 @@ if not exist ".\engine\BlowoutTeamSoft\Compilation.Module\bin\BCompiler.exe" dot
 .\engine\BlowoutTeamSoft\Compilation.Module\bin\BCompiler.exe precompile
 
 REM .\engine\BlowoutTeamSoft\Compilation.Module\bin\BCompiler.exe compile_abi --compile-filter "BlowoutTeamSoft.*" --out-directory "BlowoutABIInterop" --expose-errors true --out-pack-pattern "<rs:rust_sdk;cs:csharp_sdk>" --compilation-mode Force
-.\engine\BlowoutTeamSoft\Compilation.Module\bin\BCompiler.exe compile_abi --compile-filter "BlowoutTeamSoft.*" --out-directory ".\engine\BlowoutTeamSoft\Compilation.Core"
+.\engine\BlowoutTeamSoft\Compilation.Module\bin\BCompiler.exe compile_abi --compile-filter "BlowoutTeamSoft.*" --out-directory ".\engine\BlowoutTeamSoft\Sdk\GeneratedNative"
 
 REM For the time being, we will leave an indication only of the 'BlowoutTeamSoft.*' projects and assemblies. The features of the compiler are currently not used in the Sandbox. For quick compilation, we are currently using BlowoutTeamSoft.
 .\engine\BlowoutTeamSoft\Compilation.Module\bin\BCompiler.exe compilation --compile-filter "BlowoutTeamSoft.*" --compile-abi false --out-directory "BGenerated" --rel-proj-src true --expose-errors true
