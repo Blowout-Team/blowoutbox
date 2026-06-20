@@ -39,6 +39,9 @@ public class SystemsConfig : ConfigData
 	/// </summary>
 	public static object GetDefaultValue( PropertyDescription property )
 	{
+		if ( property.GetCustomAttribute<System.ComponentModel.DefaultValueAttribute>() is { } systemDefaultValue )
+			return systemDefaultValue.Value;
+
 		if ( property.GetCustomAttribute<DefaultValueAttribute>() is { } defaultValue )
 			return defaultValue.Value;
 
