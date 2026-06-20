@@ -44,6 +44,7 @@ native class IPhysicsWorld
 	IPhysicsJoint AddSphericalJoint( IPhysicsBody pBody1, IPhysicsBody pBody2, Transform localFrame1, Transform localFrame2 );
 	IPhysicsJoint AddMotorJoint( IPhysicsBody pBody1, IPhysicsBody pBody2, Transform localFrame1, Transform localFrame2 );
 	IPhysicsJoint AddWheelJoint( IPhysicsBody pBody1, IPhysicsBody pBody2, Transform localFrame1, Transform localFrame2 );
+	IPhysicsJoint AddParallelJoint( IPhysicsBody pBody1, IPhysicsBody pBody2, Transform localFrame1, Transform localFrame2 );
 	IPhysicsJoint AddFilterJoint( IPhysicsBody pBody1, IPhysicsBody pBody2 );
 
 	//
@@ -62,7 +63,7 @@ native class IPhysicsWorld
 
 	inline IPhysAggregateInstance CreateAggregateInstance( string resourceName, Transform tmStart, ulong nGSNHandle, PhysicsMotionType nMotionType )
 	{
-		HPhysAggregateData_Internal hPhysicsData = g_pResourceSystem->FindExistingResourceByName< RESOURCE_TYPE_PHYSICSDATA_INTERNAL >( CResourceName( resourceName ) );
+		HPhysicsData hPhysicsData = g_pResourceSystem->FindExistingResourceByName< RESOURCE_TYPE_PHYSICSDATA_INTERNAL >( CResourceName( resourceName ) );
 		IPhysAggregateInstance *pInstance = nullptr;
 		if ( !hPhysicsData.HasData() )
 			return pInstance;

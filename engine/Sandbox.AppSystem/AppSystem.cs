@@ -272,6 +272,9 @@ public class AppSystem : IBlowoutGameProcessor
 		GlobalContext.Menu.Shutdown();
 		GlobalContext.Game.Shutdown();
 
+		// Clear font manager cache, dispose native font handles
+		FontManager.Instance.Clear( true );
+
 		// Drain any disposables queued for end-of-frame — no more frames
 		// will run during shutdown so these would otherwise leak.
 		EngineLoop.DrainFrameEndDisposables();

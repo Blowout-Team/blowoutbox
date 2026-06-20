@@ -1,6 +1,7 @@
 ﻿@using Sandbox;
 @using Sandbox.UI;
 @using MenuProject.UI;
+@using Menu;
 @inherits Panel
 
 <root class="cblock">
@@ -9,9 +10,7 @@
 		<ChildContent>
 		@foreach ( var package in Group.Packages )
 		{
-			<PackageCard Package=@package 
-						OnLaunch="@( () => ContentBlocks.OnLaunch( package ) )"
-						OnMenu="@( () => ContentBlocks.OnMenu( this, package ) )"></PackageCard>
+            <PackageCard Size=@PackageCard.SizeType.Tall Package=@package Clicked="@(() => package.OpenModal())" RightClicked="@(() => MenuHelpers.OpenPackageMenu(this, package))" />
 		}
 		</ChildContent>
 	</ContentBlockBody>

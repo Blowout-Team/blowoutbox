@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Reflection;
+using System.Runtime.InteropServices;
 
 namespace Sandbox;
 
@@ -19,14 +20,13 @@ public static class LauncherEnvironment
 	{
 		get
 		{
-			if ( OperatingSystem.IsWindows() )
-				return "win64";
-			if ( OperatingSystem.IsLinux() )
-				return "linuxsteamrt64";
-			if ( OperatingSystem.IsMacOS() )
-				return "osxarm64";
+			var platform = OperatingSystem.IsWindows() ? "win"
+				: OperatingSystem.IsLinux() ? "linuxsteamrt"
+				: OperatingSystem.IsMacOS() ? "osx"
+				: throw new Exception( "Unsupported platform" );
 
-			throw new Exception( "Unsupported platform" );
+			var architecture = RuntimeInformation.OSArchitecture == Architecture.Arm64 ? "arm64" : "64";
+			return $"{platform}{architecture}";
 		}
 	}
 
@@ -73,9 +73,12 @@ public static class LauncherEnvironment
 		// Put our native dll path first so that when looking up native dlls we'll
 		// always use the ones from our folder first
 		//
-		var path = System.Environment.GetEnvironmentVariable( "PATH" );
-		path = $"{nativeDllPath};{path}";
-		System.Environment.SetEnvironmentVariable( "PATH", path );
+		if ( OperatingSystem.IsWindows() )
+		{
+			var path = System.Environment.GetEnvironmentVariable( "PATH" );
+			path = $"{nativeDllPath};{path}";
+			System.Environment.SetEnvironmentVariable( "PATH", path );
+		}
 	}
 
 	private static Assembly CurrentDomain_AssemblyResolve( object sender, ResolveEventArgs args )

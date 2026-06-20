@@ -1,6 +1,7 @@
 using BlowoutTeamSoft.Engine.Interfaces.UI;
 using BlowoutTeamSoft.Engine.Render;
 using Sandbox.UI;
+
 namespace Sandbox;
 
 /// <summary>
@@ -26,10 +27,27 @@ public sealed class WorldPanel : Renderer, IRootPanelComponent
 	/// <summary>
 	/// How far can we interact with this world panel?
 	/// </summary>
-	[Property, MakeDirty] public float InteractionRange { get; set; } = 1000.0f;
-	public BlowoutColor Color { get => worldPanel.Style.BackgroundColor.Value.ToBlowoutColor(); set => worldPanel.Style.BackgroundColor = value; }
+	[Property]
+	public float InteractionRange
+	{
+		get;
+		set
+		{
+			if ( field == value )
+				return;
 
-	public enum HAlignment
+			field = value;
+
+			if ( worldPanel.IsValid() )
+			{
+				worldPanel.MaxInteractionDistance = value;
+			}
+		}
+	} = 1000.0f;
+
+    public BlowoutColor Color { get => worldPanel.Style.BackgroundColor.Value.ToBlowoutColor(); set => worldPanel.Style.BackgroundColor = value; }
+
+    public enum HAlignment
 	{
 		[Icon( "align_horizontal_left" )]
 		Left = 1,
@@ -63,21 +81,7 @@ public sealed class WorldPanel : Renderer, IRootPanelComponent
 		if ( VerticalAlign == VAlignment.Center ) r.Position -= new Vector2( 0, PanelSize.y * 0.5f );
 		if ( VerticalAlign == VAlignment.Bottom ) r.Position -= new Vector2( 0, PanelSize.y );
 
-
 		return r;
-	}
-
-	protected override void OnDirty()
-	{
-		if ( !worldPanel.IsValid() )
-			return;
-
-		worldPanel.MaxInteractionDistance = InteractionRange;
-
-		if ( worldPanel.SceneObject.IsValid() )
-		{
-			RenderOptions.Apply( worldPanel.SceneObject );
-		}
 	}
 
 	protected override void DrawGizmos()
@@ -168,7 +172,7 @@ public sealed class WorldPanel : Renderer, IRootPanelComponent
 		if ( !worldPanel.IsValid() )
 			return;
 
-		worldPanel?.Tags.SetFrom( Tags );
+		worldPanel.Tags.SetFrom( Tags );
 	}
 
 	protected override void OnRenderOptionsChanged()
@@ -178,5 +182,4 @@ public sealed class WorldPanel : Renderer, IRootPanelComponent
 			RenderOptions.Apply( worldPanel.SceneObject );
 		}
 	}
-
 }

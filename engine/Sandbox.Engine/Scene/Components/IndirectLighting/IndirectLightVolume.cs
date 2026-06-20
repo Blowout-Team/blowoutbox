@@ -12,7 +12,7 @@ using System.Threading;
 /// </summary>
 [Expose]
 [Title( "Indirect Light Volume (DDGI)" )]
-[Category( "Rendering" )]
+[Category( "Light" )]
 [Icon( "grid_view" )]
 [EditorHandle( "materials/gizmo/lpv.png" )]
 [Alias( "DDGIVolume" )]
@@ -58,29 +58,76 @@ public sealed partial class IndirectLightVolume : Component, Component.ExecuteIn
 	/// <summary>
 	/// World-space bounding box that defines the volume coverage area.
 	/// </summary>
-	[Property, MakeDirty]
-	public BBox Bounds { get; set; } = BBox.FromPositionAndSize( Vector3.Zero, new Vector3( 512.0f ) );
+	[Property]
+	public BBox Bounds
+	{
+		get;
+		set
+		{
+			if ( field == value ) return;
+			field = value;
+
+			MarkDirty();
+		}
+	} = BBox.FromPositionAndSize( Vector3.Zero, new Vector3( 512.0f ) );
 
 	/// <summary>
 	/// Number of probes per 1024 world units. Higher values increase probe resolution.
 	/// </summary>
-	[Property, Range( 1, 15 ), MakeDirty]
-	public int ProbeDensity { get; set; } = 8;
+	[Property, Range( 1, 15 )]
+	public int ProbeDensity
+	{
+		get;
+		set
+		{
+			if ( field == value ) return;
+			field = value;
+
+			MarkDirty();
+		}
+	} = 8;
 
 	/// <summary>
 	/// Bias applied along surface normals to prevent self-occlusion artifacts.
 	/// </summary>
 	[Group( "Advanced Settings" )]
-	[Property, Range( -0.0f, 50.0f ), MakeDirty]
-	public float NormalBias { get; set; } = 5.0f;
+	[Property, Range( -0.0f, 50.0f )]
+	public float NormalBias
+	{
+		get;
+		set
+		{
+			if ( field == value ) return;
+			field = value;
+
+			MarkDirty();
+		}
+	} = 5.0f;
 
 	/// <summary>
 	/// Controls how much less energy to conserve during probe integration.
 	/// Higher values give a harsher, more contrasty look.
 	/// </summary>
-	[Property, Range( 1.0f, 2.0f ), MakeDirty]
+	[Property, Range( 1.0f, 2.0f )]
 	[Group( "Advanced Settings" )]
-	public float Contrast { get; set; } = 1.0f;
+	public float Contrast
+	{
+		get;
+		set
+		{
+			if ( field == value ) return;
+			field = value;
+
+			MarkDirty();
+		}
+	} = 1.0f;
+
+	/// <summary>
+	/// Objects with any of these tags will be excluded when baking probes for this volume.
+	/// </summary>
+	[Property]
+	[Group( "Advanced Settings" )]
+	public TagSet RenderExcludeTags { get; set; } = new();
 
 	/// <summary>
 	/// Calculated probe count along each axis based on bounds and density.
@@ -117,37 +164,43 @@ public sealed partial class IndirectLightVolume : Component, Component.ExecuteIn
 	protected override void OnEnabled()
 	{
 		base.OnEnabled();
-		Transform.OnTransformChanged += OnDirty;
+		Transform.OnTransformChanged += MarkDirty;
 
 		LoadProbesFromRelocationTexture();
-		OnDirty();
+		MarkDirty();
 	}
 
 	protected override void OnDisabled()
 	{
 		base.OnDisabled();
-		Transform.OnTransformChanged -= OnDirty;
+		Transform.OnTransformChanged -= MarkDirty;
 
 		_bakeCts?.Cancel();
 		_bakeCts?.Dispose();
 		_bakeCts = null;
 
-		Scene.Get<DDGIVolumeSystem>()?.MarkDirty();
+		MarkDirty();
 	}
 
-	protected override void OnDirty()
+	void MarkDirty()
 	{
-		base.OnDirty();
 		Scene.Get<DDGIVolumeSystem>()?.MarkDirty();
 	}
 
 	//
 	// Editor Actions
 	//
+	internal bool IsSceneSaved => Scene?.Editor?.GetSceneFolder() is not null;
+
+	[ShowIf( nameof( IsSceneSaved ), false )]
+	[InfoBox( "Save the scene before baking indirect light volumes.", "warning", EditorTint.Yellow )]
+	[Button( "Bake", "lightbulb" ), ReadOnly]
+	public void BakeProbesUnavailableMessage() { }
 
 	/// <summary>
 	/// Starts the probe baking process to capture lighting into the volume textures.
 	/// </summary>
+	[ShowIf( nameof( IsSceneSaved ), true )]
 	[Button( "Bake", "lightbulb" )]
 	public async Task BakeProbes( CancellationToken ct = default )
 	{
@@ -184,7 +237,7 @@ public sealed partial class IndirectLightVolume : Component, Component.ExecuteIn
 			Graphics.FlushGPU();
 
 			IrradianceTexture = SaveTexture( updater.GeneratedIrradianceTexture, "Irradiance" );
-			DistanceTexture = SaveTexture( updater.GeneratedDistanceTexture, "Distance", ImageFormat.RG1616F ); // BC6H ideally, but block compression fucks precision too much
+			DistanceTexture = SaveTexture( updater.GeneratedDistanceTexture, "Distance", ImageFormat.BC6H ); // Previously RGBA16F, we're using softer depth so we can take advantage of BC6H compression now like Overwatch does.
 			RelocationTexture = SaveTexture( GeneratedRelocationTexture, "Relocation", ImageFormat.RGBA16161616F );
 		}
 
@@ -243,6 +296,10 @@ public sealed partial class IndirectLightVolume : Component, Component.ExecuteIn
 		var bounds = Bounds;
 		Gizmo.Control.BoundingBox( "Bounds", bounds, out bounds );
 		Gizmo.Draw.LineBBox( bounds );
+
+		Gizmo.Draw.Color = new Color( 0.25f, 0.9f, 1, 0.05f );
+		Gizmo.Draw.SolidBox( bounds );
+
 		Bounds = bounds;
 
 		// Use gizmo pooling so it follows gizmo visibility rules (hidden when gizmos disabled, not in cubemaps)

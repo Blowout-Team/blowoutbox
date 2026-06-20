@@ -1,5 +1,6 @@
 
 using NativeEngine;
+using Sandbox.Rendering;
 
 namespace Sandbox;
 
@@ -127,8 +128,8 @@ public class SceneMapLoader : MapLoader
 			sceneLight = new SceneDirectionalLight( World, kv.Rotation, color * brightness )
 			{
 				ShadowsEnabled = castShadows,
-				ShadowCascadeCount = shadowCascadeCount,
-				LightCookie = lightCookie,
+				ShadowCascadeCount = 4,
+				ShadowCascadeSplitRatio = 0.91f
 			};
 
 			sceneLight.Tags.Add( "light_directional" );
@@ -160,7 +161,7 @@ public class SceneMapLoader : MapLoader
 		}
 		else if ( lightType == LightType.Omni )
 		{
-			sceneLight = new SceneLight( World, kv.Position, range, color * brightness )
+			sceneLight = new ScenePointLight( World, kv.Position, range, color * brightness )
 			{
 				Rotation = kv.Rotation,
 				ShadowsEnabled = castShadows,
@@ -207,7 +208,7 @@ public class SceneMapLoader : MapLoader
 		}
 		else if ( lightType == LightType.Capsule )
 		{
-			sceneLight = new SceneLight( World, kv.Position, range, color * brightness )
+			sceneLight = new ScenePointLight( World, kv.Position, range, color * brightness )
 			{
 				Rotation = kv.Rotation,
 				ShadowsEnabled = false, // Not yet
@@ -230,20 +231,7 @@ public class SceneMapLoader : MapLoader
 		}
 		else if ( lightType == LightType.Ortho )
 		{
-			sceneLight = new SceneOrthoLight( World )
-			{
-				Position = kv.Position,
-				Rotation = kv.Rotation,
-				ShadowsEnabled = castShadows,
-				Radius = range,
-				ConstantAttenuation = attenuation0,
-				LinearAttenuation = attenuation1,
-				QuadraticAttenuation = attenuation2 * 10000.0f,
-				LightCookie = lightCookie,
-				LightColor = color * brightness
-			};
-
-			sceneLight.Tags.Add( "light_ortho" );
+			Log.Warning( "Ortho lights have been removed." );
 		}
 
 		if ( !sceneLight.IsValid() )
@@ -260,15 +248,14 @@ public class SceneMapLoader : MapLoader
 		switch ( directLight )
 		{
 			case 3: // HAMMER_DIRECT_LIGHT_STATIONARY
-				light.SetLightFlags( light.GetLightFlags() | 512 ); // LIGHTTYPE_FLAGS_RENDER_ALL_GEOMETRY
+				light.SetLightFlags( light.GetLightFlags() | 16 ); // LIGHTTYPE_FLAGS_MIXED_SHADOWS
 				light.SetLightFlags( light.GetLightFlags() | 32 ); // LIGHTTYPE_FLAGS_BAKED
 				break;
-			case 1: // HAMMER_DIRECT_LIGHT_DYNAMIC
+			case 1: // HAMMER_DIRECT_LIGHT_BAKED
 				light.SetLightFlags( light.GetLightFlags() | 32 ); // LIGHTTYPE_FLAGS_BAKED
 				break;
 		}
 
-		light.SetLightFlags( light.GetLightFlags() | 16 ); // LIGHTTYPE_FLAGS_MIXED_SHADOWS
 		light.GetAttributesPtrForModify().SetFloatValue( "MixedShadowsStrength", 1.0f );
 		light.SetCascadeDistanceScale( shadowCascadeDistanceScale );
 		light.SetBounceColor( light.GetColor() * bounceScale );
@@ -317,6 +304,8 @@ public class SceneMapLoader : MapLoader
 
 	public class TextSceneObject : SceneCustomObject
 	{
+		private readonly CommandList _commandList = new( "MapText" );
+
 		public string Text { get; set; }
 		public string FontName { get; set; } = "Roboto";
 		public float FontSize { get; set; } = 100.0f;
@@ -328,10 +317,17 @@ public class SceneMapLoader : MapLoader
 			RenderLayer = SceneRenderLayer.Default;
 		}
 
+		internal void BuildCommandList()
+		{
+			_commandList.Reset();
+			_commandList.Attributes.SetCombo( "D_WORLDPANEL", 1 );
+			var scope = new TextRendering.Scope( Text, ColorTint, FontSize, FontName, (int)FontWeight );
+			_commandList.DrawText( scope, new Rect( 0 ), TextFlags );
+		}
+
 		public override void RenderSceneObject()
 		{
-			Graphics.Attributes.SetCombo( "D_WORLDPANEL", 1 );
-			Graphics.DrawText( new Rect( 0 ), Text, ColorTint, FontName, FontSize, FontWeight, TextFlags );
+			_commandList.ExecuteOnRenderThread();
 		}
 	}
 
@@ -374,6 +370,7 @@ public class SceneMapLoader : MapLoader
 		else if ( justifyVertical == 2 )
 			textObject.TextFlags |= TextFlag.Top;
 
+		textObject.BuildCommandList();
 		SceneObjects.Add( textObject );
 	}
 

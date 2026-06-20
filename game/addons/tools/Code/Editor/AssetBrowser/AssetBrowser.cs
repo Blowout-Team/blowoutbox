@@ -157,20 +157,22 @@ public partial class AssetBrowser : Widget, IBrowser, AssetSystem.IEventListener
 		AssetList.OnViewModeChanged += () => { UpdateViewModeIcon(); SaveSettings(); };
 		AssetList.OnHighlight = ( entries ) =>
 		{
-			var assets = entries.OfType<AssetEntry>().ToList();
-			if ( assets.Count == entries.Count() )
+			var highlightedEntries = entries.ToList();
+			var assets = highlightedEntries.OfType<AssetEntry>().ToList();
+
+			if ( assets.Count == highlightedEntries.Count )
 			{
 				if ( assets.Count > 1 )
 				{
 					OnAssetsHighlight?.Invoke( assets.Select( x => x.Asset ).ToArray() );
 				}
-				else
+				else if ( assets.Count == 1 )
 				{
 					OnAssetHighlight?.Invoke( assets.First().Asset );
 				}
 			}
 
-			OnHighlight?.Invoke( entries );
+			OnHighlight?.Invoke( highlightedEntries );
 		};
 
 		Chips = new ChipsWidget();
@@ -190,7 +192,7 @@ public partial class AssetBrowser : Widget, IBrowser, AssetSystem.IEventListener
 
 		var splitter = new Splitter( this );
 		splitter.IsHorizontal = true;
-		splitter.AddWidget( AssetLocations );
+		splitter.AddWidget( BuildLocationsPanel() );
 		splitter.SetStretch( 0, 1 );
 		splitter.AddWidget( body );
 		splitter.SetStretch( 1, 5 );
@@ -231,6 +233,8 @@ public partial class AssetBrowser : Widget, IBrowser, AssetSystem.IEventListener
 	{
 
 	}
+
+	protected virtual Widget BuildLocationsPanel() => AssetLocations;
 
 	public override void OnDestroyed()
 	{
@@ -464,18 +468,27 @@ public partial class AssetBrowser : Widget, IBrowser, AssetSystem.IEventListener
 				if ( file.Exists && file.Attributes.HasFlag( FileAttributes.Hidden ) )
 					continue;
 
-				var asset = AssetSystem.FindByPath( file.ToString() );
+				var path = file.ToString();
+				// pretend blobs are real assets for a moment so we can filter them out if they have a source file
+				var blob = file.Name.EndsWith( "_d" );
+				if ( blob )
+					path = path[..^2];
+				var asset = AssetSystem.FindByPath( path );
 
 				//
 				// Filter out compiled assets if we have a source asset
 				//
 				string sourcePath = asset?.GetSourceFile();
-				if ( file.Name.EndsWith( "_c" ) && !string.IsNullOrEmpty( sourcePath ) )
+				if ( (file.Name.EndsWith( "_c" ) || blob) && !string.IsNullOrEmpty( sourcePath ) )
 				{
 					// ( but only if the extensions are similar and would both be shown in this filter, eg so we don't hide .sounds because we have a .wav etc )
 					if ( Search.AssetTypes.ActiveTags.Count == 0 || file.Extension.Contains( System.IO.Path.GetExtension( sourcePath ) ) )
 						continue;
 				}
+
+				// can't load an asset or show the inspector from a blob
+				if ( blob )
+					asset = null;
 
 				if ( asset == null && HideNonAssets )
 					continue;
@@ -700,10 +713,9 @@ public partial class AssetBrowser : Widget, IBrowser, AssetSystem.IEventListener
 	{
 		if ( asset is null ) return;
 
-		var folder = System.IO.Path.GetDirectoryName( asset.AbsolutePath );
 		EditorWindow.DockManager.RaiseDock( this );
 
-		NavigateTo( folder );
+		NavigateTo( asset.AbsolutePath );
 
 		// wait for the list to (successfully) populate before selecting the item
 		var success = await RefreshTask;
@@ -741,7 +753,7 @@ public partial class AssetBrowser : Widget, IBrowser, AssetSystem.IEventListener
 		{
 			PixmapIcon = x.Icon16,
 			Title = x.FriendlyName,
-			Group = (string.IsNullOrEmpty( x.Category ) ? "Other" : x.Category),
+			Group = string.IsNullOrEmpty( x.Category ) ? "Other" : x.Category,
 			Column = 0,
 			Count = () => AssetSystem.All.Where( y => y.AssetType == x ).Count(),
 			Color = x.Color

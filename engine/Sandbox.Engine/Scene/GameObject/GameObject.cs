@@ -382,6 +382,15 @@ public partial class GameObject : BlowoutEngineGameObject, IJsonConvert, ICompon
 		UpdateNetworkRoot();
 
 		//
+		// We might become (in)active now. oldParent is null during the constructor, we don't want
+		// to update enabled status there.
+		//
+		if ( oldParent is not null && Enabled && oldParent.Active != parent.Active )
+		{
+			UpdateEnabledStatus();
+		}
+
+		//
 		// Let components react to this
 		//
 		Components.ForEach( "OnParentChanged", false, c =>
@@ -393,7 +402,7 @@ public partial class GameObject : BlowoutEngineGameObject, IJsonConvert, ICompon
 		} );
 
 		// We should tell our children and they should tell their children, propogate it down
-		// as like a OnHeirachyChanged or something
+		// as like a OnHierarchyChanged or something
 	}
 
 	[ActionGraphInclude( AutoExpand = true )]
@@ -745,21 +754,20 @@ public partial class GameObject : BlowoutEngineGameObject, IJsonConvert, ICompon
 	[ActionGraphInclude, Pure]
 	public BBox GetBounds()
 	{
-		var result = BBox.FromPositionAndSize( WorldPosition );
+		BBox? result = null;
 
 		Components.ExecuteEnabledInSelfAndDescendants<Component.IHasBounds>( x =>
 		{
-			if ( x is Component c )
-			{
-				result = result.AddBBox( x.LocalBounds.Transform( c.WorldTransform ) );
-			}
-			else
-			{
-				result = result.AddBBox( x.LocalBounds );
-			}
+			var bounds = x is Component c
+				? x.LocalBounds.Transform( c.WorldTransform )
+				: x.LocalBounds;
+
+			result = result.HasValue
+				? result.Value.AddBBox( bounds )
+				: bounds;
 		} );
 
-		return result;
+		return result ?? BBox.FromPositionAndSize( WorldPosition );
 	}
 
 	/// <summary>

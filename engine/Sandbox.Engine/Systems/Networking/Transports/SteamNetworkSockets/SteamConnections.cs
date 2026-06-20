@@ -1,6 +1,5 @@
-﻿using System.Collections.Concurrent;
-using NativeEngine;
-using Sandbox.Internal;
+﻿using NativeEngine;
+using Sandbox.Engine;
 using Steamworks;
 using Steamworks.Data;
 using System.Runtime.CompilerServices;
@@ -25,9 +24,7 @@ internal static partial class SteamNetwork
 				return true;
 			}
 
-			IMenuSystem.ShowServerError( "Disconnected", "Invalid Authentication Ticket" );
-			Log.Warning( "Disconnecting - Invalid Authentication Ticket" );
-
+			IGameInstanceDll.Current.Disconnect( "Invalid Authentication Ticket" );
 			return false;
 		}
 
@@ -99,6 +96,14 @@ internal static partial class SteamNetwork
 
 		private ulong AuthenticatedSteamId { get; set; }
 
+		static readonly Dictionary<ulong, TaskCompletionSource<ValidateAuthTicketResponse_t>> PendingAuth = new();
+
+		internal static void OnValidateAuthTicket( ValidateAuthTicketResponse_t response )
+		{
+			if ( PendingAuth.Remove( response.SteamID, out var tcs ) )
+				tcs.TrySetResult( response );
+		}
+
 		public override bool HasPermission( string permission )
 		{
 			// On a dedicated server, we'll allow the host to dictate user permissions.
@@ -126,6 +131,10 @@ internal static partial class SteamNetwork
 			// the session was active. It doesn't hurt.
 			Services.Auth.EndAuthSession( info.SteamId );
 
+			// Start waiting for the auth validation callback before calling BeginAuthSession
+			var tcs = new TaskCompletionSource<ValidateAuthTicketResponse_t>();
+			PendingAuth[info.SteamId] = tcs;
+
 			// We need to check if the client has a valid authentication ticket.
 			var result = Services.Auth.BeginAuthSession( info.SteamId, info.AuthTicket );
 			if ( result != BeginAuthResult.OK )
@@ -133,6 +142,17 @@ internal static partial class SteamNetwork
 				Close( 0, result.ToString() );
 				return false;
 			}
+
+			// Wait for Steam to validate and tell us the app owner
+			var authResponse = await tcs.Task.WaitAsync( TimeSpan.FromSeconds( 30 ) );
+
+			if ( authResponse.AuthSessionResponse != AuthResponse.OK )
+			{
+				Close( 0, $"Auth Failed: {authResponse.AuthSessionResponse}" );
+				return false;
+			}
+
+			OwnerSteamId = authResponse.OwnerSteamID;
 
 			// Let's see if we have another connection with this Steam Id. They might have
 			// crashed, so let's kick the old one.
@@ -143,12 +163,11 @@ internal static partial class SteamNetwork
 			return await base.OnReceiveUserInfo( info );
 		}
 
-		internal override void InternalSend( ByteStream stream, NetFlags flags )
+		internal override void InternalSend( byte[] data, NetFlags flags )
 		{
 			if ( !Socket.IsValid() )
 				return;
 
-			byte[] data = Networking.EncodeStream( stream );
 			Socket.SendMessage( Handle, data, flags.ToSteamFlags() );
 		}
 
@@ -179,8 +198,6 @@ internal static partial class SteamNetwork
 		public string Identity => $"{Glue.Networking.GetConnectionSteamId( handle )}";
 
 		ConnectionStatus Status => (ConnectionStatus)Glue.Networking.GetConnectionState( handle );
-
-		public override string Name => Identity;
 
 		public enum ConnectionStatus
 		{
@@ -257,19 +274,13 @@ internal static partial class SteamNetwork
 
 			while ( OutgoingMessages.Reader.TryRead( out var msg ) )
 			{
-				var gcHandle = GCHandle.Alloc( msg.Data, GCHandleType.Pinned );
-				var dataPtr = gcHandle.AddrOfPinnedObject();
-
-				PinnedBuffers[dataPtr] = gcHandle;
-
-				var steamMsgPtr = Glue.Networking.AllocateMessageWithManagedBuffer( msg.Connection, dataPtr, msg.Data.Length, msg.Flags );
+				// Let Steam allocate the native buffer so there's no need to pin managed arrays.
+				var steamMsgPtr = Glue.Networking.AllocateMessage( msg.Connection, msg.Data.Length, msg.Flags );
 				if ( steamMsgPtr == IntPtr.Zero )
-				{
-					// Allocation failed, clean up immediately
-					PinnedBuffers.TryRemove( dataPtr, out _ );
-					gcHandle.Free();
 					continue;
-				}
+
+				var nativeBuffer = Glue.Networking.GetMessageDataBuffer( steamMsgPtr );
+				Marshal.Copy( msg.Data, 0, nativeBuffer, msg.Data.Length );
 
 				_messageBatch[batchCount++] = steamMsgPtr;
 
@@ -310,7 +321,7 @@ internal static partial class SteamNetwork
 				for ( var i = 0; i < count; i++ )
 				{
 					var msg = Unsafe.Read<SteamNetworkMessage>( (void*)ptr[i] );
-					var data = new byte[msg.Size];
+					var data = GC.AllocateUninitializedArray<byte>( msg.Size );
 					Marshal.Copy( (IntPtr)msg.Data, data, 0, data.Length );
 
 					var m = new IncomingSteamMessage { Connection = msg.Connection, Data = data };
@@ -339,14 +350,12 @@ internal static partial class SteamNetwork
 			count = 0;
 		}
 
-		internal override void InternalSend( ByteStream stream, NetFlags flags )
+		internal override void InternalSend( byte[] data, NetFlags flags )
 		{
-			byte[] output = Networking.EncodeStream( stream );
-
 			var message = new OutgoingSteamMessage
 			{
 				Connection = handle,
-				Data = output,
+				Data = data,
 				Flags = flags.ToSteamFlags()
 			};
 
@@ -357,17 +366,7 @@ internal static partial class SteamNetwork
 		{
 			while ( IncomingMessages.Reader.TryRead( out var msg ) )
 			{
-				Span<byte> output = Networking.DecodeStream( msg.Data );
-
-				using ByteStream stream = ByteStream.CreateReader( output );
-
-				var nwm = new NetworkSystem.NetworkMessage
-				{
-					Data = stream,
-					Source = this
-				};
-
-				handler( nwm );
+				OnRawPacketReceived( msg.Data, handler );
 			}
 		}
 

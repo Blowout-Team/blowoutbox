@@ -90,7 +90,7 @@ public static class LibrarySystem
 				IAssetSystem.UpdateMods();
 			}
 
-			ResourceLoader.LoadAllGameResource( FileSystem.Mounted );
+			await ResourceLoader.LoadAllGameResourceAsync( FileSystem.Mounted, token );
 		}
 
 		// install it

@@ -8,7 +8,7 @@ partial class MapInstance
 	private List<CollisionEventSystem> CollisionEvents { get; set; } = new();
 	private MapCollider Collider { get; set; }
 
-	protected override void OnDirty()
+	void OnEnableCollisionChanged()
 	{
 		AddCollision();
 
@@ -134,7 +134,7 @@ partial class MapInstance
 
 		var shapeCount = body.ShapeCount;
 		var indicesCount = part.native.GetCollisionAttributeCount();
-		var attributeCount = Physics.native.GetCollisionAttributeCount();
+		var attributeCount = Physics.CollisionAttributeCount;
 
 		if ( indicesCount > 0 )
 		{

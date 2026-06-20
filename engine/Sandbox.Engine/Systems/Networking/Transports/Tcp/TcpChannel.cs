@@ -12,11 +12,9 @@ internal class TcpChannel : Connection
 {
 	internal readonly Channel<byte[]> incoming = Channel.CreateUnbounded<byte[]>();
 
-	string _name = "Tcp Channel";
 	string _address = "Tcp";
 
 	public override string Address => _address;
-	public override string Name => _name;
 
 	public bool IsConnected => client?.Connected ?? false;
 
@@ -30,8 +28,7 @@ internal class TcpChannel : Connection
 				token.ThrowIfCancellationRequested();
 			}
 
-			_name = client.Client.RemoteEndPoint?.ToString() ?? client.Client.LocalEndPoint.ToString();
-			_address = _name;
+			_address = client.Client.RemoteEndPoint?.ToString() ?? client.Client.LocalEndPoint.ToString();
 
 			var stream = client.GetStream();
 
@@ -160,7 +157,7 @@ internal class TcpChannel : Connection
 		}
 	}
 
-	internal override void InternalSend( ByteStream stream, NetFlags flags )
+	internal override void InternalSend( byte[] output, NetFlags flags )
 	{
 		if ( !client.Connected )
 			return;
@@ -171,8 +168,6 @@ internal class TcpChannel : Connection
 			if ( chance <= Networking.FakePacketLoss )
 				return;
 		}
-
-		byte[] output = Networking.EncodeStream( stream );
 
 		if ( Networking.FakeLag > 0 )
 		{
@@ -231,31 +226,18 @@ internal class TcpChannel : Connection
 	{
 		while ( incoming.Reader.TryRead( out byte[] data ) )
 		{
-			Span<byte> output = Networking.DecodeStream( data );
-
 			if ( Networking.FakeLag > 0 )
 			{
-				fakeLagIncoming.Enqueue( (output.ToArray(), Networking.FakeLag / 1000f, handler) );
+				fakeLagIncoming.Enqueue( (data, Networking.FakeLag / 1000f, handler) );
 				continue;
 			}
 
-			using ByteStream stream = ByteStream.CreateReader( output );
-
-			handler( new NetworkSystem.NetworkMessage
-			{
-				Data = stream,
-				Source = this
-			} );
-
-			MessagesRecieved++;
+			OnRawPacketReceived( data, handler );
 		}
 	}
 
 	private void InvokeMessageHandler( NetworkSystem.MessageHandler handler, byte[] data )
 	{
-		using ByteStream stream = ByteStream.CreateReader( data );
-		handler( new() { Data = stream, Source = this } );
-
-		MessagesRecieved++;
+		OnRawPacketReceived( data, handler );
 	}
 }

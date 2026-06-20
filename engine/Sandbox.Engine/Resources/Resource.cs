@@ -48,6 +48,7 @@ public abstract partial class Resource : BlowoutEngineObject, IValid, IJsonConve
 
 
 	[Hide, JsonIgnore] public abstract bool IsValid { get; }
+	[Hide, JsonIgnore] public virtual bool IsError => false;
 
 	[Hide, JsonIgnore]
 	public string AssetName { get => ResourceName; set => ResourceName = value; }

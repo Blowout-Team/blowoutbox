@@ -40,6 +40,12 @@ public abstract partial class BaseStyles : ICloneable
 		if ( bs._backgroundImage != null ) _backgroundImage = bs._backgroundImage;
 		if ( bs._maskImage != null ) _maskImage = bs._maskImage;
 		if ( bs._borderImageSource != null ) _borderImageSource = bs._borderImageSource;
+		if ( bs._backgroundPlaybackPaused.HasValue ) _backgroundPlaybackPaused = bs._backgroundPlaybackPaused;
+
+		if ( CssWide != null || bs.CssWide != null )
+			MergeCssWide( bs );
+
+		if ( bs.HasCurrentColor ) HasCurrentColor = true;
 	}
 
 	/// <summary>
@@ -52,6 +58,10 @@ public abstract partial class BaseStyles : ICloneable
 		_backgroundImage = bs._backgroundImage;
 		_maskImage = bs._maskImage;
 		_borderImageSource = bs._borderImageSource;
+		_backgroundPlaybackPaused = bs._backgroundPlaybackPaused;
+
+		CssWide = bs.CssWide == null ? null : new System.Collections.Generic.Dictionary<string, CssWideKeyword>( bs.CssWide );
+		HasCurrentColor = bs.HasCurrentColor;
 	}
 
 	/// <summary>
@@ -91,8 +101,16 @@ public abstract partial class BaseStyles : ICloneable
 			case "hidden":
 				set( OverflowMode.Hidden );
 				return true;
+			case "auto":
 			case "scroll":
+				// We have no "scroll only when needed" mode, so auto maps to scroll.
 				set( OverflowMode.Scroll );
+				return true;
+			case "clip":
+				set( OverflowMode.Clip );
+				return true;
+			case "clip-whole":
+				set( OverflowMode.ClipWhole );
 				return true;
 			case "visible":
 				set( OverflowMode.Visible );
@@ -119,7 +137,7 @@ public abstract partial class BaseStyles : ICloneable
 	{
 		var generated_hash = GetHashCodeGenerated();
 
-		generated_hash = HashCode.Combine( generated_hash, _backgroundImage, _borderImageSource, _maskImage );
+		generated_hash = HashCode.Combine( generated_hash, _backgroundImage, _borderImageSource, _maskImage, _backgroundPlaybackPaused );
 
 		return generated_hash;
 	}

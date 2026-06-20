@@ -1,4 +1,4 @@
-﻿using NativeEngine;
+using NativeEngine;
 
 namespace Sandbox.Engine;
 
@@ -25,7 +25,7 @@ internal static partial class InputRouter
 
 		if ( mouse is not null )
 		{
-			mouse.IN_Button( down, button, false, modifiers );
+			mouse.IN_Button( down, button, button, false, modifiers );
 		}
 
 		//
@@ -38,7 +38,7 @@ internal static partial class InputRouter
 			{
 				if ( context == mouse ) continue;
 
-				context.IN_ButtonReleased( button, modifiers );
+				context.IN_ButtonReleased( button, button, modifiers );
 			}
 		}
 	}
@@ -87,30 +87,26 @@ internal static partial class InputRouter
 	/// </summary>
 	internal static void OnMousePositionChange( float x, float y, float dx, float dy )
 	{
-		var delta = new Vector2( 0, 0 );
-
-		// if we're not in relative mode - take the delta from this
-		if ( !NativeEngine.InputSystem.GetRelativeMouseMode() )
-		{
-			delta = new Vector2( dx, dy );
-			MouseCursorDelta += delta;
-		}
-
 		MouseCursorPosition = new Vector2( x, y );
 
-		// if this is set, we're in capture mode - so just update the position
-		// which will update the position of the cursor when we come out of it
+		if ( InputSystem.GetRelativeMouseMode() )
+		{
+			dx = dy = 0;
+		}
+
+		// If this is set, we're in capture mode - so just update the position
+		// cache we restore when capture ends. This intentionally records the
+		// latest absolute position without moving the OS cursor.
 		if ( mouseCapturePosition is not null )
 		{
 			mouseCapturePosition = MouseCursorPosition;
 			return;
 		}
 
+		MouseCursorDelta += new Vector2( dx, dy );
+
 		var mouse = Contexts.FirstOrDefault( x => x.MouseState != InputContext.InputState.Ignore );
-		if ( mouse is not null )
-		{
-			mouse.In_MousePosition( MouseCursorPosition, delta );
-		}
+		mouse?.In_MousePosition( MouseCursorPosition, new Vector2( dx, dy ) );
 	}
 
 	internal static void OnGameControllerButton( int deviceId, GameControllerCode button, bool down )
@@ -163,16 +159,17 @@ internal static partial class InputRouter
 		foreach ( var action in Sandbox.Input.InputActions.Where( x => x.GamepadCode != GamepadCode.None && x.GamepadCode == code ) )
 		{
 			var i = Sandbox.Input.GetActionIndex( action );
-			foreach ( var e in Sandbox.Input.Contexts )
+
+			if ( controller?.InputContext is not { } controllerContext )
+				continue;
+
+			if ( down )
 			{
-				if ( down )
-				{
-					e.AccumActionsPressed |= 1UL << i;
-				}
-				else
-				{
-					e.AccumActionsReleased |= 1UL << i;
-				}
+				controllerContext.AccumActionsPressed |= 1UL << i;
+			}
+			else
+			{
+				controllerContext.AccumActionsReleased |= 1UL << i;
 			}
 		}
 	}
@@ -204,7 +201,8 @@ internal static partial class InputRouter
 			_ => GamepadCode.None,
 		};
 
-		OnGamepadCode( deviceId, code, value >= triggerDeadzone );
+		// Normalize raw SDL axis value to 0-1 range before comparing against the normalized deadzone.
+		OnGamepadCode( deviceId, code, ((float)value).Remap( 0, Controller.AXIS_RANGE.y, 0, 1 ) >= triggerDeadzone );
 	}
 
 	internal static void OnGameControllerConnected( int joystickId, int deviceId )
@@ -229,16 +227,16 @@ internal static partial class InputRouter
 		}
 	}
 
-	internal static void OnKey( ButtonCode button, bool down, bool repeat, int ikeymods, int vkcode )
+	internal static void OnKey( ButtonCode scanButtonCode, ButtonCode keyButtonCode, bool down, bool repeat, int ikeymods )
 	{
 		if ( !repeat )
 		{
-			SetButtonState( button, down );
+			SetButtonState( scanButtonCode, down );
 		}
 
 		var modifiers = GetCurrentModifiers();
 
-		if ( button == ButtonCode.KEY_ESCAPE )
+		if ( scanButtonCode == ButtonCode.KEY_ESCAPE )
 		{
 			if ( repeat )
 				return;
@@ -250,13 +248,13 @@ internal static partial class InputRouter
 		//
 		// Function keys
 		//
-		if ( button >= ButtonCode.KEY_F1 && button <= ButtonCode.KEY_F12 )
+		if ( scanButtonCode >= ButtonCode.KEY_F1 && scanButtonCode <= ButtonCode.KEY_F12 )
 		{
 			if ( !down || repeat ) return;
 
-			IToolsDll.Current?.OnFunctionKey( button, modifiers );
+			IToolsDll.Current?.OnFunctionKey( scanButtonCode, modifiers );
 
-			var bind = g_pInputService.GetBinding( button );
+			var bind = g_pInputService.GetBinding( scanButtonCode );
 			if ( string.IsNullOrEmpty( bind ) ) return;
 
 			ConVarSystem.Run( bind );
@@ -266,7 +264,7 @@ internal static partial class InputRouter
 		//
 		// Console
 		//
-		if ( button == ButtonCode.KEY_BACKQUOTE || button == ButtonCode.KEY_TILDE )
+		if ( scanButtonCode == ButtonCode.KEY_BACKQUOTE || scanButtonCode == ButtonCode.KEY_TILDE )
 		{
 			if ( !down || repeat ) return;
 
@@ -280,7 +278,7 @@ internal static partial class InputRouter
 		var keyboard = Contexts.FirstOrDefault( x => x.KeyboardState != InputContext.InputState.Ignore );
 		if ( keyboard is not null )
 		{
-			keyboard.IN_Button( down, button, repeat, modifiers );
+			keyboard.IN_Button( down, scanButtonCode, keyButtonCode, repeat, modifiers );
 		}
 
 		//
@@ -293,7 +291,7 @@ internal static partial class InputRouter
 			{
 				if ( context == keyboard ) continue;
 
-				context.IN_ButtonReleased( button, modifiers );
+				context.IN_ButtonReleased( scanButtonCode, keyButtonCode, modifiers );
 			}
 		}
 	}
@@ -317,13 +315,13 @@ internal static partial class InputRouter
 		{
 			if ( y < 0 )
 			{
-				mouse.IN_Button( true, ButtonCode.MouseWheelDown, false, default );
-				mouse.IN_Button( false, ButtonCode.MouseWheelDown, false, default );
+				mouse.IN_Button( true, ButtonCode.MouseWheelDown, ButtonCode.MouseWheelDown, false, default );
+				mouse.IN_Button( false, ButtonCode.MouseWheelDown, ButtonCode.MouseWheelDown, false, default );
 			}
 			else
 			{
-				mouse.IN_Button( true, ButtonCode.MouseWheelUp, false, default );
-				mouse.IN_Button( false, ButtonCode.MouseWheelUp, false, default );
+				mouse.IN_Button( true, ButtonCode.MouseWheelUp, ButtonCode.MouseWheelUp, false, default );
+				mouse.IN_Button( false, ButtonCode.MouseWheelUp, ButtonCode.MouseWheelUp, false, default );
 			}
 
 			mouse.IN_MouseWheel( value, modifiers );

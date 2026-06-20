@@ -1,4 +1,5 @@
-﻿using System.Linq.Expressions;
+﻿using Facepunch.ActionGraphs;
+using System.Linq.Expressions;
 using System.Text.Json.Nodes;
 using BlowoutTeamSoft.Engine.Interfaces;
 using Facepunch.ActionGraphs;
@@ -117,8 +118,12 @@ internal static class CloneHelpers
 
 		if ( originalValue is null || ReflectionQueryCache.IsTypeCloneableByCopy( valueType ) )
 		{
-			SetMemberValue( member, target, originalValue );
-			return;
+			// Embedded resources are deep-copied to carry any inline generator data over, only when in the editor.
+			if ( !Application.IsEditor || !ReflectionQueryCache.IsInlineEmbeddedResource( originalValue, valueType ) )
+			{
+				SetMemberValue( member, target, originalValue );
+				return;
+			}
 		}
 
 		// If the original object has already been cloned simply point to it.
@@ -206,6 +211,8 @@ internal static class MemberCopyCache
 	// The cache is still cleared explicitly via ReflectionQueryCache.ClearTypeCache() during hotload.
 	[SkipHotload]
 	private static readonly Dictionary<MemberDescription, Action<object, object>> _cache = new();
+
+	internal static bool IsEmpty => _cache.Count == 0;
 
 	internal static void Clear() => _cache.Clear();
 

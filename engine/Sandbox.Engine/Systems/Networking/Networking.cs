@@ -1,11 +1,9 @@
-﻿using Sandbox.Compression;
+﻿using Sandbox.Engine;
 using Sandbox.Network;
 using Sandbox.Utility;
 using Sentry;
 using Steamworks;
 using Steamworks.Data;
-using System.Buffers.Binary;
-using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using Steam = NativeEngine.Steam;
@@ -27,82 +25,6 @@ public static partial class Networking
 	internal static int ReceiveBatchSizePerTick { get; set; } = 1024;
 
 	internal static Dictionary<string, string> ServerData { get; set; } = new();
-
-	private const byte FlagUncompressed = 0;
-	private const byte FlagLz4 = 1;
-
-	/// <summary>
-	/// The minimum byte count required to compress using LZ4 encoding. This number
-	/// was chosen because the overhead is often not worth it otherwise.
-	/// </summary>
-	private const int MinimumCompressionByteCount = 128;
-
-	/// <summary>
-	/// Try to encode the data from the specified <see cref="ByteStream"/> using LZ4 encoding.
-	/// If the data is less than the required byte count, the data will not be compressed.
-	/// </summary>
-	internal static byte[] EncodeStream( ByteStream stream )
-	{
-		var src = stream.ToSpan();
-
-		// Compress only if it’s large enough
-		if ( src.Length > MinimumCompressionByteCount )
-		{
-			var compressed = LZ4.CompressBlock( src );
-
-			// Only keep compression if it actually helped
-			if ( compressed.Length < src.Length )
-			{
-				var output = new byte[1 + sizeof( int ) + compressed.Length];
-				output[0] = FlagLz4;
-
-				BinaryPrimitives.WriteInt32LittleEndian( output.AsSpan( 1 ), src.Length );
-				compressed.CopyTo( output.AsSpan( 1 + sizeof( int ) ) );
-
-				return output;
-			}
-		}
-
-		var result = new byte[1 + sizeof( int ) + src.Length];
-		result[0] = FlagUncompressed;
-
-		BinaryPrimitives.WriteInt32LittleEndian( result.AsSpan( 1 ), src.Length );
-		src.CopyTo( result.AsSpan( 1 + sizeof( int ) ) );
-
-		return result;
-	}
-
-	private static readonly byte[] ReceiveBuffer = new byte[1024 * 1024 * 4];
-
-	/// <summary>
-	/// Try to decode the supplied data using LZ4. If the data cannot be decompressed, then the
-	/// original data will be returned.
-	/// </summary>
-	internal static Span<byte> DecodeStream( byte[] data )
-	{
-		if ( data.Length < 1 + sizeof( int ) )
-			return data;
-
-		var flag = data[0];
-		var originalLen = BinaryPrimitives.ReadInt32LittleEndian( data.AsSpan( 1, sizeof( int ) ) );
-		ReadOnlySpan<byte> payload = data.AsSpan( 1 + sizeof( int ) );
-
-		switch ( flag )
-		{
-			case FlagUncompressed:
-				return MemoryMarshal.CreateSpan( ref MemoryMarshal.GetArrayDataReference( data ), data.Length )
-					.Slice( 1 + sizeof( int ), originalLen );
-			case FlagLz4:
-				{
-					int written = LZ4.DecompressBlock( payload.ToArray(), ReceiveBuffer );
-					var result = ReceiveBuffer.AsSpan( 0, written );
-					TryRecordMessage( result );
-					return result;
-				}
-			default:
-				return data;
-		}
-	}
 
 	/// <summary>
 	/// Set data about the current server or lobby. Other players can query this
@@ -432,6 +354,10 @@ public static partial class Networking
 		// Connection.All, which allocates and includes mock ConnectionInfo entries with zero stats.
 		foreach ( var c in System.Connections )
 		{
+			// Don't try to count connections that aren't authenticated yet, Steam stats calls are blocking until fully authed
+			if ( c.State < Connection.ChannelState.Welcome )
+				continue;
+
 			var s = c.Stats;
 			totalIn += s.InBytesPerSecond;
 			totalOut += s.OutBytesPerSecond;
@@ -510,7 +436,7 @@ public static partial class Networking
 	/// </summary>
 	internal static LobbyPrivacy EditorLobbyPrivacy { get; set; } = LobbyPrivacy.Private;
 
-	private static CancellationTokenSource createLobbyCts;
+	private static CancellationTokenSource lobbyCts;
 
 	/// <summary>
 	/// Will create a new lobby with the specified <see cref="LobbyConfig"/> to
@@ -533,13 +459,13 @@ public static partial class Networking
 		if ( IsActive )
 			return;
 
-		createLobbyCts?.Cancel();
-		createLobbyCts = new();
+		lobbyCts?.Cancel();
+		lobbyCts = new();
 
 		//
 		// Did the menu want to override the lobby's max players?
 		//
-		if ( LaunchArguments.MaxPlayers > 1 )
+		if ( LaunchArguments.MaxPlayers > 0 )
 		{
 			config.MaxPlayers = LaunchArguments.MaxPlayers;
 		}
@@ -560,7 +486,7 @@ public static partial class Networking
 			config.Privacy = LaunchArguments.Privacy;
 		}
 
-		_ = CreateLobbyAsync( config, createLobbyCts );
+		_ = CreateLobbyAsync( config, lobbyCts.Token );
 	}
 
 	/// <summary>
@@ -577,7 +503,7 @@ public static partial class Networking
 		CreateLobby( config );
 	}
 
-	static async Task<bool> CreateDedicatedServer( LobbyConfig config, CancellationTokenSource cts = null )
+	static async Task<bool> CreateDedicatedServer( LobbyConfig config, CancellationToken token = default )
 	{
 		var success = await DedicatedServer.Start( config );
 		if ( !success ) return false;
@@ -595,11 +521,11 @@ public static partial class Networking
 			net.AddSocket( DedicatedServer.IpSocket );
 			net.AddSocket( DedicatedServer.IdSocket );
 
-			return !(cts?.IsCancellationRequested ?? false);
+			return !token.IsCancellationRequested;
 		}
 	}
 
-	static async Task<bool> CreateLobbyAsync( LobbyConfig config, CancellationTokenSource cts = null )
+	static async Task<bool> CreateLobbyAsync( LobbyConfig config, CancellationToken token = default )
 	{
 		if ( IsActive )
 			return false;
@@ -611,7 +537,7 @@ public static partial class Networking
 
 		if ( Application.IsDedicatedServer )
 		{
-			return await CreateDedicatedServer( config, cts );
+			return await CreateDedicatedServer( config, token );
 		}
 
 		var net = new NetworkSystem( "lobbyhost", Engine.IGameInstanceDll.Current.TypeLibrary )
@@ -630,20 +556,20 @@ public static partial class Networking
 			await Engine.IToolsDll.Current.OnInitializeHost();
 		}
 
-		if ( cts?.IsCancellationRequested ?? false )
+		if ( token.IsCancellationRequested )
 			return false;
 
 		var socket = await SteamLobbySocket.Create( config );
 		if ( socket is null )
 		{
-			if ( cts?.IsCancellationRequested ?? false )
+			if ( token.IsCancellationRequested )
 				return false;
 
 			Disconnect();
 			return false;
 		}
 
-		if ( cts?.IsCancellationRequested ?? false )
+		if ( token.IsCancellationRequested )
 			return false;
 
 		net.AddSocket( socket );
@@ -664,6 +590,9 @@ public static partial class Networking
 	/// </summary>
 	public static void Disconnect()
 	{
+		lobbyCts?.Cancel();
+		lobbyCts = null;
+
 		if ( System is null ) return;
 
 		lock ( NetworkThreadLock )
@@ -675,9 +604,6 @@ public static partial class Networking
 
 			System.Disconnect();
 			System = null;
-
-			createLobbyCts?.Cancel();
-			createLobbyCts = null;
 
 			DedicatedServer.Hide();
 		}
@@ -691,8 +617,7 @@ public static partial class Networking
 
 		return new DisposeAction( () =>
 		{
-			System.IsDisconnecting = false;
-
+			System?.IsDisconnecting = false;
 			Disconnect();
 		} );
 	}
@@ -704,57 +629,63 @@ public static partial class Networking
 	/// </summary>
 	public static void Connect( string target )
 	{
-		Disconnect();
 		_ = TryConnect( target );
 	}
 
-	internal static async Task<bool> TryConnect( string target, int retries = 30 )
+	static async Task<bool> TryConnect( string target, int retries = 30 )
 	{
+		Disconnect();
+
 		if ( string.IsNullOrWhiteSpace( target ) )
 		{
 			Log.Warning( "Couldn't connect - target is null!" );
 			return false;
 		}
 
-		SentrySdk.AddBreadcrumb( $"Connect to '{target}'", "network.connect" );
-		Assert.IsNull( System );
-
 		//
 		// SteamID
 		//
 		if ( ulong.TryParse( target, out var steamId ) )
 		{
-			return await TryConnectSteamId( steamId );
+			return await TryConnectSteamId( steamId, retries );
 		}
 
-		var count = 0;
+		SentrySdk.AddBreadcrumb( $"Connect to '{target}'", "network.connect" );
+		Assert.IsNull( System );
 
+		LoadingScreen.IsVisible = true;
+		LoadingScreen.Media = null;
+		LoadingScreen.Title = "Connecting";
+
+		OnTryConnect( target );
+
+		var count = 0;
 		while ( count < retries )
 		{
 			lock ( NetworkThreadLock )
 			{
 				if ( target == "local" )
 				{
-					Assert.NotNull( Engine.IGameInstanceDll.Current );
-					Assert.NotNull( Engine.IGameInstanceDll.Current.TypeLibrary );
-
 					Log.Info( $"Connecting to local client.." );
 
-					System = new( "localclient", Engine.IGameInstanceDll.Current.TypeLibrary );
+					System = new( "localclient", IGameInstanceDll.Current.TypeLibrary );
 					System.Connect( new TcpChannel( "127.0.0.1", 55333 ) );
-					System.UpdateLoading( "Connecting" );
-
-					LastConnectionString = target;
 				}
 				else
 				{
-					Log.Info( $"Connecting to {target}.." );
-					System = new( "client", Engine.IGameInstanceDll.Current.TypeLibrary );
-					System.Connect( new SteamNetwork.IpConnection( target ) );
-					System.UpdateLoading( "Connecting" );
+					// replace localhost
+					target = target.Replace( "localhost", "127.0.0.1", StringComparison.OrdinalIgnoreCase );
 
-					LastConnectionString = target;
+					// append port if needed
+					if ( !target.Contains( ':' ) )
+						target = $"{target}:{Port}";
+
+					Log.Info( $"Connecting to {target}.." );
+					System = new( "client", IGameInstanceDll.Current.TypeLibrary );
+					System.Connect( new SteamNetwork.IpConnection( target ) );
 				}
+
+				LastConnectionString = target;
 			}
 
 			var success = await AwaitSuccessfulConnection();
@@ -763,12 +694,13 @@ public static partial class Networking
 			if ( System is null )
 				return false;
 
-			Log.Info( $"Couldn't connect, trying again ({count} out of {retries})" );
+			Log.Info( $"Couldn't connect, retrying ({count}/{retries})" );
 			count++;
 
 			Disconnect();
 		}
 
+		IGameInstanceDll.Current.Disconnect( $"Connection failed after {retries} retries." );
 		return false;
 	}
 
@@ -788,60 +720,107 @@ public static partial class Networking
 		return false;
 	}
 
-	/// <summary>
-	/// Will try to connect to a server. Will return false if failed to connect.
-	/// </summary>
-	public static async Task<bool> TryConnectSteamId( SteamId steamId )
+	public static async Task<bool> TryConnectSteamId( SteamId steamId, int retries = 30 )
 	{
 		Disconnect();
+
+		SentrySdk.AddBreadcrumb( $"Connect to '{steamId}'", "network.connect" );
+		Assert.IsNull( System );
+
+		LoadingScreen.IsVisible = true;
+		LoadingScreen.Media = null;
+		LoadingScreen.Title = "Connecting";
+
+		LastConnectionString = steamId.ToString();
+		OnTryConnect( LastConnectionString );
 
 		if ( steamId.AccountType == SteamId.AccountTypes.Lobby )
 		{
-			return await JoinSteamLobbyServer( steamId );
+			lobbyCts?.Cancel();
+			lobbyCts = new();
+
+			return await JoinSteamLobbyServer( steamId, retries, lobbyCts.Token );
 		}
 
-		// Don't load no weird maps
-		LaunchArguments.Reset();
-
-		lock ( NetworkThreadLock )
+		var count = 0;
+		while ( count < retries )
 		{
-			System = new( "steamclient", Engine.IGameInstanceDll.Current.TypeLibrary );
-			System.Connect( new SteamNetwork.IdConnection( steamId, 77 ) );
-			System.UpdateLoading( "Connecting" );
+			Log.Info( $"Connecting to {steamId}.." );
+			lock ( NetworkThreadLock )
+			{
+				System = new( "steamclient", IGameInstanceDll.Current.TypeLibrary );
+				System.Connect( new SteamNetwork.IdConnection( steamId, 77 ) );
+			}
+
+			var success = await AwaitSuccessfulConnection();
+			if ( success ) return true;
+
+			if ( System is null )
+				return false;
+
+			Log.Info( $"Couldn't connect, retrying ({count}/{retries})" );
+			count++;
+
+			Disconnect();
 		}
 
-		LastConnectionString = $"{steamId}";
-
-		var success = await AwaitSuccessfulConnection();
-		if ( success ) return true;
-
-		Disconnect();
+		IGameInstanceDll.Current.Disconnect( $"Connection failed after {retries} retries." );
 		return false;
 	}
 
-	static async Task<bool> JoinSteamLobbyServer( ulong steamid )
+	static async Task<bool> JoinSteamLobbyServer( ulong steamid, int retries, CancellationToken token = default )
 	{
-		LoadingScreen.IsVisible = true;
-		LoadingScreen.Title = "Connecting";
+		SteamLobbySocket lobbySocket = null;
 
-		var lobbySocket = await SteamLobbySocket.Join( steamid );
+		// attempt to join the lobby, allowing for the possibility that the lobby doesn't exist yet because the host is still setting up.
+		// in future when lobbies persist thru map changes etc, we should be able to remove this retry logic and just attempt to join once.
+		var count = 0;
+		while ( count < retries )
+		{
+			var result = await SteamLobbySocket.Join( steamid );
+
+			if ( token.IsCancellationRequested )
+				return false;
+
+			if ( result.Response == RoomEnter.Success )
+			{
+				// ok!
+				lobbySocket = result.Socket;
+				break;
+			}
+
+			if ( result.Response != RoomEnter.DoesntExist )
+			{
+				// the lobby exists, but we failed to join for some reason. no point in retrying.
+				IGameInstanceDll.Current.Disconnect( $"Failed to join lobby: {result.Response}" );
+				return false;
+			}
+
+			Log.Info( $"Couldn't join lobby ({result.Response}), retrying ({count}/{retries})" );
+			count++;
+
+			// the lobby doesn't exist, it might be because the host is still setting up.
+			// let's wait a bit and retry.
+
+			await Task.Delay( 2000 );
+
+			if ( token.IsCancellationRequested )
+				return false;
+		}
+
 		if ( lobbySocket is null )
 		{
-			LoadingScreen.IsVisible = false;
-
-			// Try another one?
+			IGameInstanceDll.Current.Disconnect( $"Joining lobby failed after {retries} retries." );
 			return false;
 		}
 
 		Log.Trace( $"Joined Lobby {steamid}" );
-		LoadingScreen.Title = "Connected";
+		LoadingScreen.Title = "Joined lobby";
 
 		if ( System is not null )
 		{
-			LoadingScreen.IsVisible = false;
 			Log.Warning( "Network is already active - leaving lobby" );
 			lobbySocket?.Dispose();
-
 			return false;
 		}
 
@@ -851,16 +830,70 @@ public static partial class Networking
 		// This lobby should tell us what to do
 		lock ( NetworkThreadLock )
 		{
-			System = new( "lobbyclient", Engine.IGameInstanceDll.Current.TypeLibrary );
+			System = new( "lobbyclient", IGameInstanceDll.Current.TypeLibrary );
 			System.AddSocket( lobbySocket );
-
-			LastConnectionString = $"{steamid}";
 		}
 
 		var success = await AwaitSuccessfulConnection();
 		if ( success ) return true;
 
 		Disconnect();
+		IGameInstanceDll.Current.Disconnect( "Connection timed out." );
 		return false;
+	}
+
+	static void OnTryConnect( string address )
+	{
+		// if we're a non-leader in a party and we're connecting to a server that isn't what the leader is on, leave the party.
+		if ( PartyRoom.Current is { } party && !party.Owner.IsMe )
+		{
+			string partyAddress = party.GameAddress;
+			if ( string.IsNullOrEmpty( partyAddress ) || partyAddress != address )
+			{
+				party.Leave();
+			}
+		}
+	}
+
+	/// <summary>
+	/// The client has been told to reconnect to the server. Pause while the server restarts, then attempt to reconnect.
+	/// </summary>
+	internal static async Task<bool> ClientReconnect( ReconnectMsg data )
+	{
+		IGameInstanceDll.Current?.CloseGame();
+
+		string address = LastConnectionString;
+		if ( string.IsNullOrWhiteSpace( address ) )
+		{
+			IGameInstanceDll.Current.Disconnect( "Reconnect failed, missing target address." );
+			return false;
+		}
+
+		Disconnect();
+
+		Log.Info( $"Reconnecting to {address}" );
+
+		LoadingScreen.IsVisible = true;
+		LoadingScreen.Media = null;
+		LoadingScreen.Title = "Server Restarting";
+		await Task.Delay( 4000 ); // pause to allow server to restart
+
+		return await TryConnect( address );
+	}
+
+	/// <summary>
+	/// Are we currently matchmaking?
+	/// We want to suppress user-facing join errors in this case, and silently keep trying lobbies until we find one that works.
+	/// </summary>
+	internal static bool IsMatchmaking { get; private set; }
+
+	internal static IDisposable MatchmakingScope()
+	{
+		IsMatchmaking = true;
+
+		return new DisposeAction( () =>
+		{
+			IsMatchmaking = false;
+		} );
 	}
 }

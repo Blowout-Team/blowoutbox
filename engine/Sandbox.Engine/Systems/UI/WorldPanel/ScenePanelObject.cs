@@ -1,5 +1,6 @@
 using BlowoutTeamSoft.Engine.Interfaces.UI;
 using Sandbox.UI;
+using Sandbox.Rendering;
 
 namespace Sandbox;
 
@@ -18,23 +19,43 @@ internal sealed class ScenePanelObject : SceneCustomObject
 	/// </summary>
 	public RootPanel Panel { get; private set; }
 
+	private readonly CommandList _commandList = new( "ScenePanel" );
+
 	public ScenePanelObject( SceneWorld world, RootPanel Panel ) : base( world )
 	{
 		this.Panel = Panel;
 	}
 
-	public override void RenderSceneObject()
+	internal static Matrix BuildPanelToObjectMatrix()
 	{
-		Graphics.Attributes.SetCombo( "D_WORLDPANEL", 1 );
+		Matrix mat = Matrix.CreateRotation( Rotation.From( 0, 90, 90 ) );
+		mat *= Matrix.CreateScale( ScreenToWorldScale );
+		return mat;
+	}
 
+	internal static Matrix BuildPanelToWorldMatrix( Transform transform )
+	{
+		return BuildPanelToObjectMatrix() * Matrix.FromTransform( transform );
+	}
+
+	/// <summary>
+	/// Called on the main thread to snapshot the world matrix before render.
+	/// </summary>
+	internal void BuildCommandList()
+	{
 		//
 		// This converts it to front left up (instead of right, down, whatever)
 		// and we apply a sensible enough default scale.
 		//
-		Matrix mat = Matrix.CreateRotation( Rotation.From( 0, 90, 90 ) );
-		mat *= Matrix.CreateScale( ScreenToWorldScale );
-		Graphics.Attributes.Set( "WorldMat", mat );
+		_commandList.Reset();
 
-		Panel?.RenderManual();
+		_commandList.Attributes.SetCombo( "D_WORLDPANEL", 1 );
+		_commandList.Attributes.Set( "WorldMat", BuildPanelToWorldMatrix( Transform ) );
+	}
+
+	public override void RenderSceneObject()
+	{
+		_commandList.ExecuteOnRenderThread();
+		Panel?.Render();
 	}
 }

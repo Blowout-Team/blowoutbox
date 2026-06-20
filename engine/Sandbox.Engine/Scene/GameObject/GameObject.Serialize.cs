@@ -340,32 +340,50 @@ public partial class GameObject
 		{
 			if ( this is not PrefabScene )
 			{
+				// Set the persisted id first; nested mapping gap-fill is seeded by it.
+				DeserializeId( node );
+
 				InitPrefabInstance( prefabSource, true );
 
-				var prefabFile = ResourceLibrary.Get<PrefabFile>( PrefabInstance.PrefabSource );
+				var prefabFile = PrefabFile.Load( PrefabInstance.PrefabSource );
 				if ( !IsPrefabLoaded( prefabFile ) )
 				{
 					PostDeserialize( options );
 					return;
 				}
 
-				// Need to create those since they are not stored
-				if ( !PrefabInstance.InitMappingsForNestedInstance( node[JsonKeys.Id].Deserialize<Guid>() ) )
-				{
-					PostDeserialize( options );
-					return;
-				}
+				// Build the (unstored) nested mappings in PostDeserialize, once the subtree has its
+				// final ids. Doing it here would run against temp ids and an empty subtree.
+				_pendingNestedMappingId = node[JsonKeys.Id].Deserialize<Guid>();
 			}
 		}
 		// Handle full prefab instances
 		else if ( node[JsonKeys.PrefabInstanceSource] is JsonValue __prefab && __prefab.TryGetValue( out prefabSource ) )
 		{
+			// Set the persisted id first; mapping gap-fill is seeded by it.
+			DeserializeId( node );
+
 			InitPrefabInstance( prefabSource, false );
 
-			var prefabFile = ResourceLibrary.Get<PrefabFile>( PrefabInstance.PrefabSource );
+			var prefabFile = PrefabFile.Load( PrefabInstance.PrefabSource );
 			if ( !IsPrefabLoaded( prefabFile ) )
 			{
+				// Preserve patch and GUID mappings so the instance data survives save/load round-trips
+				// and can be fully restored when the prefab file comes back.
+				if ( node[JsonKeys.PrefabInstancePatch] is JsonObject stubPatchJson )
+				{
+					PrefabInstance.InitPatch( Json.FromNode<Json.Patch>( stubPatchJson ) );
+					PrefabInstance.InitLookups( node[JsonKeys.PrefabIdToInstanceId]?.Deserialize<Dictionary<Guid, Guid>>() ?? new Dictionary<Guid, Guid>() );
+				}
+
+				// Keep this object visible in the hierarchy as a disabled stub.
+				DeserializeId( node );
+				Name = $"[Missing Prefab] {PrefabInstance.PrefabSource}";
+				_enabled = false;
+				Flags |= GameObjectFlags.Error;
+
 				PostDeserialize( options );
+				UpdateEnabledStatus();
 				return;
 			}
 
@@ -422,7 +440,7 @@ public partial class GameObject
 		Name = node.GetPropertyValue( "Name", Name );
 		DeserializeTransform( node, options );
 
-		_enabled = node.GetPropertyValue( "Enabled", false );
+		_enabled = node.GetPropertyValue( JsonKeys.Enabled, false );
 
 		using var batchGroup = CallbackBatch.Batch();
 
@@ -652,7 +670,7 @@ public partial class GameObject
 		}
 
 		// We only want to deserialize certain flags, the rest are runtime only.
-		const GameObjectFlags FlagsToKeep =
+		const GameObjectFlags flagsToKeep =
 						GameObjectFlags.ProceduralBone |
 						GameObjectFlags.EditorOnly |
 						GameObjectFlags.NotNetworked |
@@ -661,11 +679,10 @@ public partial class GameObject
 						GameObjectFlags.Hidden;
 
 		// Clear the flags we're about to deserialize
-		Flags &= ~FlagsToKeep;
+		Flags &= ~flagsToKeep;
 
 		// Copy set flags from source
-		Flags |= (inFlags & FlagsToKeep);
-
+		Flags |= (inFlags & flagsToKeep);
 	}
 
 	private bool IsPrefabLoaded( PrefabFile prefabFile )
@@ -768,7 +785,10 @@ public partial class GameObject
 			tx.Position = node[JsonKeys.Position]?.Deserialize<Vector3>() ?? Vector3.Zero;
 			tx.Rotation = node[JsonKeys.Rotation]?.Deserialize<Rotation>() ?? Rotation.Identity;
 			tx.Scale = node[JsonKeys.Scale]?.Deserialize<Vector3>() ?? Vector3.One;
-			LocalTransform = tx;
+
+			// Use exact (bitwise) equality to avoid Vector3.operator== swallowing tiny
+			// differences within its 0.0001 AlmostEqual tolerance during deserialization.
+			Transform.SetLocalTransformExact( tx );
 		}
 	}
 
@@ -785,7 +805,7 @@ public partial class GameObject
 	{
 		if ( variables is null || variables.Count == 0 ) return;
 
-		var prefabFile = ResourceLibrary.Get<PrefabFile>( PrefabInstance.PrefabSource );
+		var prefabFile = PrefabFile.Load( PrefabInstance.PrefabSource );
 		if ( prefabFile is null ) return;
 
 		var prefabScene = SceneUtility.GetPrefabScene( prefabFile );
@@ -832,8 +852,7 @@ public partial class GameObject
 	{
 		if ( IsPrefabInstanceRoot )
 		{
-			var prefabFile = ResourceLibrary.Get<PrefabFile>( PrefabInstanceSource );
-
+			var prefabFile = PrefabFile.Load( PrefabInstanceSource );
 			if ( prefabFile is null )
 			{
 				Log.Warning( $"Unable to find prefab source file: \"{PrefabInstanceSource}\"." );
@@ -863,6 +882,14 @@ public partial class GameObject
 
 	internal void PostDeserialize( DeserializeOptions options )
 	{
+		// Build deferred nested mappings now the subtree has its final ids, before
+		// PushDeserializeContext consumes the lookup.
+		if ( _pendingNestedMappingId is Guid pendingNestedMappingId )
+		{
+			_pendingNestedMappingId = null;
+			PrefabInstance.InitMappingsForNestedInstance( pendingNestedMappingId );
+		}
+
 		using var prefabContext = PushDeserializeContext();
 
 		Components.ForEach( "PostDeserialize", true, c =>
@@ -1037,6 +1064,7 @@ public partial class GameObject
 		internal const string Rotation = "Rotation";
 		internal const string Scale = "Scale";
 		internal const string Enabled = "Enabled";
+		internal const string Hidden = "Hidden";
 		internal const string Tags = "Tags";
 		internal const string Version = "__version";
 		internal const string NetworkMode = "NetworkMode";

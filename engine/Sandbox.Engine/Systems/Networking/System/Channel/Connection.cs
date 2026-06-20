@@ -10,7 +10,7 @@ namespace Sandbox;
 [Expose, ActionGraphIgnore]
 public abstract partial class Connection
 {
-	internal abstract void InternalSend( ByteStream stream, NetFlags flags );
+	internal abstract void InternalSend( byte[] data, NetFlags flags );
 	internal abstract void InternalRecv( NetworkSystem.MessageHandler handler );
 	internal abstract void InternalClose( int closeCode, string closeReason );
 
@@ -171,8 +171,12 @@ public abstract partial class Connection
 
 	public virtual float Latency => 0;
 
+	/// <summary>
+	/// The player's name.
+	/// </summary>
+	/// <seealso cref="DisplayName"/>
 	[ActionGraphInclude]
-	public virtual string Name => "Unnammed";
+	public string Name => Info?.Name ?? "Unknown Player";
 
 	[ActionGraphInclude]
 	public virtual float Time => 0.0f;
@@ -280,7 +284,7 @@ public abstract partial class Connection
 
 		System.Serialize( t, ref msg );
 
-		SendRawMessage( msg );
+		SendStream( msg );
 		msg.Dispose();
 	}
 
@@ -307,44 +311,44 @@ public abstract partial class Connection
 
 		System.Serialize( t, ref msg );
 
-		SendRawMessage( msg, flags );
+		SendStream( msg, flags );
 		msg.Dispose();
 	}
 
-	internal virtual void SendRawMessage( ByteStream stream, NetFlags flags = NetFlags.Reliable )
+	/// <summary>
+	/// Virtual override point — exists so <see cref="MockConnection"/> can intercept the raw
+	/// <see cref="ByteStream"/> for routing through the host before encoding happens.
+	/// All other code should prefer calling <see cref="Send"/> with already-encoded bytes.
+	/// </summary>
+	internal virtual void SendStream( ByteStream stream, NetFlags flags = NetFlags.Reliable )
 	{
-		// Note: this is basically quater of k_cbMaxSteamNetworkingSocketsMessageSizeSend
-		var maxChunkSize = 128 * 1024;
-		var isReliableMessage = (flags & NetFlags.Reliable) != 0;
+		Send( Encode( stream ), flags );
+	}
 
-		if ( !isReliableMessage || stream.Length < maxChunkSize )
+	/// <summary>
+	/// Send an already wire-encoded payload. Chunks it into <see cref="MaxChunkSize"/> packets
+	/// if the payload exceeds the threshold and the message is reliable.
+	/// </summary>
+	internal const int MaxChunkSize = 128 * 1024; // ~quarter of Steam's k_cbMaxSteamNetworkingSocketsMessageSizeSend
+
+	internal virtual void Send( byte[] encoded, NetFlags flags )
+	{
+		var isReliable = (flags & NetFlags.Reliable) != 0;
+
+		if ( !isReliable || encoded.Length < MaxChunkSize )
 		{
-			InternalSend( stream, flags );
+			InternalSend( encoded, flags );
 			return;
 		}
 
-		//
-		// Split messages into multiple parts, this should hardly ever happen.
-		//
+		var chunks = (encoded.Length / (float)MaxChunkSize).CeilToInt();
 
-		var chunkHeader = 32;
-		var chunks = (stream.Length / (float)maxChunkSize).CeilToInt();
-
-		Log.Trace( $"splitting {stream.Length} bytes into {chunks} {maxChunkSize}b chunks" );
-
-		for ( int i = 0; i < chunks; i++ )
+		for ( var i = 0; i < chunks; i++ )
 		{
-			using ByteStream chunkMessage = ByteStream.Create( maxChunkSize + chunkHeader );
-			chunkMessage.Write( InternalMessageType.Chunk );
-			chunkMessage.Write( (uint)i );
-			chunkMessage.Write( (uint)chunks );
-			chunkMessage.Write( stream, i * maxChunkSize, maxChunkSize );
-
-			Log.Trace( $"Chunk {i + 1} is {chunkMessage.Length}b" );
-
-			InternalSend( chunkMessage, flags );
-
-			chunkMessage.Dispose();
+			var offset = i * MaxChunkSize;
+			var length = Math.Min( MaxChunkSize, encoded.Length - offset );
+			var chunk = BuildChunkPacket( encoded, offset, length, i, chunks );
+			InternalSend( chunk, flags );
 		}
 	}
 
@@ -363,6 +367,7 @@ public abstract partial class Connection
 
 	internal void Close( int reasonCode, string reasonString )
 	{
+		_chunkBufferLength = -1;
 		InternalClose( reasonCode, reasonString );
 	}
 
@@ -450,11 +455,56 @@ public abstract partial class Connection
 	/// </summary>
 	internal ConnectionInfo PreInfo { get; set; }
 
+	/// <summary>
+	/// The player's name but with any potential nicknames or naughty words filtered out.
+	/// You don't want to be using this in serverside logic really.
+	/// </summary>
+	/// <seealso cref="Name"/>
 	[ActionGraphInclude]
-	public string DisplayName => Info?.DisplayName ?? "Unknown Player";
+	public string DisplayName
+	{
+		get
+		{
+			if ( Steamworks.SteamFriends.IsInstalled )
+			{
+				var personaName = FriendInfo.DisplayName;
+				if ( !string.IsNullOrWhiteSpace( personaName ) )
+					return Utility.Steam.FilterName( personaName, SteamId );
+			}
+
+			return Utility.Steam.FilterName( Name, SteamId );
+		}
+	}
 
 	[ActionGraphInclude]
 	public SteamId SteamId => Info?.SteamId ?? default;
+
+	/// <summary>
+	/// Steam friend information for this connection.
+	/// This is not available on the dedicated server.
+	/// </summary>
+	public Friend FriendInfo
+	{
+		get
+		{
+			if ( SteamId.ValueUnsigned == 0 )
+				return default;
+
+			if ( field.Id != SteamId.ValueUnsigned )
+				field = new( SteamId.ValueUnsigned );
+
+			return field;
+		}
+	}
+
+	/// <summary>
+	/// The SteamID of the account that actually owns the game in a Steam Family.
+	/// If not in a Steam Family this is the same as <see cref="SteamId"/>
+	/// </summary>
+	/// <remarks>
+	/// This is only valid on the host.
+	/// </remarks>
+	public SteamId OwnerSteamId { get; internal set; }
 
 	/// <summary>
 	/// The Id of the party that this user is a part of. This can be used to compare to other users to 

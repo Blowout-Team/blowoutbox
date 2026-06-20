@@ -194,7 +194,14 @@ internal partial class GlobalContext
 
 	internal void OnHotload()
 	{
-		ResourceSystem.OnHotload();
-		UISystem.OnHotload();
+		ReflectionQueryCache.ClearTypeCache();
+
+		if ( !Application.IsUnitTest )
+			VertexLayout.FreeAll();
+
+		// These systems might be null in unit tests
+
+		ResourceSystem?.OnHotload();
+		UISystem?.OnHotload();
 	}
 }

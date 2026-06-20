@@ -195,6 +195,12 @@ public abstract partial class Asset
 	public abstract void OpenInEditor( string nativeEditor = null );
 
 	/// <summary>
+	/// Whether <see cref="OpenInEditor"/> can do anything useful for this asset. Used to decide
+	/// whether to offer an "Open" action for assets that have no file on disk (e.g. mounted resources).
+	/// </summary>
+	public virtual bool CanOpenInEditor => true;
+
+	/// <summary>
 	/// Returns assets that this asset references/uses.
 	/// </summary>
 	/// <param name="deep">Whether to recurse. For example, will also include textures referenced by the materials used by this model asset, as opposed to returning just the materials.</param>
@@ -205,6 +211,12 @@ public abstract partial class Asset
 	/// </summary>
 	/// <param name="deep">Whether to recurse. For example, will also include maps that are using models which use this material asset, as opposed to returning just the models.</param>
 	public abstract List<Asset> GetDependants( bool deep );
+
+	/// <summary>
+	/// Returns assets that are parents of this asset (i.e. this asset is a compiled child resource of the returned assets).
+	/// </summary>
+	/// <param name="deep">Whether to recurse up the parent chain.</param>
+	public abstract List<Asset> GetParents( bool deep );
 
 	List<Asset> GetAssetList( NativeEngine.CUtlVectorAsset v, bool free )
 	{

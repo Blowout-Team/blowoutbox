@@ -3,8 +3,6 @@ using Sandbox.Internal;
 using Sandbox.Modals;
 using Sandbox.Rendering;
 using Sandbox.UI;
-using Sandbox.VR;
-using System.Threading;
 
 namespace Sandbox;
 
@@ -13,7 +11,7 @@ namespace Sandbox;
 /// </summary>
 internal class UISystem
 {
-	internal ThreadLocal<PanelRenderer> Renderer = new( () => new PanelRenderer() );
+	internal PanelRenderer Renderer = new();
 
 	internal PanelInput Input { get; set; } = new();
 
@@ -122,14 +120,15 @@ internal class UISystem
 			RunDeferredDeletion();
 		}
 
-		using ( Performance.Scope( "Build Command Lists" ) )
+		using ( Performance.Scope( "Build Descriptors" ) )
 		{
-			BuildCommandLists();
+			BuildDescriptors();
 		}
 
-		using ( Performance.Scope( "Gather Command Lists" ) )
+		using ( Performance.Scope( "Build Command Lists" ) )
 		{
-			GatherCommandLists();
+			PanelRenderer.Stats.Reset();
+			BuildCommandLists();
 		}
 
 		using ( Performance.Scope( "Combine Command Lists" ) )
@@ -190,26 +189,33 @@ internal class UISystem
 		}
 	}
 
-	internal void BuildCommandLists()
+	internal void BuildDescriptors()
 	{
 		for ( int i = 0; i < RootPanels.Count; i++ )
 		{
 			var root = RootPanels[i];
 			if ( !root.IsValid ) continue;
 
-			root.BuildCommandLists();
+			root.BuildDescriptors();
 		}
 	}
 
-	internal void GatherCommandLists()
+	internal void BuildCommandLists()
 	{
+		Renderer.AdvanceFrame();
+
 		for ( int i = 0; i < RootPanels.Count; i++ )
 		{
 			var root = RootPanels[i];
 			if ( !root.IsValid ) continue;
-			if ( root.RenderedManually ) continue;
+			if ( root.RenderedManually && !root.IsWorldPanel ) continue;
 
-			root.GatherCommandLists();
+			if ( root is Sandbox.UI.WorldPanel { SceneObject: not null } wp )
+			{
+				wp.SceneObject.BuildCommandList();
+			}
+
+			root.BuildCommandList();
 		}
 	}
 
@@ -290,7 +296,7 @@ internal class UISystem
 			}
 
 			//
-			// The developer console is open
+			// The developer console / chat is open
 			//
 			if ( IMenuSystem.Current?.ForceCursorVisible ?? false )
 			{
@@ -389,9 +395,26 @@ internal class UISystem
 		for ( int i = 0; i < DeletionList.Count; i++ )
 		{
 			var p = DeletionList[i];
+
+			// panel might have been turned null by hotloading
+			if ( p is null )
+			{
+				DeletionList.RemoveAt( i );
+				i--;
+				continue;
+			}
+
 			if ( !force && p.HasActiveTransitions ) continue;
 
-			p.Delete( true );
+			try
+			{
+				p.Delete( true );
+			}
+			catch ( System.Exception ex )
+			{
+				Log.Warning( ex, $"Exception while deferred-deleting {p}" );
+			}
+
 			DeletionList.RemoveAt( i );
 			i--;
 		}
@@ -446,7 +469,7 @@ internal class UISystem
 		// MouseButtonState, InputEventQueue, etc.
 		Input = new();
 		InputEventQueue = new();
-		Renderer = new( () => new PanelRenderer() );
+		Renderer = new();
 		CurrentFocus = null;
 		NextFocus = null;
 	}

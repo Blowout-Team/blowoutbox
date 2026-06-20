@@ -34,6 +34,7 @@ namespace Sandbox
 	{
 		internal IMesh native;
 		internal long instanceId;
+		private int renderPrimType = (int)RenderPrimitiveType.RENDER_PRIM_TRIANGLES;
 
 		private Model _coreModel;
 
@@ -51,7 +52,8 @@ namespace Sandbox
 			if ( string.IsNullOrWhiteSpace( name ) )
 				name = "mesh";
 
-			native = MeshGlue.CreateRenderMesh( material != null ? material.native : IntPtr.Zero, (int)MeshPrimTypeToRenderPrimType( primType ), name );
+			renderPrimType = (int)MeshPrimTypeToRenderPrimType( primType );
+			native = MeshGlue.CreateRenderMesh( material != null ? material.native : IntPtr.Zero, renderPrimType, name );
 
 			if ( native.IsNull ) throw new Exception( "RenderMesh pointer cannot be null!" );
 
@@ -89,7 +91,11 @@ namespace Sandbox
 		/// </summary>
 		public MeshPrimitiveType PrimitiveType
 		{
-			set => MeshGlue.SetMeshPrimType( native, (int)MeshPrimTypeToRenderPrimType( value ) );
+			set
+			{
+				renderPrimType = (int)MeshPrimTypeToRenderPrimType( value );
+				MeshGlue.SetMeshPrimType( native, renderPrimType );
+			}
 		}
 
 		/// <summary>
@@ -98,6 +104,21 @@ namespace Sandbox
 		public Material Material
 		{
 			set => MeshGlue.SetMeshMaterial( native, value != null ? value.native : IntPtr.Zero );
+		}
+
+		/// <summary>
+		/// Add a sub mesh, drawing a range of the index buffer with its own <paramref name="material"/>.
+		/// Create the vertex and index buffers before adding sub meshes.
+		/// </summary>
+		/// <param name="material">Material to draw this range with.</param>
+		/// <param name="startIndex">First index of the range to draw.</param>
+		/// <param name="indexCount">Number of indices to draw.</param>
+		/// <param name="startVertex">Base vertex offset. Defaults to the whole vertex buffer when zero.</param>
+		/// <param name="vertexCount">Number of vertices referenced. Defaults to the whole vertex buffer when zero.</param>
+		public Mesh AddSubMesh( Material material, int startIndex, int indexCount, int startVertex = 0, int vertexCount = 0 )
+		{
+			MeshGlue.AddMeshDrawCall( native, material != null ? material.native : IntPtr.Zero, renderPrimType, startIndex, indexCount, startVertex, vertexCount );
+			return this;
 		}
 
 		/// <summary>

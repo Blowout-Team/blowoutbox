@@ -14,13 +14,23 @@ public static partial class Input
 
 	internal static ulong Actions
 	{
-		get => CurrentContext.ActionsCurrent;
+		get => CurrentPlayerScope switch
+		{
+			0 => CurrentContext.ActionsCurrent,
+			> 0 => CurrentController?.InputContext?.ActionsCurrent ?? 0,
+			_ => CurrentContext.ActionsCurrent | (Controller.First?.InputContext?.ActionsCurrent ?? 0)
+		};
 		set => CurrentContext.ActionsCurrent = value;
 	}
 
 	static ulong LastActions
 	{
-		get => CurrentContext.ActionsPrevious;
+		get => CurrentPlayerScope switch
+		{
+			0 => CurrentContext.ActionsPrevious,
+			> 0 => CurrentController?.InputContext?.ActionsPrevious ?? 0,
+			_ => CurrentContext.ActionsPrevious | (Controller.First?.InputContext?.ActionsPrevious ?? 0)
+		};
 		set => CurrentContext.ActionsPrevious = value;
 	}
 
@@ -62,6 +72,7 @@ public static partial class Input
 	[ActionGraphNode( "input.down" ), Pure, Category( "Input" ), Icon( "gamepad" )]
 	public static bool Down( [InputAction] string action, bool complainOnMissing = true )
 	{
+		if ( Application.IsHeadless ) return false;
 		if ( Suppressed ) return false;
 		if ( string.IsNullOrWhiteSpace( action ) ) return false;
 
@@ -98,6 +109,7 @@ public static partial class Input
 	[ActionGraphNode( "input.pressed" ), Pure, Category( "Input" ), Icon( "gamepad" )]
 	public static bool Pressed( [InputAction] string action )
 	{
+		if ( Application.IsHeadless ) return false;
 		if ( Suppressed ) return false;
 		return !WasDownLastCommand( action ) && Down( action );
 	}
@@ -108,6 +120,7 @@ public static partial class Input
 	[ActionGraphNode( "input.released" ), Pure, Category( "Input" ), Icon( "gamepad" )]
 	public static bool Released( [InputAction] string action )
 	{
+		if ( Application.IsHeadless ) return false;
 		if ( Suppressed ) return false;
 		return WasDownLastCommand( action ) && !Down( action );
 	}
@@ -252,6 +265,9 @@ public static partial class Input
 			{
 				foreach ( var e in Contexts )
 				{
+					if ( IsControllerContext( e ) )
+						continue;
+
 					e.AccumActionsPressed |= 1UL << i;
 				}
 			}
@@ -259,6 +275,9 @@ public static partial class Input
 			{
 				foreach ( var e in Contexts )
 				{
+					if ( IsControllerContext( e ) )
+						continue;
+
 					e.AccumActionsReleased |= 1UL << i;
 				}
 			}
@@ -284,6 +303,14 @@ public static partial class Input
 		if ( string.IsNullOrEmpty( binding ) ) return;
 
 		ConVarSystem.Run( $"{binding}\n" );
+	}
+
+	/// <summary>
+	/// Returns true if the given context belongs to a controller
+	/// </summary>
+	private static bool IsControllerContext( Context context )
+	{
+		return Controller.All.Any( c => c.InputContext == context );
 	}
 
 	internal static InputSettings InputSettings { get; set; }

@@ -1,5 +1,5 @@
-﻿using Sandbox.Html;
-using Sandbox.Rendering;
+﻿using Microsoft.AspNetCore.Components;
+using Sandbox.Html;
 using System.Globalization;
 
 namespace Sandbox.UI
@@ -23,8 +23,6 @@ namespace Sandbox.UI
 		int layoutStateHash;
 		bool sizeFinalized;
 		Vector2 availableSpace;
-
-		public override bool HasContent => true;
 
 		[Category( "Selection" )]
 		public bool ShouldDrawSelection
@@ -149,6 +147,7 @@ namespace Sandbox.UI
 		/// <summary>
 		/// Text to display on the label.
 		/// </summary>
+		[Parameter]
 		public virtual string Text
 		{
 			get => _text;
@@ -177,6 +176,7 @@ namespace Sandbox.UI
 		/// <summary>
 		/// Set to true if this is rich text. This means it can support some inline html elements.
 		/// </summary>
+		[Parameter]
 		public bool IsRich { get; set; }
 
 		public override void SetProperty( string name, string value )
@@ -389,7 +389,7 @@ namespace Sandbox.UI
 			_textRect.Size = _textBlock.BlockSize;
 		}
 
-		internal override void DrawContent( CommandList commandList, PanelRenderer renderer, ref RenderState state )
+		public override void OnDraw()
 		{
 			// Ensure texture is created if we have text but no texture yet
 			if ( _textBlock != null && _textBlock.Texture == null && !string.IsNullOrEmpty( _textBlock.Text ) )
@@ -399,7 +399,7 @@ namespace Sandbox.UI
 
 			var rect = Box.RectInner;
 			rect.Position -= caretScroll;
-			_textBlock?.BuildCommandList( commandList, renderer, ref state, ComputedStyle, rect, Opacity * state.RenderOpacity );
+			_textBlock?.BuildDescriptors( CachedDescriptors, CachedOverrideBlendMode, ComputedStyle, rect, CachedRenderOpacity );
 		}
 
 		public int GetLetterAt( Vector2 pos )

@@ -1,4 +1,4 @@
-﻿using BlowoutTeamSoft.Engine.Attributes.Render;
+using BlowoutTeamSoft.Engine.Attributes.Render;
 using NativeEngine;
 using System.Collections.Concurrent;
 using System.ComponentModel;
@@ -12,7 +12,7 @@ namespace Sandbox;
 /// </summary>
 public static class VertexLayout
 {
-	static ConcurrentDictionary<Type, NativeEngine.VertexLayout> entries = new();
+	static readonly ConcurrentDictionary<Type, NativeEngine.VertexLayout> entries = new();
 
 	internal static NativeEngine.VertexLayout Get<T>() where T : unmanaged
 	{
@@ -107,14 +107,18 @@ public static class VertexLayout
 
 
 	/// <summary>
-	/// Should probably be calling this on hotload, when types are changed?
+	/// Drop every cached layout so the next <see cref="Get(Type)"/> rebuilds it. Called on hotload,
+	/// where a vertex struct's byte layout can change while its <see cref="Type"/> identity is preserved.
 	/// </summary>
 	internal static void FreeAll()
 	{
-		foreach ( var value in entries.Values )
+		foreach ( var key in entries.Keys )
 		{
-			value.Free();
-			value.Destroy();
+			if ( entries.TryRemove( key, out var value ) )
+			{
+				value.Free();
+				value.Destroy();
+			}
 		}
 	}
 

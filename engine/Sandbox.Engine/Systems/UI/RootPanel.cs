@@ -55,12 +55,14 @@ public partial class RootPanel : Panel
 	/// Single flat command list used by the flat rendering path.
 	/// All panels record into this one list instead of per-panel lists.
 	/// </summary>
-	internal readonly CommandList PanelCommandList = new();
+	internal readonly CommandList PanelCommandList;
 
 	public RootPanel()
 	{
 		Style.Width = Length.Percent( 100 );
 		Style.Height = Length.Percent( 100 );
+
+		PanelCommandList = new CommandList( $"UI Root: {GetType().Name}" );
 
 		GlobalContext.Current.UISystem.AddRoot( this );
 		AddToLists();
@@ -220,19 +222,19 @@ public partial class RootPanel : Panel
 	}
 
 	/// <summary>
-	/// Build command lists for this panel and all children.
-	/// Called during the tick phase, before rendering.
+	/// Build descriptors for this panel and all children.
+	/// Called during the tick phase, before gathering.
 	/// </summary>
-	internal void BuildCommandLists( float opacity = 1.0f )
+	internal void BuildDescriptors( float opacity = 1.0f )
 	{
-		var renderer = GlobalContext.Current.UISystem.Renderer.Value;
-		renderer.BuildCommandLists( this, opacity );
+		var renderer = GlobalContext.Current.UISystem.Renderer;
+		renderer.BuildDescriptors( this, opacity );
 	}
 
-	internal void GatherCommandLists( float opacity = 1.0f )
+	internal void BuildCommandList( float opacity = 1.0f )
 	{
-		var renderer = GlobalContext.Current.UISystem.Renderer.Value;
-		renderer.GatherCommandLists( this, opacity );
+		var renderer = GlobalContext.Current.UISystem.Renderer;
+		renderer.BuildCommandList( this, opacity );
 	}
 
 	/// <summary>
@@ -246,7 +248,7 @@ public partial class RootPanel : Panel
 		if ( !RenderedManually && !IsWorldPanel )
 			throw new Exception( $"{nameof( RenderedManually )} must be set to true to render this panel manually." );
 
-		GatherCommandLists( opacity );
+		BuildCommandList( opacity );
 		Render( opacity );
 	}
 
@@ -293,19 +295,26 @@ public partial class RootPanel : Panel
 		{
 			Parallel.ForEach( styleRuleUpdates, panel =>
 			{
-				if ( !panel.IsValid )
-					return;
-
-				if ( panel.Style.BuildRulesInThread() )
+				try
 				{
-					lock ( l )
-					{
-						locks++;
-						panel.SetNeedsPreLayout();
-					}
-				}
+					if ( !panel.IsValid() || panel.Style is null )
+						return;
 
-				panel.MarkStylesRebuilt();
+					if ( panel.Style.BuildRulesInThread() )
+					{
+						lock ( l )
+						{
+							locks++;
+							panel.SetNeedsPreLayout();
+						}
+					}
+
+					panel.MarkStylesRebuilt();
+				}
+				catch ( Exception e )
+				{
+					Log.Warning( e, e.Message );
+				}
 
 			} );
 

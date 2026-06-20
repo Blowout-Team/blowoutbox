@@ -151,6 +151,7 @@ internal class GameInstance : IGameInstance
 		Log.Trace( $"LoadAsync: {Ident} (dev:{IsDeveloperHost})" );
 		SentrySdk.AddBreadcrumb( $"Loading Game {Ident}", "gameinstance.load" );
 
+		LoadingScreen.Title = "Fetching Package Info";
 		_package = await Package.FetchAsync( Ident, false );
 
 		if ( !IsDeveloperHost )
@@ -180,10 +181,16 @@ internal class GameInstance : IGameInstance
 			return true;
 		}
 
+		if ( Package.TypeName != "game" && !Application.IsEditor )
+		{
+			throw new Exception( $"Package {Ident} is not a game" );
+		}
+
 		var achievementTask = _package.GetAchievements();
 
 		Log.Trace( $"Install Async {Package.Title}" );
 		LoadingScreen.Title = $"Installing {Package.Title}";
+		LoadingScreen.Media = Package.LoadingScreen.MediaUrl;
 
 		var identWithVersion = Package.FullIdent;
 
@@ -246,6 +253,8 @@ internal class GameInstance : IGameInstance
 		if ( !string.IsNullOrWhiteSpace( LaunchArguments.Map ) )
 		{
 			var map = LaunchArguments.Map;
+			Application.Map = map;
+
 			await LoadMapPackage( map, token );
 			Application.MapPackage = _mapPackage;
 		}
@@ -276,7 +285,7 @@ internal class GameInstance : IGameInstance
 		if ( !IsDeveloperHost )
 		{
 			Log.Trace( $"Loading GameResources" );
-			ResourceLoader.LoadAllGameResource( FileSystem.Mounted );
+			await ResourceLoader.LoadAllGameResourceAsync( FileSystem.Mounted, token );
 		}
 
 		if ( !achievementTask.IsCompleted )
@@ -527,13 +536,14 @@ class MenuLoadingScreen : ILoadingInterface
 {
 	public void Dispose()
 	{
-		LoadingScreen.Title = "";
 		LoadingScreen.Subtitle = "";
 	}
 
 	public void LoadingProgress( LoadingProgress progress )
 	{
 		LoadingScreen.Title = $"{progress.Title}";
-		LoadingScreen.Subtitle = $"{progress.Percent:n0}% • {progress.Mbps:n0}mbps • {progress.CalculateETA().ToRemainingTimeString()}";
+		LoadingScreen.Subtitle = progress.Mbps > 0
+			? $"{progress.Percent:n0}% • {progress.Mbps:n0}mbps • {progress.CalculateETA().ToRemainingTimeString()}"
+			: "";
 	}
 }

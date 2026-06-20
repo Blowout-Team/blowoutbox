@@ -288,7 +288,7 @@ public partial class GpuBuffer : IValid, IDisposable
 	/// </remarks>
 	/// <param name="data">The Span of data to upload. It should contain items of type T, which is a struct.</param>
 	/// <param name="elementOffset">The offset in terms of elements (not bytes) at which to start uploading data (default is 0).</param>
-	public void SetData<T>( Span<T> data, int elementOffset = 0 ) where T : unmanaged
+	public void SetData<T>( ReadOnlySpan<T> data, int elementOffset = 0 ) where T : unmanaged
 	{
 		ObjectDisposedException.ThrowIf( native == IntPtr.Zero, this );
 
@@ -311,7 +311,7 @@ public partial class GpuBuffer : IValid, IDisposable
 		SetData<T>( CollectionsMarshal.AsSpan( data ), elementOffset );
 	}
 
-	private unsafe void SetDataInternal( Span<byte> data, int elementOffset )
+	private unsafe void SetDataInternal( ReadOnlySpan<byte> data, int elementOffset )
 	{
 		if ( data.Length > ElementCount * ElementSize )
 		{
@@ -397,38 +397,80 @@ public class GpuBuffer<T> : GpuBuffer, IBlowoutGPUBuffer<T>
 	public void GetDataAsync( Action<ReadOnlySpan<T>> callback ) => GetDataAsync<T>( callback );
 	public void GetDataAsync( Action<ReadOnlySpan<T>> callback, int start, int count ) => GetDataAsync<T>( callback, start, count );
 
-	public void Write( Span<T> data ) =>
-		SetData( data );
-
-	public void Write( T[] data ) =>
-		SetData( data );
-
-	public Memory<T> ToWritableMemory()
+	/// <summary>
+	/// Tell the GPU to copy all elements from this buffer to <paramref name="dst"/>.
+	/// </summary>
+	public void CopyTo( GpuBuffer<T> dst )
 	{
-		throw new NotImplementedException();
+		CopyTo( dst, 0, 0, ElementCount );
 	}
 
-	public T[] Read()
+	/// <inheritdoc cref="CopyTo(GpuBuffer{T},int,int,int)"/>
+	public void CopyTo( GpuBuffer<T> dst, int elementCount )
 	{
-		T[] count = new T[Count];
-		GetData( count, 0, ElementCount );
-		return count;
+		CopyTo( dst, 0, 0, elementCount );
 	}
 
-	public ReadOnlyMemory<T> ReadMemory() =>
-		Read();
-
-	public BlowoutValidatorResult Validate()
+	/// <summary>
+	/// Tell the GPU to copy a range of elements from this buffer to <paramref name="dst"/>.
+	/// </summary>
+	public void CopyTo( GpuBuffer<T> dst, int srcElementOffset, int destElementOffset, int elementCount )
 	{
-		if ( native == IntPtr.Zero )
-			return BlowoutValidatorResult.WithError("Native handle is nullptr");
+		ObjectDisposedException.ThrowIf( native == IntPtr.Zero, this );
+		ObjectDisposedException.ThrowIf( dst.native == IntPtr.Zero, dst );
 
-		return BlowoutValidatorResult.Success;
+		ArgumentOutOfRangeException.ThrowIfNegative( elementCount );
+
+		ArgumentOutOfRangeException.ThrowIfNegative( srcElementOffset );
+		ArgumentOutOfRangeException.ThrowIfNegative( destElementOffset );
+
+		var srcEndOffset = checked(srcElementOffset + elementCount);
+		var dstEndOffset = checked(destElementOffset + elementCount);
+
+		ArgumentOutOfRangeException.ThrowIfGreaterThan( srcEndOffset, ElementCount );
+		ArgumentOutOfRangeException.ThrowIfGreaterThan( dstEndOffset, dst.ElementCount );
+
+		if ( elementCount == 0 ) return;
+
+		var elementSize = Unsafe.SizeOf<T>();
+
+		RenderTools.CopyGPUBuffer( Graphics.Context, native, dst.native,
+			checked((uint)(srcElementOffset * elementSize)),
+			checked((uint)(destElementOffset * elementSize)),
+			checked((uint)(elementCount * elementSize)) );
 	}
+    public void Write(Span<T> data) =>
+        SetData(data);
 
-	public int ReadSpan( Span<T> buffer )
+    public void Write(T[] data) =>
+        SetData(data);
+
+    public Memory<T> ToWritableMemory()
+    {
+        throw new NotImplementedException();
+    }
+
+    public T[] Read()
+    {
+        T[] count = new T[Count];
+        GetData(count, 0, ElementCount);
+        return count;
+    }
+
+    public ReadOnlyMemory<T> ReadMemory() =>
+        Read();
+
+    public BlowoutValidatorResult Validate()
+    {
+        if (native == IntPtr.Zero)
+            return BlowoutValidatorResult.WithError("Native handle is nullptr");
+
+        return BlowoutValidatorResult.Success;
+    }
+
+	public int ReadSpan(Span<T> buffer)
 	{
-		GetData( buffer );
+		GetData(buffer);
 		return ElementCount;
 	}
-}
+    }

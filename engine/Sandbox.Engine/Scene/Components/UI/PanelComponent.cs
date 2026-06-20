@@ -6,7 +6,7 @@ namespace Sandbox;
 
 [Category( "UI Panels" )]
 [Icon( "widgets" )]
-public abstract partial class PanelComponent : Component, IPanelComponent, IBlowoutUIGraphic
+public abstract partial class PanelComponent : Component, IPanelComponent, Component.DontExecuteOnServer, IBlowoutUIGraphic
 {
 	Panel panel;
 

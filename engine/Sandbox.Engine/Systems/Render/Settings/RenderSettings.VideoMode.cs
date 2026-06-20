@@ -18,7 +18,7 @@ public partial class RenderSettings
 
 	public bool Fullscreen
 	{
-		get => VideoSettings.Get<bool>( "fullscreen", true );
+		get => VideoSettings.Get<bool>( "fullscreen", false );
 		set => VideoSettings.Set<bool>( "fullscreen", value );
 	}
 
@@ -38,7 +38,7 @@ public partial class RenderSettings
 	{
 		get
 		{
-			var defaultValue = RenderService.GetMultisampleType();
+			var defaultValue = RenderMultisampleType.RENDER_MULTISAMPLE_4X;
 			var value = VideoSettings.Get( "aaquality", defaultValue );
 
 			if ( !Enum.IsDefined( typeof( RenderMultisampleType ), value ) )

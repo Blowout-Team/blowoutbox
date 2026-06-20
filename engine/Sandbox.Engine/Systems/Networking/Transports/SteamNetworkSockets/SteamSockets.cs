@@ -82,8 +82,6 @@ internal static partial class SteamNetwork
 			OnClientConnect?.Invoke( c );
 
 			Glue.Networking.SetPollGroup( connection, pollGroup );
-
-			Log.Info( $"{this}: Connection ({c})" );
 		}
 
 		internal void OnDisconnected( HSteamNetConnection connection )
@@ -92,29 +90,20 @@ internal static partial class SteamNetwork
 				return;
 
 			OnClientDisconnect?.Invoke( c );
-			Log.Info( $"{this}: Disconnection ({c})" );
 			c.Close( 0, "Disconnect" );
 		}
 
 		private Channel<OutgoingSteamMessage> OutgoingMessages { get; } = Channel.CreateUnbounded<OutgoingSteamMessage>();
 		private Channel<IncomingSteamMessage> IncomingMessages { get; } = Channel.CreateUnbounded<IncomingSteamMessage>();
 
-		/// <summary>
-		/// Enqueue a message to be sent to a user on a different thread.
-		/// </summary>
-		/// <param name="connection"></param>
-		/// <param name="data"></param>
-		/// <param name="flags"></param>
 		internal void SendMessage( HSteamNetConnection connection, in byte[] data, int flags )
 		{
-			var message = new OutgoingSteamMessage
+			OutgoingMessages.Writer.TryWrite( new OutgoingSteamMessage
 			{
 				Connection = connection,
 				Data = data,
 				Flags = flags
-			};
-
-			OutgoingMessages.Writer.TryWrite( message );
+			} );
 		}
 
 		private const int MaxBatchSize = 256;
@@ -135,19 +124,13 @@ internal static partial class SteamNetwork
 
 			while ( OutgoingMessages.Reader.TryRead( out var msg ) )
 			{
-				var gcHandle = GCHandle.Alloc( msg.Data, GCHandleType.Pinned );
-				var dataPtr = gcHandle.AddrOfPinnedObject();
-
-				PinnedBuffers[dataPtr] = gcHandle;
-
-				var steamMsgPtr = Glue.Networking.AllocateMessageWithManagedBuffer( msg.Connection, dataPtr, msg.Data.Length, msg.Flags );
+				// Let Steam allocate the native buffer so there's no need to pin managed arrays.
+				var steamMsgPtr = Glue.Networking.AllocateMessage( msg.Connection, msg.Data.Length, msg.Flags );
 				if ( steamMsgPtr == IntPtr.Zero )
-				{
-					// Allocation failed, clean up immediately
-					PinnedBuffers.TryRemove( dataPtr, out _ );
-					gcHandle.Free();
 					continue;
-				}
+
+				var nativeBuffer = Glue.Networking.GetMessageDataBuffer( steamMsgPtr );
+				Marshal.Copy( msg.Data, 0, nativeBuffer, msg.Data.Length );
 
 				_messageBatch[batchCount++] = steamMsgPtr;
 
@@ -199,7 +182,7 @@ internal static partial class SteamNetwork
 				{
 					var msg = Unsafe.Read<SteamNetworkMessage>( (void*)ptr[i] );
 
-					var data = new byte[msg.Size];
+					var data = GC.AllocateUninitializedArray<byte>( msg.Size );
 					Marshal.Copy( (IntPtr)msg.Data, data, 0, data.Length );
 
 					var m = new IncomingSteamMessage
@@ -226,18 +209,7 @@ internal static partial class SteamNetwork
 				if ( !Connections.TryGetValue( msg.Connection.Id, out var connection ) )
 					continue;
 
-				Span<byte> data = Networking.DecodeStream( msg.Data );
-
-				using var stream = ByteStream.CreateReader( data );
-
-				var nwm = new NetworkSystem.NetworkMessage
-				{
-					Data = stream,
-					Source = connection
-				};
-
-				connection.MessagesRecieved++;
-				handler( nwm );
+				connection.OnRawPacketReceived( msg.Data, handler );
 			}
 		}
 

@@ -75,13 +75,22 @@ native accessor g_pSceneSystem as NativeEngine.CSceneSystem
     void BeginRenderingDynamicView( ISceneView pView );
     //ISceneView AddDynamicView( string pszDebugName, ISceneView pParentView, CFrustum frustum, void* hSwapChain, ISceneWorld pWorld, RenderViewport mainViewport, void* pVis, int nPriority, int nViewProducerIndex );
 
-    ITexture GetWellKnownTexture( SceneSystemWellKnownTextureObjectID a );
+	ISceneView AddShadowView( string debugName, ISceneView pParentView, CFrustum frustum, RenderViewport_t mainViewport, ITexture rt, int rtIdx, ESceneObjectFlags requiredFlags, ESceneObjectFlags excludedFlags, int depthBias, float slopeScaledDepthBias, CFrustum exclusionFrustum );
+
+	inline ISceneView AddShadowView( string debugName, ISceneView pParentView, CFrustum frustum, RenderViewport_t mainViewport, ITexture rt, int rtIdx, ESceneObjectFlags requiredFlags, ESceneObjectFlags excludedFlags, int depthBias, float slopeScaledDepthBias )
+	{
+		return g_pSceneSystem->AddShadowView( debugName, pParentView, frustum, mainViewport, rt, rtIdx, requiredFlags, excludedFlags, depthBias, slopeScaledDepthBias, nullptr );
+	}
+    
+	ITexture GetWellKnownTexture( SceneSystemWellKnownTextureObjectID a );
     IMaterial GetWellKnownMaterialHandle( SceneSystemWellKnownMaterialObjectID a );
 	
     inline SceneSystemPerFrameStats_t GetPerFrameStats()
     {
         return &(g_pSceneSystem->GetPerFrameStats());
     }
+
+    uint GetNumUnbatchableMaterials();
 
     ISceneWorld CreateWorld( string debugName );
     void DestroyWorld( ISceneWorld world );
@@ -163,6 +172,10 @@ native accessor g_pSceneSystem as NativeEngine.CSceneSystem
 
 	void BindTransformSlot( IRenderContext pCtx, int nVBSlot, int nTransformSlotIndex );
 
+	// Bind a full-screen texture to a stable, pipeline-level bindless slot for this frame
+	// (used by AO/SSR so shaders read a fixed descriptor binding instead of a racy attribute).
+	void SetPipelineTextureIndex( int nSlot, int nBindlessIndex );
+
 	// Ray Tracing
 	IRayTraceSceneWorld CreateRayTraceWorld( string pWorldDebugName, int nMaxRayTypes );
 	void DestroyRayTraceWorld( IRayTraceSceneWorld pRayTraceSceneWorld );
@@ -202,4 +215,12 @@ native accessor g_pSceneSystem as NativeEngine.CSceneSystem
 
 	// Managed timestamp support for CommandList etc.
 	bool SetManagedPerfMarker( IRenderContext ctx, string markerName );
+
+	inline void SetNextRenderTime( float flNextTime )
+	{
+		if ( g_pSceneSystem )
+		{
+			g_pSceneSystem->SetNextRenderTime( flNextTime );
+		}
+	}
 }

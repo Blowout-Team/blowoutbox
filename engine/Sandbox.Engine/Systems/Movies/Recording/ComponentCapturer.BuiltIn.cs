@@ -213,6 +213,41 @@ file sealed class LineRendererCapturer : ComponentCapturer<LineRenderer>
 	}
 }
 
+
+[Expose]
+file sealed class TextRendererCapturer : ComponentCapturer<TextRenderer>
+{
+	public static void CaptureTextRenderingScope( IMovieTrackRecorder recorder )
+	{
+		recorder.Property( nameof( TextRendering.Scope.Text ) ).Capture();
+		recorder.Property( nameof( TextRendering.Scope.TextColor ) ).Capture();
+		recorder.Property( nameof( TextRendering.Scope.FontName ) ).Capture();
+		recorder.Property( nameof( TextRendering.Scope.FontSize ) ).Capture();
+		recorder.Property( nameof( TextRendering.Scope.FontWeight ) ).Capture();
+		recorder.Property( nameof( TextRendering.Scope.FontItalic ) ).Capture();
+		recorder.Property( nameof( TextRendering.Scope.LineHeight ) ).Capture();
+		recorder.Property( nameof( TextRendering.Scope.LetterSpacing ) ).Capture();
+		recorder.Property( nameof( TextRendering.Scope.WordSpacing ) ).Capture();
+		recorder.Property( nameof( TextRendering.Scope.FilterMode ) ).Capture();
+		recorder.Property( nameof( TextRendering.Scope.FontSmooth ) ).Capture();
+		recorder.Property( nameof( TextRendering.Scope.Outline ) ).Capture();
+		recorder.Property( nameof( TextRendering.Scope.Shadow ) ).Capture();
+		recorder.Property( nameof( TextRendering.Scope.OutlineUnder ) ).Capture();
+		recorder.Property( nameof( TextRendering.Scope.ShadowUnder ) ).Capture();
+	}
+
+	protected override void OnCapture( IMovieTrackRecorder recorder, TextRenderer component )
+	{
+		CaptureTextRenderingScope( recorder.Property( nameof( TextRenderer.TextScope ) ) );
+
+		recorder.Property( nameof( TextRenderer.Scale ) ).Capture();
+		recorder.Property( nameof( TextRenderer.HorizontalAlignment ) ).Capture();
+		recorder.Property( nameof( TextRenderer.VerticalAlignment ) ).Capture();
+		recorder.Property( nameof( TextRenderer.BlendMode ) ).Capture();
+		recorder.Property( nameof( TextRenderer.FogStrength ) ).Capture();
+	}
+}
+
 [Expose]
 file sealed class ParticleEffectCapturer : ComponentCapturer<ParticleEffect>
 {
@@ -386,23 +421,7 @@ file sealed class ParticleTextRendererCapturer : ComponentCapturer<ParticleTextR
 {
 	protected override void OnCapture( IMovieTrackRecorder recorder, ParticleTextRenderer component )
 	{
-		var textScope = recorder.Property( nameof( ParticleTextRenderer.Text ) );
-
-		textScope.Property( nameof( TextRendering.Scope.Text ) ).Capture();
-		textScope.Property( nameof( TextRendering.Scope.TextColor ) ).Capture();
-		textScope.Property( nameof( TextRendering.Scope.FontName ) ).Capture();
-		textScope.Property( nameof( TextRendering.Scope.FontSize ) ).Capture();
-		textScope.Property( nameof( TextRendering.Scope.FontWeight ) ).Capture();
-		textScope.Property( nameof( TextRendering.Scope.FontItalic ) ).Capture();
-		textScope.Property( nameof( TextRendering.Scope.LineHeight ) ).Capture();
-		textScope.Property( nameof( TextRendering.Scope.LetterSpacing ) ).Capture();
-		textScope.Property( nameof( TextRendering.Scope.WordSpacing ) ).Capture();
-		textScope.Property( nameof( TextRendering.Scope.FilterMode ) ).Capture();
-		textScope.Property( nameof( TextRendering.Scope.FontSmooth ) ).Capture();
-		textScope.Property( nameof( TextRendering.Scope.Outline ) ).Capture();
-		textScope.Property( nameof( TextRendering.Scope.Shadow ) ).Capture();
-		textScope.Property( nameof( TextRendering.Scope.OutlineUnder ) ).Capture();
-		textScope.Property( nameof( TextRendering.Scope.ShadowUnder ) ).Capture();
+		TextRendererCapturer.CaptureTextRenderingScope( recorder.Property( nameof( ParticleTextRenderer.Text ) ) );
 
 		recorder.Property( nameof( ParticleTextRenderer.Pivot ) ).Capture();
 		recorder.Property( nameof( ParticleTextRenderer.Scale ) ).Capture();
@@ -443,5 +462,113 @@ file sealed class MapInstanceCapturer : ComponentCapturer<MapInstance>
 	{
 		recorder.Property( nameof( MapInstance.EnableCollision ) ).Capture();
 		recorder.Property( nameof( MapInstance.MapName ) ).Capture();
+	}
+}
+
+[Expose]
+file sealed class LightCapturer : ComponentCapturer<Light>
+{
+	protected override void OnCapture( IMovieTrackRecorder recorder, Light component )
+	{
+		recorder.Property( nameof( Light.LightColor ) ).Capture();
+		recorder.Property( nameof( Light.FogMode ) ).Capture();
+		recorder.Property( nameof( Light.FogStrength ) ).Capture();
+		recorder.Property( nameof( Light.Shadows ) ).Capture();
+
+		if ( component.Shadows )
+		{
+			recorder.Property( nameof( Light.ShadowBias ) ).Capture();
+			recorder.Property( nameof( Light.ShadowHardness ) ).Capture();
+		}
+	}
+}
+
+[Expose]
+file sealed class PointLightCapturer : ComponentCapturer<PointLight>
+{
+	protected override void OnCapture( IMovieTrackRecorder recorder, PointLight component )
+	{
+		recorder.Property( nameof( PointLight.Radius ) ).Capture();
+		recorder.Property( nameof( PointLight.Attenuation ) ).Capture();
+	}
+}
+
+[Expose]
+file sealed class SpotLightCapturer : ComponentCapturer<SpotLight>
+{
+	protected override void OnCapture( IMovieTrackRecorder recorder, SpotLight component )
+	{
+		recorder.Property( nameof( SpotLight.Radius ) ).Capture();
+		recorder.Property( nameof( SpotLight.ConeOuter ) ).Capture();
+		recorder.Property( nameof( SpotLight.ConeInner ) ).Capture();
+		recorder.Property( nameof( SpotLight.Attenuation ) ).Capture();
+		recorder.Property( nameof( SpotLight.Cookie ) ).Capture();
+	}
+}
+
+[Expose]
+file sealed class DirectionalLightCapturer : ComponentCapturer<DirectionalLight>
+{
+	protected override void OnCapture( IMovieTrackRecorder recorder, DirectionalLight component )
+	{
+		recorder.Property( nameof( DirectionalLight.SkyColor ) ).Capture();
+
+		if ( component.Shadows )
+		{
+			recorder.Property( nameof( DirectionalLight.ShadowCascadeCount ) ).Capture();
+			recorder.Property( nameof( DirectionalLight.ShadowCascadeSplitRatio ) ).Capture();
+		}
+	}
+}
+
+[Expose]
+file sealed class AmbientLightCapturer : ComponentCapturer<AmbientLight>
+{
+	protected override void OnCapture( IMovieTrackRecorder recorder, AmbientLight component )
+	{
+		recorder.Property( nameof( AmbientLight.Color ) ).Capture();
+	}
+}
+
+[Expose]
+file sealed class BeamEffectCapturer : ComponentCapturer<BeamEffect>
+{
+	protected override void OnCapture( IMovieTrackRecorder recorder, BeamEffect component )
+	{
+		recorder.Property( nameof( BeamEffect.Scale ) ).Capture();
+		recorder.Property( nameof( BeamEffect.TargetGameObject ) ).Capture();
+
+		if ( !component.TargetGameObject.IsValid() )
+		{
+			recorder.Property( nameof( BeamEffect.TargetPosition ) ).Capture();
+		}
+
+		recorder.Property( nameof( BeamEffect.TargetRandom ) ).Capture();
+		recorder.Property( nameof( BeamEffect.FollowPoints ) ).Capture();
+		recorder.Property( nameof( BeamEffect.BeamsPerSecond ) ).Capture();
+		recorder.Property( nameof( BeamEffect.MaxBeams ) ).Capture();
+		recorder.Property( nameof( BeamEffect.InitialBurst ) ).Capture();
+		recorder.Property( nameof( BeamEffect.BeamLifetime ) ).Capture();
+		recorder.Property( nameof( BeamEffect.Looped ) ).Capture();
+		recorder.Property( nameof( BeamEffect.Material ) ).Capture();
+		recorder.Property( nameof( BeamEffect.TextureOffset ) ).Capture();
+		recorder.Property( nameof( BeamEffect.TextureScale ) ).Capture();
+		recorder.Property( nameof( BeamEffect.TextureScrollSpeed ) ).Capture();
+		recorder.Property( nameof( BeamEffect.TextureScroll ) ).Capture();
+		recorder.Property( nameof( BeamEffect.FilterMode ) ).Capture();
+		recorder.Property( nameof( BeamEffect.BeamColor ) ).Capture();
+		recorder.Property( nameof( BeamEffect.Alpha ) ).Capture();
+		recorder.Property( nameof( BeamEffect.Brightness ) ).Capture();
+		recorder.Property( nameof( BeamEffect.Additive ) ).Capture();
+		recorder.Property( nameof( BeamEffect.Shadows ) ).Capture();
+		recorder.Property( nameof( BeamEffect.Lighting ) ).Capture();
+		recorder.Property( nameof( BeamEffect.Opaque ) ).Capture();
+		recorder.Property( nameof( BeamEffect.DepthFeather ) ).Capture();
+		recorder.Property( nameof( BeamEffect.TravelBetweenPoints ) ).Capture();
+
+		if ( component.TravelBetweenPoints )
+		{
+			recorder.Property( nameof( BeamEffect.TravelLerp ) ).Capture();
+		}
 	}
 }

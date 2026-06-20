@@ -61,6 +61,7 @@ public partial class Panel
 		try
 		{
 			RemoveFromLists();
+			RemoveFromSceneIndex();
 
 			Task.Expire();
 
@@ -99,6 +100,12 @@ public partial class Panel
 			// stylesheet textures (gradients, masks, etc.) alive past shutdown.
 			renderTree?.Clear();
 			renderTree = null;
+
+			if ( CachedDescriptors != null )
+			{
+				RenderLayer.Return( CachedDescriptors );
+				CachedDescriptors = null;
+			}
 
 			ComputedStyle = null;
 			StyleSheet = default;
